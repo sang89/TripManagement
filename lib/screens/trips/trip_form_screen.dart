@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../config/api_keys.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
 import '../../models/trip_member.dart';
 import '../../models/trip_stop.dart';
@@ -175,7 +176,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
 
   void _openAddStopSheet({TripStop? existing}) {
     final idx = existing != null
-        ? _pendingStops.indexWhere((s) => s.id == existing.id && s.title == existing.title)
+        ? _pendingStops.indexWhere(
+            (s) => s.id == existing.id && s.title == existing.title)
         : -1;
 
     showTripStopFormSheet(
@@ -207,12 +209,16 @@ class _TripFormScreenState extends State<TripFormScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     if (!_formKey.currentState!.validate()) return;
     if (_startAt != null && _endAt != null && !_endAt!.isAfter(_startAt!)) {
-      setState(() => _error = 'End date must be after start date.');
+      setState(() => _error = l10n.endDateAfterStart);
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       final provider = context.read<TripProvider>();
@@ -237,7 +243,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
         await provider.updateTrip(updated);
 
         // Sync members
-        final existingMemberIds = _existing!.members.map((m) => m.id).toSet();
+        final existingMemberIds =
+            _existing!.members.map((m) => m.id).toSet();
         final pendingMemberIds = _pendingMembers.map((m) => m.id).toSet();
         for (final m in _existing!.members) {
           if (!pendingMemberIds.contains(m.id)) {
@@ -247,14 +254,18 @@ class _TripFormScreenState extends State<TripFormScreen> {
         for (final m in _pendingMembers) {
           if (!existingMemberIds.contains(m.id)) {
             await provider.addMember(widget.tripId!,
-                displayName: m.displayName, email: m.email, phone: m.phone);
+                displayName: m.displayName,
+                email: m.email,
+                phone: m.phone);
           }
         }
 
         // Sync stops: delete removed, add new drafts, update edited existing
         final existingStopIds = _existing!.stops.map((s) => s.id).toSet();
-        final pendingExistingIds =
-            _pendingStops.where((s) => s.id.isNotEmpty).map((s) => s.id).toSet();
+        final pendingExistingIds = _pendingStops
+            .where((s) => s.id.isNotEmpty)
+            .map((s) => s.id)
+            .toSet();
         for (final id in existingStopIds) {
           if (!pendingExistingIds.contains(id)) {
             await provider.deleteStop(id, widget.tripId!);
@@ -263,10 +274,14 @@ class _TripFormScreenState extends State<TripFormScreen> {
         for (final s in _pendingStops) {
           if (s.id.isEmpty) {
             await provider.addStop(widget.tripId!,
-                title: s.title, address: s.address, notes: s.notes,
-                arriveAt: s.arriveAt, departAt: s.departAt,
+                title: s.title,
+                address: s.address,
+                notes: s.notes,
+                arriveAt: s.arriveAt,
+                departAt: s.departAt,
                 sortOrder: s.sortOrder,
-                addressLat: s.addressLat, addressLng: s.addressLng);
+                addressLat: s.addressLat,
+                addressLng: s.addressLng);
           } else if (existingStopIds.contains(s.id)) {
             await provider.updateStop(s);
           }
@@ -289,19 +304,29 @@ class _TripFormScreenState extends State<TripFormScreen> {
         );
         for (final m in _pendingMembers) {
           await provider.addMember(trip.id,
-              displayName: m.displayName, email: m.email, phone: m.phone);
+              displayName: m.displayName,
+              email: m.email,
+              phone: m.phone);
         }
         for (int i = 0; i < _sortedStops.length; i++) {
           final s = _sortedStops[i];
           await provider.addStop(trip.id,
-              title: s.title, address: s.address, notes: s.notes,
-              arriveAt: s.arriveAt, departAt: s.departAt, sortOrder: i,
-              addressLat: s.addressLat, addressLng: s.addressLng);
+              title: s.title,
+              address: s.address,
+              notes: s.notes,
+              arriveAt: s.arriveAt,
+              departAt: s.departAt,
+              sortOrder: i,
+              addressLat: s.addressLat,
+              addressLng: s.addressLng);
         }
         if (mounted) context.go('/trip/${trip.id}');
       }
     } catch (e) {
-      setState(() { _loading = false; _error = e.toString(); });
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
     }
   }
 
@@ -314,96 +339,99 @@ class _TripFormScreenState extends State<TripFormScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 4),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+        builder: (ctx, setSheetState) {
+          final l10n = AppLocalizations.of(ctx);
+          return Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 4),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Text('Add member',
-                        style: Theme.of(ctx).textTheme.titleMedium),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: nameCtrl,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Full name',
-                        prefixIcon: Icon(Icons.person_outline),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(l10n.addMember,
+                          style: Theme.of(ctx).textTheme.titleMedium),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email (optional)',
-                        prefixIcon: Icon(Icons.email_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    AppPhoneField(
-                      label: 'Phone (optional)',
-                      onChanged: (v) => phone = v,
-                    ),
-                    const SizedBox(height: 20),
-                    AppButton(
-                      label: 'Add member',
-                      onPressed: () {
-                        final name = nameCtrl.text.trim();
-                        if (name.isEmpty) return;
-                        setState(() {
-                          _pendingMembers.add(TripMember(
-                            id: '',
-                            tripId: '',
-                            displayName: name,
-                            role: 'member',
-                            email: emailCtrl.text.trim().isEmpty
-                                ? null
-                                : emailCtrl.text.trim(),
-                            phone: phone.isEmpty ? null : phone,
-                            createdAt: DateTime.now(),
-                          ));
-                        });
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: nameCtrl,
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          labelText: l10n.fullNameLabel,
+                          prefixIcon: const Icon(Icons.person_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: l10n.emailOptional,
+                          prefixIcon: const Icon(Icons.email_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      AppPhoneField(
+                        label: l10n.phoneOptional,
+                        onChanged: (v) => phone = v,
+                      ),
+                      const SizedBox(height: 20),
+                      AppButton(
+                        label: l10n.addMember,
+                        onPressed: () {
+                          final name = nameCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          setState(() {
+                            _pendingMembers.add(TripMember(
+                              id: '',
+                              tripId: '',
+                              displayName: name,
+                              role: 'member',
+                              email: emailCtrl.text.trim().isEmpty
+                                  ? null
+                                  : emailCtrl.text.trim(),
+                              phone: phone.isEmpty ? null : phone,
+                              createdAt: DateTime.now(),
+                            ));
+                          });
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -411,13 +439,14 @@ class _TripFormScreenState extends State<TripFormScreen> {
   @override
   Widget build(BuildContext context) {
     final authUid = context.read<AuthProvider>().userId;
+    final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('MMM d, y  h:mm a');
     final timeFmt = DateFormat('MMM d  h:mm a');
     final sorted = _sortedStops;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEdit ? 'Edit trip' : 'New trip'),
+        title: Text(_isEdit ? l10n.editTrip : l10n.newTrip),
         actions: [
           if (_loading)
             const Padding(
@@ -429,7 +458,7 @@ class _TripFormScreenState extends State<TripFormScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2))),
             )
           else
-            TextButton(onPressed: _save, child: const Text('Save')),
+            TextButton(onPressed: _save, child: Text(l10n.save)),
         ],
       ),
       body: Form(
@@ -440,19 +469,19 @@ class _TripFormScreenState extends State<TripFormScreen> {
             // Title
             TextFormField(
               controller: _titleCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Trip title',
-                prefixIcon: Icon(Icons.flight_takeoff_rounded),
+              decoration: InputDecoration(
+                labelText: l10n.tripTitle,
+                prefixIcon: const Icon(Icons.flight_takeoff_rounded),
               ),
               validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
+                  v == null || v.trim().isEmpty ? l10n.required : null,
             ),
             const SizedBox(height: 16),
 
             // Start location — optional Places autocomplete
             PlacesAutocompleteField(
               controller: _startLocationCtrl,
-              label: 'Starting from (optional)',
+              label: l10n.startingFromLabel,
               prefixIcon: Icons.trip_origin_outlined,
               placesService: _places,
               onCoordinatesChanged: (lat, lng) => setState(() {
@@ -465,7 +494,7 @@ class _TripFormScreenState extends State<TripFormScreen> {
             // Destination — inline Places autocomplete
             PlacesAutocompleteField(
               controller: _destinationCtrl,
-              label: 'Destination',
+              label: l10n.destinationLabel,
               prefixIcon: Icons.location_on_outlined,
               placesService: _places,
               onCoordinatesChanged: (lat, lng) => setState(() {
@@ -473,26 +502,26 @@ class _TripFormScreenState extends State<TripFormScreen> {
                 _destinationLng = lng;
               }),
               validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
+                  v == null || v.trim().isEmpty ? l10n.required : null,
             ),
             const SizedBox(height: 16),
 
             // Dates
             _DateTimeTile(
-              label: 'Start',
+              label: l10n.startLabel,
               value: _startAt,
               display: _startAt != null
                   ? fmt.format(_startAt!)
-                  : 'Set start date & time',
+                  : l10n.setStartDateTime,
               onTap: () => _pickDateTime(true),
             ),
             const SizedBox(height: 12),
             _DateTimeTile(
-              label: 'End',
+              label: l10n.endLabel,
               value: _endAt,
               display: _endAt != null
                   ? fmt.format(_endAt!)
-                  : 'Set end date & time',
+                  : l10n.setEndDateTime,
               onTap: () => _pickDateTime(false),
             ),
             const SizedBox(height: 16),
@@ -500,9 +529,9 @@ class _TripFormScreenState extends State<TripFormScreen> {
             // Notes
             TextFormField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                prefixIcon: Icon(Icons.notes_outlined),
+              decoration: InputDecoration(
+                labelText: l10n.notesOptional,
+                prefixIcon: const Icon(Icons.notes_outlined),
               ),
               maxLines: 4,
             ),
@@ -519,7 +548,7 @@ class _TripFormScreenState extends State<TripFormScreen> {
             const SizedBox(height: 28),
             Row(
               children: [
-                Text('Stops',
+                Text(l10n.stopsSection,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: AppTheme.primary,
                         fontWeight: FontWeight.bold)),
@@ -527,18 +556,20 @@ class _TripFormScreenState extends State<TripFormScreen> {
                 TextButton.icon(
                   onPressed: () => _openAddStopSheet(),
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add stop'),
+                  label: Text(l10n.addStop),
                   style: TextButton.styleFrom(
                       foregroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8)),
                 ),
               ],
             ),
             if (sorted.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('No stops added yet.',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                child: Text(l10n.noStopsYet,
+                    style:
+                        TextStyle(color: Colors.grey[500], fontSize: 13)),
               )
             else
               ReorderableListView.builder(
@@ -597,7 +628,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
                         IconButton(
                           icon: const Icon(Icons.edit_outlined,
                               size: 18, color: AppTheme.primary),
-                          onPressed: () => _openAddStopSheet(existing: stop),
+                          onPressed: () =>
+                              _openAddStopSheet(existing: stop),
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline,
@@ -614,7 +646,7 @@ class _TripFormScreenState extends State<TripFormScreen> {
 
             // ── Map preview ────────────────────────────────────────────────
             const SizedBox(height: 28),
-            Text('Map',
+            Text(l10n.mapSection,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: AppTheme.primary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -624,30 +656,31 @@ class _TripFormScreenState extends State<TripFormScreen> {
             const SizedBox(height: 28),
             Row(
               children: [
-                Text('Members',
+                Text(l10n.membersSection,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: AppTheme.primary, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: _openAddMemberSheet,
                   icon: const Icon(Icons.person_add_outlined, size: 16),
-                  label: const Text('Add member'),
+                  label: Text(l10n.addMember),
                   style: TextButton.styleFrom(
                       foregroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8)),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             if (_isEdit)
-              ..._existingMemberTiles(authUid)
+              ..._existingMemberTiles(context, authUid)
             else ...[
-              _youOrganizerTile(),
-              ..._pendingMemberTiles(),
+              _youOrganizerTile(context),
+              ..._pendingMemberTiles(context),
             ],
             const SizedBox(height: 24),
             AppButton(
-              label: _isEdit ? 'Save changes' : 'Save trip',
+              label: _isEdit ? l10n.saveChanges : l10n.saveTrip,
               onPressed: _save,
               loading: _loading,
             ),
@@ -658,72 +691,81 @@ class _TripFormScreenState extends State<TripFormScreen> {
     );
   }
 
-  Widget _youOrganizerTile() => const ListTile(
+  Widget _youOrganizerTile(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const CircleAvatar(
+          backgroundColor: AppTheme.primary,
+          child: Icon(Icons.person, color: Colors.white, size: 18)),
+      title: Text(l10n.you),
+      subtitle: Text(l10n.organizer),
+      dense: true,
+    );
+  }
+
+  List<Widget> _pendingMemberTiles(BuildContext context) {
+    return _pendingMembers.map((m) {
+      final detail = [
+        if (m.email != null) m.email!,
+        if (m.phone != null) m.phone!,
+      ].join(' · ');
+      return ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(
-            backgroundColor: AppTheme.primary,
-            child: Icon(Icons.person, color: Colors.white, size: 18)),
-        title: Text('You'),
-        subtitle: Text('Organizer'),
+          backgroundColor: Colors.grey[200],
+          child: Text(m.displayName[0].toUpperCase(),
+              style: const TextStyle(color: AppTheme.primary)),
+        ),
+        title: Text(m.displayName),
+        subtitle: detail.isNotEmpty ? Text(detail) : null,
+        trailing: IconButton(
+          icon: const Icon(Icons.remove_circle_outline,
+              color: AppTheme.danger, size: 20),
+          onPressed: () => setState(() => _pendingMembers.remove(m)),
+        ),
         dense: true,
       );
+    }).toList();
+  }
 
-  List<Widget> _pendingMemberTiles() => _pendingMembers.map((m) {
-        final detail = [
-          if (m.email != null) m.email!,
-          if (m.phone != null) m.phone!,
-        ].join(' · ');
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            backgroundColor: Colors.grey[200],
-            child: Text(m.displayName[0].toUpperCase(),
-                style: const TextStyle(color: AppTheme.primary)),
-          ),
-          title: Text(m.displayName),
-          subtitle: detail.isNotEmpty ? Text(detail) : null,
-          trailing: IconButton(
-            icon: const Icon(Icons.remove_circle_outline,
-                color: AppTheme.danger, size: 20),
-            onPressed: () => setState(() => _pendingMembers.remove(m)),
-          ),
-          dense: true,
-        );
-      }).toList();
-
-  List<Widget> _existingMemberTiles(String? authUid) =>
-      _pendingMembers.map((m) {
-        final isMe = m.userId == authUid;
-        final roleLabel = m.role == 'organizer' ? 'Organizer' : 'Member';
-        final contact = [
-          if (m.email != null) m.email!,
-          if (m.phone != null) m.phone!,
-        ].join(' · ');
-        final subtitleText = contact.isNotEmpty ? '$roleLabel · $contact' : roleLabel;
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            backgroundColor:
-                m.role == 'organizer' ? AppTheme.primary : Colors.grey[200],
-            child: Text(m.displayName[0].toUpperCase(),
-                style: TextStyle(
-                    color: m.role == 'organizer'
-                        ? Colors.white
-                        : AppTheme.primary)),
-          ),
-          title: Text(isMe ? 'You' : m.displayName),
-          subtitle: Text(subtitleText),
-          trailing: isMe
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.remove_circle_outline,
-                      color: AppTheme.danger, size: 20),
-                  onPressed: () =>
-                      setState(() => _pendingMembers.remove(m)),
-                ),
-          dense: true,
-        );
-      }).toList();
+  List<Widget> _existingMemberTiles(BuildContext context, String? authUid) {
+    final l10n = AppLocalizations.of(context);
+    return _pendingMembers.map((m) {
+      final isMe = m.userId == authUid;
+      final roleLabel =
+          m.role == 'organizer' ? l10n.organizer : l10n.member;
+      final contact = [
+        if (m.email != null) m.email!,
+        if (m.phone != null) m.phone!,
+      ].join(' · ');
+      final subtitleText =
+          contact.isNotEmpty ? '$roleLabel · $contact' : roleLabel;
+      return ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: CircleAvatar(
+          backgroundColor:
+              m.role == 'organizer' ? AppTheme.primary : Colors.grey[200],
+          child: Text(m.displayName[0].toUpperCase(),
+              style: TextStyle(
+                  color: m.role == 'organizer'
+                      ? Colors.white
+                      : AppTheme.primary)),
+        ),
+        title: Text(isMe ? l10n.you : m.displayName),
+        subtitle: Text(subtitleText),
+        trailing: isMe
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.remove_circle_outline,
+                    color: AppTheme.danger, size: 20),
+                onPressed: () =>
+                    setState(() => _pendingMembers.remove(m)),
+              ),
+        dense: true,
+      );
+    }).toList();
+  }
 }
 
 class _DateTimeTile extends StatelessWidget {

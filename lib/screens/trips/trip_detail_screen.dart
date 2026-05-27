@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
 import '../../models/trip_stop.dart';
 import '../../providers/trip_provider.dart';
@@ -25,16 +26,16 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   late final TabController _tabController;
   int _tabIndex = 0; // tracked for FAB visibility
 
-  static const _tabs = [
-    (label: 'Overview',  icon: Icons.info_outline_rounded),
-    (label: 'Itinerary', icon: Icons.route_outlined),
-    (label: 'Map',       icon: Icons.map_outlined),
+  static const _tabIcons = [
+    Icons.info_outline_rounded,
+    Icons.route_outlined,
+    Icons.map_outlined,
   ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(length: _tabIcons.length, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() => _tabIndex = _tabController.index);
@@ -49,20 +50,21 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   }
 
   Future<void> _confirmDeleteStop(BuildContext context, TripStop stop) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove stop?'),
-        content: Text('Remove "${stop.title}" from the itinerary?'),
+        title: Text(l10n.removeStopTitle),
+        content: Text(l10n.removeStopMessage(stop.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove',
-                style: TextStyle(color: AppTheme.danger)),
+            child: Text(l10n.remove,
+                style: const TextStyle(color: AppTheme.danger)),
           ),
         ],
       ),
@@ -107,11 +109,13 @@ class _TripDetailScreenState extends State<TripDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final tabLabels = [l10n.overview, l10n.itinerary, l10n.mapTab];
     final trip = context.watch<TripProvider>().getById(widget.tripId);
     if (trip == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(child: Text('Trip not found')),
+        body: Center(child: Text(l10n.tripNotFound)),
       );
     }
     return Scaffold(
@@ -119,16 +123,17 @@ class _TripDetailScreenState extends State<TripDetailScreen>
         title: Text(trip.title),
         bottom: TabBar(
           controller: _tabController,
-          tabs: _tabs
-              .map((t) => Tab(icon: Icon(t.icon, size: 20), text: t.label))
-              .toList(),
+          tabs: List.generate(
+            _tabIcons.length,
+            (i) => Tab(icon: Icon(_tabIcons[i], size: 20), text: tabLabels[i]),
+          ),
           labelStyle:
               const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit trip',
+            tooltip: l10n.editTripTooltip,
             onPressed: () => context.push('/trip/${trip.id}/edit'),
           ),
         ],
@@ -146,7 +151,8 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       ),
       floatingActionButton: _tabIndex == 1
           ? AppFab(
-              onPressed: () => showTripStopFormSheet(context, tripId: trip.id),
+              onPressed: () =>
+                  showTripStopFormSheet(context, tripId: trip.id),
             )
           : null,
     );
@@ -160,63 +166,70 @@ class _OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('MMM d, y  h:mm a');
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (trip.startLocation != null && trip.startLocation!.isNotEmpty) ...[
+        if (trip.startLocation != null &&
+            trip.startLocation!.isNotEmpty) ...[
           _InfoRow(
             icon: Icons.trip_origin_outlined,
-            label: 'Starting from',
+            label: l10n.startingFrom,
             value: trip.startLocation!,
           ),
           const SizedBox(height: 12),
         ],
         _InfoRow(
           icon: Icons.location_on_outlined,
-          label: 'Destination',
+          label: l10n.destination,
           value: trip.destination,
         ),
         const SizedBox(height: 12),
         _InfoRow(
           icon: Icons.calendar_today_outlined,
-          label: 'Start',
-          value: trip.startAt != null ? fmt.format(trip.startAt!) : 'Not set',
+          label: l10n.startLabel,
+          value:
+              trip.startAt != null ? fmt.format(trip.startAt!) : l10n.notSet,
         ),
         const SizedBox(height: 12),
         _InfoRow(
           icon: Icons.event_outlined,
-          label: 'End',
-          value: trip.endAt != null ? fmt.format(trip.endAt!) : 'Not set',
+          label: l10n.endLabel,
+          value: trip.endAt != null ? fmt.format(trip.endAt!) : l10n.notSet,
         ),
         if (trip.notes.isNotEmpty) ...[
           const SizedBox(height: 12),
           _InfoRow(
             icon: Icons.notes_outlined,
-            label: 'Notes',
+            label: l10n.notes,
             value: trip.notes,
           ),
         ],
         const SizedBox(height: 24),
-        Text('Members',
+        Text(l10n.membersSection,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: AppTheme.primary, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...trip.members.map((m) => ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
-                backgroundColor:
-                    m.role == 'organizer' ? AppTheme.primary : Colors.grey[200],
-                child: Text(m.displayName.isNotEmpty
-                    ? m.displayName[0].toUpperCase()
-                    : '?',
+                backgroundColor: m.role == 'organizer'
+                    ? AppTheme.primary
+                    : Colors.grey[200],
+                child: Text(
+                    m.displayName.isNotEmpty
+                        ? m.displayName[0].toUpperCase()
+                        : '?',
                     style: TextStyle(
                         color: m.role == 'organizer'
                             ? Colors.white
                             : AppTheme.primary)),
               ),
               title: Text(m.displayName),
-              subtitle: Text(m.role == 'organizer' ? 'Organizer' : 'Member'),
+              subtitle: Text(m.role == 'organizer'
+                  ? l10n.organizer
+                  : l10n.member),
               dense: true,
             )),
       ],
@@ -228,21 +241,24 @@ class _ItineraryTab extends StatelessWidget {
   final Trip trip;
   final void Function(TripStop stop) onDeleteStop;
 
-  const _ItineraryTab({required this.trip, required this.onDeleteStop});
+  const _ItineraryTab(
+      {required this.trip, required this.onDeleteStop});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (trip.stops.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.route_outlined, size: 64, color: AppTheme.primaryLight),
-            SizedBox(height: 16),
-            Text('No stops yet'),
-            SizedBox(height: 8),
-            Text('Tap + to add your first stop.',
-                style: TextStyle(color: Colors.grey)),
+            const Icon(Icons.route_outlined,
+                size: 64, color: AppTheme.primaryLight),
+            const SizedBox(height: 16),
+            Text(l10n.noStopsInItinerary),
+            const SizedBox(height: 8),
+            Text(l10n.addFirstStop,
+                style: const TextStyle(color: Colors.grey)),
           ],
         ),
       );
@@ -262,7 +278,7 @@ class _ItineraryTab extends StatelessWidget {
                 backgroundColor: AppTheme.danger,
                 foregroundColor: Colors.white,
                 icon: Icons.delete_outline,
-                label: 'Delete',
+                label: l10n.delete,
               ),
             ],
           ),
@@ -281,6 +297,7 @@ class _StopCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final timeFmt = DateFormat('MMM d  h:mm a');
     return AppTappable(
       onTap: () =>
@@ -322,9 +339,9 @@ class _StopCard extends StatelessWidget {
                     Text(
                       [
                         if (stop.arriveAt != null)
-                          'Arrive ${timeFmt.format(stop.arriveAt!)}',
+                          '${l10n.arrive} ${timeFmt.format(stop.arriveAt!)}',
                         if (stop.departAt != null)
-                          'Depart ${timeFmt.format(stop.departAt!)}',
+                          '${l10n.depart} ${timeFmt.format(stop.departAt!)}',
                       ].join('  ·  '),
                       style: TextStyle(color: Colors.grey[700], fontSize: 13),
                     ),

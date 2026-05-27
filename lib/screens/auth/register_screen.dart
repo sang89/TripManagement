@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: SafeArea(
@@ -68,9 +70,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const Icon(Icons.flight_takeoff_rounded,
                       size: 72, color: AppTheme.primary),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Create Account',
-                    style: TextStyle(
+                  Text(
+                    l10n.createAccount,
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primary,
@@ -78,7 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Plan your next adventure',
+                    l10n.planNextAdventure,
                     style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
@@ -93,26 +95,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             TextFormField(
                               controller: _nameCtrl,
                               textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                labelText: 'Full Name',
-                                prefixIcon: Icon(Icons.person_outline),
+                              decoration: InputDecoration(
+                                labelText: l10n.fullName,
+                                prefixIcon:
+                                    const Icon(Icons.person_outline),
                               ),
                               validator: (v) =>
                                   v == null || v.trim().isEmpty
-                                      ? 'Enter your name'
+                                      ? l10n.enterYourName
                                       : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _emailCtrl,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.email_outlined),
+                              decoration: InputDecoration(
+                                labelText: l10n.email,
+                                prefixIcon:
+                                    const Icon(Icons.email_outlined),
                               ),
                               validator: (v) =>
                                   v == null || !v.contains('@')
-                                      ? 'Enter a valid email'
+                                      ? l10n.enterValidEmail
                                       : null,
                             ),
                             const SizedBox(height: 16),
@@ -120,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               controller: _passwordCtrl,
                               obscureText: _obscure,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: l10n.password,
                                 prefixIcon:
                                     const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
@@ -132,19 +136,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                               validator: (v) => v == null || v.length < 6
-                                  ? 'Minimum 6 characters'
+                                  ? l10n.passwordMinimum6
                                   : null,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _confirmCtrl,
                               obscureText: _obscure,
-                              decoration: const InputDecoration(
-                                labelText: 'Confirm Password',
-                                prefixIcon: Icon(Icons.lock_outline_rounded),
+                              decoration: InputDecoration(
+                                labelText: l10n.confirmPassword,
+                                prefixIcon:
+                                    const Icon(Icons.lock_outline_rounded),
                               ),
                               validator: (v) => v != _passwordCtrl.text
-                                  ? 'Passwords do not match'
+                                  ? l10n.passwordsDoNotMatch
                                   : null,
                             ),
                             if (_error != null) ...[
@@ -158,7 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ],
                             const SizedBox(height: 24),
                             AppButton(
-                              label: 'Create Account',
+                              label: l10n.createAccount,
                               onPressed: _register,
                               loading: _loading,
                             ),
@@ -171,10 +176,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Already have an account?'),
+                      Text(l10n.alreadyHaveAccount),
                       TextButton(
                         onPressed: () => context.go('/login'),
-                        child: const Text('Sign In'),
+                        child: Text(l10n.signIn),
                       ),
                     ],
                   ),

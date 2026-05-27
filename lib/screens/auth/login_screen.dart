@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -90,6 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: SafeArea(
@@ -104,9 +106,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Icon(Icons.flight_takeoff_rounded,
                       size: 72, color: AppTheme.primary),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Trip Planner',
-                    style: TextStyle(
+                  Text(
+                    l10n.appTitle,
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primary,
@@ -114,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sign in to your account',
+                    l10n.signInToAccount,
                     style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
@@ -130,13 +132,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _emailCtrl,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.email_outlined),
+                              decoration: InputDecoration(
+                                labelText: l10n.email,
+                                prefixIcon: const Icon(Icons.email_outlined),
                               ),
                               validator: (v) =>
                                   v == null || !v.contains('@')
-                                      ? 'Enter a valid email'
+                                      ? l10n.enterValidEmail
                                       : null,
                             ),
                             const SizedBox(height: 16),
@@ -147,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               onFieldSubmitted: (_) =>
                                   _loading ? null : _login(),
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: l10n.password,
                                 prefixIcon:
                                     const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
@@ -159,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               validator: (v) => v == null || v.length < 4
-                                  ? 'Password too short'
+                                  ? l10n.passwordTooShort
                                   : null,
                             ),
                             const SizedBox(height: 4),
@@ -175,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onTap: () => setState(
                                       () => _rememberMe = !_rememberMe),
                                   child: Text(
-                                    'Remember me',
+                                    l10n.rememberMe,
                                     style: TextStyle(
                                         color: Colors.grey[700],
                                         fontSize: 14),
@@ -194,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                             const SizedBox(height: 16),
                             AppButton(
-                              label: 'Sign In',
+                              label: l10n.signIn,
                               onPressed: _login,
                               loading: _loading,
                             ),
@@ -207,10 +209,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account?"),
+                      Text(l10n.dontHaveAccount),
                       TextButton(
                         onPressed: () => context.go('/register'),
-                        child: const Text('Sign Up'),
+                        child: Text(l10n.signUp),
                       ),
                     ],
                   ),

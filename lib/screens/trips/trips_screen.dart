@@ -3,6 +3,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
 import '../../providers/trip_provider.dart';
 import '../../widgets/trip_card.dart';
@@ -18,17 +19,16 @@ class _TripsScreenState extends State<TripsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  // Tab order: 0 = All, 1 = Upcoming, 2 = Past
-  static const _tabs = [
-    (label: 'All',      icon: Icons.format_list_bulleted_rounded),
-    (label: 'Upcoming', icon: Icons.flight_takeoff_rounded),
-    (label: 'Past',     icon: Icons.history_rounded),
+  static const _tabIcons = [
+    Icons.format_list_bulleted_rounded,
+    Icons.flight_takeoff_rounded,
+    Icons.history_rounded,
   ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(length: _tabIcons.length, vsync: this);
   }
 
   @override
@@ -52,6 +52,7 @@ class _TripsScreenState extends State<TripsScreen>
   }
 
   Widget _tripSlide(BuildContext context, Trip trip) {
+    final l10n = AppLocalizations.of(context);
     return Slidable(
       key: ValueKey(trip.id),
       endActionPane: ActionPane(
@@ -62,7 +63,7 @@ class _TripsScreenState extends State<TripsScreen>
             backgroundColor: AppTheme.danger,
             foregroundColor: Colors.white,
             icon: Icons.delete_outline,
-            label: 'Delete',
+            label: l10n.delete,
           ),
         ],
       ),
@@ -71,20 +72,21 @@ class _TripsScreenState extends State<TripsScreen>
   }
 
   Future<void> _confirmDelete(BuildContext context, Trip trip) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete trip?'),
-        content: Text('Delete "${trip.title}"? This cannot be undone.'),
+        title: Text(l10n.deleteTripTitle),
+        content: Text(l10n.deleteTripMessage(trip.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppTheme.danger)),
+            child: Text(l10n.delete,
+                style: const TextStyle(color: AppTheme.danger)),
           ),
         ],
       ),
@@ -96,6 +98,7 @@ class _TripsScreenState extends State<TripsScreen>
 
   Widget _tabBody(BuildContext context, int tabIndex) {
     final provider = context.watch<TripProvider>();
+    final l10n = AppLocalizations.of(context);
 
     if (!provider.loaded) {
       return const Center(child: CircularProgressIndicator());
@@ -111,15 +114,15 @@ class _TripsScreenState extends State<TripsScreen>
               const Icon(Icons.cloud_off_outlined,
                   size: 48, color: AppTheme.danger),
               const SizedBox(height: 12),
-              const Text('Could not load trips',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(l10n.couldNotLoadTrips,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Text(provider.loadError!,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600], fontSize: 13)),
               const SizedBox(height: 16),
               AppButton(
-                label: 'Retry',
+                label: l10n.retry,
                 onPressed: () => context.read<TripProvider>().load(),
               ),
             ],
@@ -152,14 +155,17 @@ class _TripsScreenState extends State<TripsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final tabLabels = [l10n.all, l10n.upcoming, l10n.past];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Trips'),
+        title: Text(l10n.myTrips),
         bottom: TabBar(
           controller: _tabController,
-          tabs: _tabs
-              .map((t) => Tab(icon: Icon(t.icon, size: 20), text: t.label))
-              .toList(),
+          tabs: List.generate(
+            _tabIcons.length,
+            (i) => Tab(icon: Icon(_tabIcons[i], size: 20), text: tabLabels[i]),
+          ),
           labelStyle:
               const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
@@ -167,7 +173,7 @@ class _TripsScreenState extends State<TripsScreen>
       body: TabBarView(
         controller: _tabController,
         children: List.generate(
-          _tabs.length,
+          _tabIcons.length,
           (i) => _tabBody(context, i),
         ),
       ),
@@ -185,12 +191,15 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final messages = [
-      ('No trips yet',       'Tap + to get started.'),
-      ('No upcoming trips',  'Tap + to plan your next adventure.'),
-      ('No past trips',      'Your completed trips will appear here.'),
+    final l10n = AppLocalizations.of(context);
+    final titles = [l10n.noTripsYet, l10n.noUpcomingTrips, l10n.noPastTrips];
+    final subtitles = [
+      l10n.noTripsHint,
+      l10n.noUpcomingTripsHint,
+      l10n.noPastTripsHint,
     ];
-    final (title, subtitle) = messages[tabIndex];
+    final title = titles[tabIndex];
+    final subtitle = subtitles[tabIndex];
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'config/api_keys.dart';
+import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/trip_provider.dart';
+import 'providers/user_profile_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/profile/profile_screen.dart';
+import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell_scaffold.dart';
 import 'screens/trips/trip_detail_screen.dart';
 import 'screens/trips/trip_form_screen.dart';
@@ -34,12 +39,21 @@ void main() async {
   await settings.load();
 
   final trips = TripProvider(connectivity: connectivity, queue: offlineQueue);
-  if (auth.isLoggedIn) await trips.load();
+  final profile = UserProfileProvider(
+    connectivity: connectivity,
+    queue: offlineQueue,
+  );
+
+  if (auth.isLoggedIn) {
+    await trips.load();
+    await profile.load();
+  }
 
   runApp(TripManagementApp(
     auth: auth,
     settings: settings,
     trips: trips,
+    profile: profile,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
   ));
@@ -49,6 +63,7 @@ class TripManagementApp extends StatefulWidget {
   final AuthProvider auth;
   final SettingsProvider settings;
   final TripProvider trips;
+  final UserProfileProvider profile;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
 
@@ -57,6 +72,7 @@ class TripManagementApp extends StatefulWidget {
     required this.auth,
     required this.settings,
     required this.trips,
+    required this.profile,
     required this.connectivity,
     required this.offlineQueue,
   });
@@ -115,9 +131,23 @@ class _TripManagementAppState extends State<TripManagementApp> {
             StatefulShellBranch(routes: [
               GoRoute(
                 path: '/journal',
-                builder: (_, _) => const Scaffold(
-                  body: Center(child: Text('Journal coming soon')),
+                builder: (context, _) => Scaffold(
+                  body: Center(
+                    child: Text(AppLocalizations.of(context).journalComingSoon),
+                  ),
                 ),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (_, _) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'settings',
+                    builder: (_, _) => const SettingsScreen(),
+                  ),
+                ],
               ),
             ]),
           ],
@@ -129,8 +159,10 @@ class _TripManagementAppState extends State<TripManagementApp> {
   void _onAuthChanged() {
     if (widget.auth.isLoggedIn) {
       widget.trips.load();
+      widget.profile.load();
     } else {
       widget.trips.clear();
+      widget.profile.clear();
     }
   }
 
@@ -147,6 +179,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.auth),
         ChangeNotifierProvider.value(value: widget.settings),
         ChangeNotifierProvider.value(value: widget.trips),
+        ChangeNotifierProvider.value(value: widget.profile),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
       ],
@@ -155,13 +188,16 @@ class _TripManagementAppState extends State<TripManagementApp> {
           title: 'Trip Planner',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
+          locale: settings.locale,
           themeMode: settings.themeMode,
           localizationsDelegates: const [
+            AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
+            ...PhoneFieldLocalization.delegates,
           ],
-          supportedLocales: const [Locale('en')],
+          supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: _router,
           debugShowCheckedModeBanner: false,
         ),

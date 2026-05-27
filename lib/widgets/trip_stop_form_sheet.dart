@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../config/api_keys.dart';
+import '../l10n/app_localizations.dart';
 import '../models/trip_stop.dart';
 import '../providers/trip_provider.dart';
 import '../services/trip_places_service.dart';
@@ -79,9 +80,12 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
 
   Future<void> _pickDateTime(bool isArrival) async {
     final now = DateTime.now();
-    final initial = (isArrival ? _arriveAt : _departAt) ?? _arriveAt ?? now;
-    final firstDate = isArrival ? DateTime(2020) : (_arriveAt ?? DateTime(2020));
-    final lastDate = isArrival ? (_departAt ?? DateTime(2100)) : DateTime(2100);
+    final initial =
+        (isArrival ? _arriveAt : _departAt) ?? _arriveAt ?? now;
+    final firstDate =
+        isArrival ? DateTime(2020) : (_arriveAt ?? DateTime(2020));
+    final lastDate =
+        isArrival ? (_departAt ?? DateTime(2100)) : DateTime(2100);
 
     final date = await showDatePicker(
       context: context,
@@ -100,7 +104,9 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
     setState(() {
       if (isArrival) {
         _arriveAt = picked;
-        if (_departAt != null && !picked.isBefore(_departAt!)) _departAt = null;
+        if (_departAt != null && !picked.isBefore(_departAt!)) {
+          _departAt = null;
+        }
       } else {
         _departAt = picked;
       }
@@ -167,6 +173,7 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isEdit = widget.existing != null;
     return Padding(
       padding:
@@ -189,7 +196,7 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                Text(isEdit ? 'Edit stop' : 'Add stop',
+                Text(isEdit ? l10n.editStop : l10n.addStopButton,
                     style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
                 if (_loading)
@@ -211,17 +218,17 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
                   children: [
                     TextFormField(
                       controller: _titleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Title',
-                        prefixIcon: Icon(Icons.place_outlined),
+                      decoration: InputDecoration(
+                        labelText: l10n.stopTitleLabel,
+                        prefixIcon: const Icon(Icons.place_outlined),
                       ),
                       validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Required' : null,
+                          v == null || v.trim().isEmpty ? l10n.required : null,
                     ),
                     const SizedBox(height: 12),
                     PlacesAutocompleteField(
                       controller: _addressCtrl,
-                      label: 'Address (optional)',
+                      label: l10n.addressOptional,
                       prefixIcon: Icons.location_on_outlined,
                       placesService: _places,
                       onCoordinatesChanged: (lat, lng) => setState(() {
@@ -231,14 +238,14 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
                     ),
                     const SizedBox(height: 12),
                     _DateTimeRow(
-                      label: 'Arrive',
+                      label: l10n.arriveLabel,
                       value: _arriveAt,
                       onTap: () => _pickDateTime(true),
                       onClear: () => setState(() => _arriveAt = null),
                     ),
                     const SizedBox(height: 12),
                     _DateTimeRow(
-                      label: 'Depart',
+                      label: l10n.departLabel,
                       value: _departAt,
                       onTap: () => _pickDateTime(false),
                       onClear: () => setState(() => _departAt = null),
@@ -246,15 +253,15 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _notesCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes (optional)',
-                        prefixIcon: Icon(Icons.notes_outlined),
+                      decoration: InputDecoration(
+                        labelText: l10n.notesOptional,
+                        prefixIcon: const Icon(Icons.notes_outlined),
                       ),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 20),
                     AppButton(
-                      label: isEdit ? 'Save changes' : 'Add stop',
+                      label: isEdit ? l10n.saveChanges : l10n.addStopButton,
                       onPressed: _loading ? () {} : _save,
                       loading: _loading,
                     ),
@@ -284,10 +291,11 @@ class _DateTimeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final display = value != null
         ? '${value!.month}/${value!.day}/${value!.year}  '
             '${TimeOfDay.fromDateTime(value!).format(context)}'
-        : 'Not set';
+        : l10n.notSet;
     return AppTappable(
       onTap: onTap,
       child: InputDecorator(
@@ -302,8 +310,8 @@ class _DateTimeRow extends StatelessWidget {
               : null,
         ),
         child: Text(display,
-            style:
-                TextStyle(color: value != null ? null : Colors.grey[500])),
+            style: TextStyle(
+                color: value != null ? null : Colors.grey[500])),
       ),
     );
   }
