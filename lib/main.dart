@@ -14,10 +14,18 @@ import 'screens/shell/shell_scaffold.dart';
 import 'screens/trips/trip_detail_screen.dart';
 import 'screens/trips/trip_form_screen.dart';
 import 'screens/trips/trips_screen.dart';
+import 'services/connectivity_service.dart';
+import 'services/offline_queue.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonKey);
+
+  final connectivity = ConnectivityService();
+  await connectivity.init();
+
+  final offlineQueue = OfflineQueue(connectivity);
+  await offlineQueue.init();
 
   final auth = AuthProvider();
   await auth.init();
@@ -25,22 +33,32 @@ void main() async {
   final settings = SettingsProvider();
   await settings.load();
 
-  final trips = TripProvider();
+  final trips = TripProvider(connectivity: connectivity, queue: offlineQueue);
   if (auth.isLoggedIn) await trips.load();
 
-  runApp(TripManagementApp(auth: auth, settings: settings, trips: trips));
+  runApp(TripManagementApp(
+    auth: auth,
+    settings: settings,
+    trips: trips,
+    connectivity: connectivity,
+    offlineQueue: offlineQueue,
+  ));
 }
 
 class TripManagementApp extends StatefulWidget {
   final AuthProvider auth;
   final SettingsProvider settings;
   final TripProvider trips;
+  final ConnectivityService connectivity;
+  final OfflineQueue offlineQueue;
 
   const TripManagementApp({
     super.key,
     required this.auth,
     required this.settings,
     required this.trips,
+    required this.connectivity,
+    required this.offlineQueue,
   });
 
   @override
@@ -129,6 +147,8 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.auth),
         ChangeNotifierProvider.value(value: widget.settings),
         ChangeNotifierProvider.value(value: widget.trips),
+        ChangeNotifierProvider.value(value: widget.connectivity),
+        ChangeNotifierProvider.value(value: widget.offlineQueue),
       ],
       child: Consumer<SettingsProvider>(
         builder: (_, settings, _) => MaterialApp.router(
