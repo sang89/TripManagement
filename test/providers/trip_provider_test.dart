@@ -185,6 +185,17 @@ void main() {
       expect(rt.members.first.displayName, member.displayName);
     });
 
+    test('preserves member status field through cache round-trip', () {
+      final pending = TripMember(
+        id: 'm2', tripId: 'x3a', displayName: 'Bob',
+        role: 'member', status: 'pending', createdAt: DateTime(2026, 1, 1),
+      );
+      final trip = _makeTrip(id: 'x3a', members: [pending]);
+      final json = TripProvider.tripToCacheJsonForTest(trip);
+      final rt = Trip.fromJson(json);
+      expect(rt.members.first.status, 'pending');
+    });
+
     test('preserves nested stops sorted by sortOrder', () {
       final s0 = _makeStop(id: 's0', tripId: 'x4', sortOrder: 0);
       final s1 = _makeStop(id: 's1', tripId: 'x4', sortOrder: 1);

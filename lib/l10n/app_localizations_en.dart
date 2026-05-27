@@ -466,4 +466,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memberLinkedAccount => 'Linked account';
+
+  @override
+  String get invitePending => 'Pending';
+
+  @override
+  String get inviteAccepted => 'Accepted';
+
+  @override
+  String get inviteDeclined => 'Declined';
+
+  @override
+  String tripInvitationsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count trip invitations',
+      one: '1 trip invitation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get acceptInvite => 'Accept';
+
+  @override
+  String get declineInvite => 'Decline';
+
+  @override
+  String get inviteNotifTitle => 'Trip invitation';
+
+  @override
+  String inviteNotifBody(String tripTitle) {
+    return 'You\'ve been invited to $tripTitle';
+  }
 }

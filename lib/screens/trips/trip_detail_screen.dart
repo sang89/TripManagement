@@ -227,12 +227,58 @@ class _OverviewTab extends StatelessWidget {
                             : AppTheme.primary)),
               ),
               title: Text(m.displayName),
-              subtitle: Text(m.role == 'organizer'
-                  ? l10n.organizer
-                  : l10n.member),
+              subtitle: Row(
+                children: [
+                  Text(m.role == 'organizer'
+                      ? l10n.organizer
+                      : l10n.member),
+                  if (m.userId != null) ...[
+                    const SizedBox(width: 6),
+                    _StatusChip(
+                      label: switch (m.status) {
+                        'pending' => l10n.invitePending,
+                        'declined' => l10n.inviteDeclined,
+                        _ => l10n.inviteAccepted,
+                      },
+                      color: switch (m.status) {
+                        'pending' => Colors.orange,
+                        'declined' => AppTheme.danger,
+                        _ => Colors.green,
+                      },
+                    ),
+                  ],
+                ],
+              ),
               dense: true,
             )),
       ],
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

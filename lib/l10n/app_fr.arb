@@ -147,5 +147,19 @@
   "memberSearching": "Recherche en cours…",
   "memberAccountFound": "Compte trouvé",
   "memberNoAccountFound": "Aucun compte trouvé",
-  "memberLinkedAccount": "Compte lié"
+  "memberLinkedAccount": "Compte lié",
+  "invitePending": "En attente",
+  "inviteAccepted": "Accepté",
+  "inviteDeclined": "Refusé",
+  "tripInvitationsTitle": "{count, plural, =1{1 invitation de voyage} other{{count} invitations de voyage}}",
+  "@tripInvitationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "acceptInvite": "Accepter",
+  "declineInvite": "Refuser",
+  "inviteNotifTitle": "Invitation de voyage",
+  "inviteNotifBody": "Vous avez été invité à {tripTitle}",
+  "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
 }

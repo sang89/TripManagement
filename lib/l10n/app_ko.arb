@@ -147,5 +147,19 @@
   "memberSearching": "검색 중…",
   "memberAccountFound": "계정을 찾았습니다",
   "memberNoAccountFound": "계정을 찾을 수 없습니다",
-  "memberLinkedAccount": "연결된 계정"
+  "memberLinkedAccount": "연결된 계정",
+  "invitePending": "대기 중",
+  "inviteAccepted": "수락됨",
+  "inviteDeclined": "거절됨",
+  "tripInvitationsTitle": "{count, plural, other{여행 초대 {count}건}}",
+  "@tripInvitationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "acceptInvite": "수락",
+  "declineInvite": "거절",
+  "inviteNotifTitle": "여행 초대",
+  "inviteNotifBody": "{tripTitle}에 초대받으셨습니다",
+  "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
 }

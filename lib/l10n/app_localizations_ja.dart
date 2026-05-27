@@ -463,4 +463,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get memberLinkedAccount => 'リンク済みアカウント';
+
+  @override
+  String get invitePending => '保留中';
+
+  @override
+  String get inviteAccepted => '承諾済み';
+
+  @override
+  String get inviteDeclined => '辞退済み';
+
+  @override
+  String tripInvitationsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件の旅行招待',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get acceptInvite => '承諾';
+
+  @override
+  String get declineInvite => '辞退';
+
+  @override
+  String get inviteNotifTitle => '旅行招待';
+
+  @override
+  String inviteNotifBody(String tripTitle) {
+    return '$tripTitleに招待されました';
+  }
 }

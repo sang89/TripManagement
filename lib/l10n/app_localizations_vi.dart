@@ -467,4 +467,38 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get memberLinkedAccount => 'Tài khoản đã liên kết';
+
+  @override
+  String get invitePending => 'Đang chờ';
+
+  @override
+  String get inviteAccepted => 'Đã chấp nhận';
+
+  @override
+  String get inviteDeclined => 'Đã từ chối';
+
+  @override
+  String tripInvitationsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lời mời chuyến đi',
+      one: '1 lời mời chuyến đi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get acceptInvite => 'Chấp nhận';
+
+  @override
+  String get declineInvite => 'Từ chối';
+
+  @override
+  String get inviteNotifTitle => 'Lời mời chuyến đi';
+
+  @override
+  String inviteNotifBody(String tripTitle) {
+    return 'Bạn đã được mời tham gia $tripTitle';
+  }
 }

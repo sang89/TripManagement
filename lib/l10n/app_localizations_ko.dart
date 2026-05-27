@@ -464,4 +464,37 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get memberLinkedAccount => '연결된 계정';
+
+  @override
+  String get invitePending => '대기 중';
+
+  @override
+  String get inviteAccepted => '수락됨';
+
+  @override
+  String get inviteDeclined => '거절됨';
+
+  @override
+  String tripInvitationsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '여행 초대 $count건',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get acceptInvite => '수락';
+
+  @override
+  String get declineInvite => '거절';
+
+  @override
+  String get inviteNotifTitle => '여행 초대';
+
+  @override
+  String inviteNotifBody(String tripTitle) {
+    return '$tripTitle에 초대받으셨습니다';
+  }
 }

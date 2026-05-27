@@ -147,5 +147,19 @@
   "memberSearching": "検索中…",
   "memberAccountFound": "アカウントが見つかりました",
   "memberNoAccountFound": "アカウントが見つかりません",
-  "memberLinkedAccount": "リンク済みアカウント"
+  "memberLinkedAccount": "リンク済みアカウント",
+  "invitePending": "保留中",
+  "inviteAccepted": "承諾済み",
+  "inviteDeclined": "辞退済み",
+  "tripInvitationsTitle": "{count, plural, other{{count}件の旅行招待}}",
+  "@tripInvitationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "acceptInvite": "承諾",
+  "declineInvite": "辞退",
+  "inviteNotifTitle": "旅行招待",
+  "inviteNotifBody": "{tripTitle}に招待されました",
+  "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
 }
