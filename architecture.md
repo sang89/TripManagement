@@ -17,6 +17,10 @@
 | Navigation | Declarative routing | `go_router ^14.6.2` |
 | Backend / Database | Supabase (Postgres + Auth) | `supabase_flutter ^2.9.0` |
 | Secure storage | Flutter Secure Storage | `flutter_secure_storage ^9.2.4` |
+| Offline cache | SharedPreferences JSON cache | `shared_preferences ^2.3.0` |
+| Offline queue | Write-ahead queue, replayed on reconnect | (same package) |
+| Connectivity | Network state monitor | `connectivity_plus ^6.1.0` |
+| Client UUID gen | Offline ID generation | `uuid ^4.5.0` |
 | Address / place search | Google Places API (New) — mobile + web | `http ^1.4.0` |
 | Maps | Google Maps Flutter | `google_maps_flutter ^2.9.0` |
 | Real road routes | Google Maps Directions API | `http ^1.4.0` (REST) |
@@ -62,7 +66,10 @@ lib/
 │   ├── trip_places_web.dart            # Web impl via Google Maps JS SDK + dart:js_interop
 │   ├── trip_places_stub.dart           # Stub for non-web builds
 │   ├── directions_service.dart         # Google Maps Directions API; decodes encoded polyline
-│   └── cache_entry.dart                # Generic TTL cache wrapper
+│   ├── cache_entry.dart                # Generic TTL cache wrapper
+│   ├── local_cache.dart                # SharedPreferences JSON cache (offline read support)
+│   ├── connectivity_service.dart       # Network state monitor (connectivity_plus)
+│   └── offline_queue.dart              # Persistent write-ahead queue, replayed on reconnect
 ├── widgets/
 │   ├── trip_card.dart                  # Trip summary card (title, destination, date range, member count)
 │   ├── trip_map_widget.dart            # Google Map with numbered stop markers + real road polyline
@@ -107,8 +114,21 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
 | `TripProvider` | All trips + members + stops | `load()`, `clear()`, `getById(id)`, CRUD for trips/members/stops |
 | `SettingsProvider` | Theme mode preference | `load()`, `setThemeMode(ThemeMode)` |
+| `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |
+| `OfflineQueue` | Pending write operations | `init()`, `enqueue()`, `flush()`, `pendingCount`, `hasPending` |
 
 Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` or `TripProvider.clear()`.
+
+### Offline behaviour
+
+`TripProvider` accepts a `ConnectivityService` and `OfflineQueue`. When offline:
+
+- **`load()`** — serves the last-saved JSON cache from `SharedPreferences` (key `cache_trips_v1_<userId>`). Falls back to cache on network errors even when nominally online.
+- **Write operations** — applied optimistically to the in-memory list immediately, then either sent to Supabase (online) or added to `OfflineQueue` (offline). The cache is updated after every mutation so app restarts reflect pending changes.
+- **Queue flush** — `OfflineQueue` auto-flushes when `ConnectivityService` reports coming back online. Operations are replayed in order using `upsert`/`update`/`delete`. Failed ops stay in the queue and are retried on the next flush.
+- **Logout** — `clear()` evicts the cache key for that user.
+
+Client-side UUID generation (`uuid` package) ensures new records have a stable ID before and after the Supabase round-trip.
 
 ---
 
