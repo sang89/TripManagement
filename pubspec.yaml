@@ -32,6 +32,8 @@ dependencies:
   uuid: ^4.5.0
   image_picker: ^1.1.2
   phone_form_field: ^10.0.17
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.0.0
 
 dev_dependencies:
   flutter_test:

@@ -147,5 +147,19 @@
   "memberSearching": "Đang tìm kiếm…",
   "memberAccountFound": "Đã tìm thấy tài khoản",
   "memberNoAccountFound": "Không tìm thấy tài khoản",
-  "memberLinkedAccount": "Tài khoản đã liên kết"
+  "memberLinkedAccount": "Tài khoản đã liên kết",
+  "invitePending": "Đang chờ",
+  "inviteAccepted": "Đã chấp nhận",
+  "inviteDeclined": "Đã từ chối",
+  "tripInvitationsTitle": "{count, plural, =1{1 lời mời chuyến đi} other{{count} lời mời chuyến đi}}",
+  "@tripInvitationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "acceptInvite": "Chấp nhận",
+  "declineInvite": "Từ chối",
+  "inviteNotifTitle": "Lời mời chuyến đi",
+  "inviteNotifBody": "Bạn đã được mời tham gia {tripTitle}",
+  "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
 }

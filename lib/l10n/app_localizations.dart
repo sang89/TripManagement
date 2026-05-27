@@ -995,6 +995,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Linked account'**
   String get memberLinkedAccount;
+
+  /// No description provided for @invitePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get invitePending;
+
+  /// No description provided for @inviteAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted'**
+  String get inviteAccepted;
+
+  /// No description provided for @inviteDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined'**
+  String get inviteDeclined;
+
+  /// No description provided for @tripInvitationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 trip invitation} other{{count} trip invitations}}'**
+  String tripInvitationsTitle(int count);
+
+  /// No description provided for @acceptInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get acceptInvite;
+
+  /// No description provided for @declineInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get declineInvite;
+
+  /// No description provided for @inviteNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip invitation'**
+  String get inviteNotifTitle;
+
+  /// No description provided for @inviteNotifBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve been invited to {tripTitle}'**
+  String inviteNotifBody(String tripTitle);
 }
 
 class _AppLocalizationsDelegate

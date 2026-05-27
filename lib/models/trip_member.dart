@@ -6,6 +6,7 @@ class TripMember {
   final String? userId;
   final String? email;
   final String? phone;
+  final String status; // 'pending' | 'accepted' | 'declined'
   final DateTime createdAt;
 
   const TripMember({
@@ -16,6 +17,7 @@ class TripMember {
     this.userId,
     this.email,
     this.phone,
+    this.status = 'accepted',
     required this.createdAt,
   });
 
@@ -27,6 +29,7 @@ class TripMember {
         userId: json['user_id'] as String?,
         email: json['email'] as String?,
         phone: json['phone'] as String?,
+        status: json['status'] as String? ?? 'accepted',
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
@@ -44,6 +47,7 @@ class TripMember {
     String? userId,
     String? email,
     String? phone,
+    String? status,
   }) =>
       TripMember(
         id: id,
@@ -53,6 +57,7 @@ class TripMember {
         userId: userId ?? this.userId,
         email: email ?? this.email,
         phone: phone ?? this.phone,
+        status: status ?? this.status,
         createdAt: createdAt,
       );
 }

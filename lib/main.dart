@@ -1,13 +1,17 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_logging/shared_logging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'config/api_keys.dart';
+import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
+import 'providers/invitations_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/trip_provider.dart';
 import 'providers/user_profile_provider.dart';
@@ -21,9 +25,12 @@ import 'screens/trips/trip_form_screen.dart';
 import 'screens/trips/trips_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_queue.dart';
+import 'services/push_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AppLogger.init();
   await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonKey);
 
   final connectivity = ConnectivityService();
@@ -43,10 +50,13 @@ void main() async {
     connectivity: connectivity,
     queue: offlineQueue,
   );
+  final invitations = InvitationsProvider();
 
   if (auth.isLoggedIn) {
     await trips.load();
     await profile.load();
+    final uid = auth.userId;
+    if (uid != null) await invitations.init(uid);
   }
 
   runApp(TripManagementApp(
@@ -54,6 +64,7 @@ void main() async {
     settings: settings,
     trips: trips,
     profile: profile,
+    invitations: invitations,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
   ));
@@ -64,6 +75,7 @@ class TripManagementApp extends StatefulWidget {
   final SettingsProvider settings;
   final TripProvider trips;
   final UserProfileProvider profile;
+  final InvitationsProvider invitations;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
 
@@ -73,6 +85,7 @@ class TripManagementApp extends StatefulWidget {
     required this.settings,
     required this.trips,
     required this.profile,
+    required this.invitations,
     required this.connectivity,
     required this.offlineQueue,
   });
@@ -83,10 +96,15 @@ class TripManagementApp extends StatefulWidget {
 
 class _TripManagementAppState extends State<TripManagementApp> {
   late final GoRouter _router;
+  late final PushNotificationService _push;
 
   @override
   void initState() {
     super.initState();
+
+    _push = PushNotificationService(
+      onTripInviteTap: () => _router.go('/trips'),
+    );
 
     widget.auth.addListener(_onAuthChanged);
 
@@ -160,7 +178,14 @@ class _TripManagementAppState extends State<TripManagementApp> {
     if (widget.auth.isLoggedIn) {
       widget.trips.load();
       widget.profile.load();
+      final uid = widget.auth.userId;
+      if (uid != null) {
+        widget.invitations.init(uid);
+        _push.init();
+      }
     } else {
+      _push.removeToken();
+      widget.invitations.clear();
       widget.trips.clear();
       widget.profile.clear();
     }
@@ -180,6 +205,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.settings),
         ChangeNotifierProvider.value(value: widget.trips),
         ChangeNotifierProvider.value(value: widget.profile),
+        ChangeNotifierProvider.value(value: widget.invitations),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
       ],

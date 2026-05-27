@@ -257,7 +257,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
             await provider.addMember(widget.tripId!,
                 displayName: m.displayName,
                 email: m.email,
-                phone: m.phone);
+                phone: m.phone,
+                userId: m.userId);
           }
         }
 
@@ -669,11 +670,29 @@ class _TripFormScreenState extends State<TripFormScreen> {
         subtitle: Text(subtitleText),
         trailing: isMe
             ? null
-            : IconButton(
-                icon: const Icon(Icons.remove_circle_outline,
-                    color: AppTheme.danger, size: 20),
-                onPressed: () =>
-                    setState(() => _pendingMembers.remove(m)),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (m.userId != null)
+                    _StatusChip(
+                      label: switch (m.status) {
+                        'pending' => l10n.invitePending,
+                        'declined' => l10n.inviteDeclined,
+                        _ => l10n.inviteAccepted,
+                      },
+                      color: switch (m.status) {
+                        'pending' => Colors.orange,
+                        'declined' => AppTheme.danger,
+                        _ => Colors.green,
+                      },
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline,
+                        color: AppTheme.danger, size: 20),
+                    onPressed: () =>
+                        setState(() => _pendingMembers.remove(m)),
+                  ),
+                ],
               ),
         dense: true,
       );
@@ -705,6 +724,33 @@ class _DateTimeTile extends StatelessWidget {
         child: Text(display,
             style:
                 TextStyle(color: value != null ? null : Colors.grey[500])),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

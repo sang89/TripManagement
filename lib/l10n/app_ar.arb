@@ -147,5 +147,19 @@
   "memberSearching": "جارٍ البحث…",
   "memberAccountFound": "تم العثور على الحساب",
   "memberNoAccountFound": "لم يتم العثور على حساب",
-  "memberLinkedAccount": "حساب مرتبط"
+  "memberLinkedAccount": "حساب مرتبط",
+  "invitePending": "معلق",
+  "inviteAccepted": "مقبول",
+  "inviteDeclined": "مرفوض",
+  "tripInvitationsTitle": "{count, plural, =1{دعوة رحلة واحدة} other{{count} دعوات رحلات}}",
+  "@tripInvitationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "acceptInvite": "قبول",
+  "declineInvite": "رفض",
+  "inviteNotifTitle": "دعوة رحلة",
+  "inviteNotifBody": "لقد تمت دعوتك إلى {tripTitle}",
+  "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
 }

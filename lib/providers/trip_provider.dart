@@ -20,6 +20,7 @@ class TripProvider extends ChangeNotifier {
   bool _loaded = false;
   String? _loadError;
   String? _userId;
+  RealtimeChannel? _memberUpdateChannel;
 
   final ConnectivityService? _connectivity;
   final OfflineQueue? _queue;
@@ -71,6 +72,7 @@ class TripProvider extends ChangeNotifier {
                   'user_id': m.userId,
                   'email': m.email,
                   'phone': m.phone,
+                  'status': m.status,
                   'created_at': m.createdAt.toIso8601String(),
                 })
             .toList(),
@@ -235,9 +237,50 @@ class TripProvider extends ChangeNotifier {
     }
     _loaded = true;
     notifyListeners();
+    _subscribeMemberUpdates();
+  }
+
+  /// Listens for trip_members UPDATE events (e.g. invitee accepts/declines)
+  /// and patches the in-memory member status so the inviter sees changes
+  /// in real time without a full reload.
+  void _subscribeMemberUpdates() {
+    if (_userId == null) return;
+    _memberUpdateChannel?.unsubscribe();
+    _memberUpdateChannel = _db
+        .channel('member_updates_$_userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'trip_members',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final memberId = row['id'] as String?;
+            final tripId = row['trip_id'] as String?;
+            final status = row['status'] as String?;
+            if (memberId == null || tripId == null || status == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final trip = _trips[tripIdx];
+            final memberIdx =
+                trip.members.indexWhere((m) => m.id == memberId);
+            if (memberIdx < 0) return;
+
+            final updatedMembers = List<TripMember>.of(trip.members)
+              ..[memberIdx] =
+                  trip.members[memberIdx].copyWith(status: status);
+            _trips[tripIdx] = trip.copyWith(members: updatedMembers);
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+        .subscribe();
   }
 
   void clear() {
+    _memberUpdateChannel?.unsubscribe();
+    _memberUpdateChannel = null;
     _trips = [];
     _loaded = false;
     _loadError = null;
@@ -401,6 +444,9 @@ class TripProvider extends ChangeNotifier {
   }) async {
     final memberId = _uuid.v4();
     final now = DateTime.now().toUtc().toIso8601String();
+    // Linked members (userId != null) start as pending until they accept.
+    // Unlinked guests (no account) are immediately accepted.
+    final status = userId != null ? 'pending' : 'accepted';
 
     final payload = <String, dynamic>{
       'id': memberId,
@@ -410,6 +456,7 @@ class TripProvider extends ChangeNotifier {
       'phone': ?phone,
       'user_id': ?userId,
       'role': 'member',
+      'status': status,
     };
 
     late TripMember member;

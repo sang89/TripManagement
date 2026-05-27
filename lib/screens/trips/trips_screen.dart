@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
+import '../../providers/invitations_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../widgets/trip_card.dart';
 
@@ -133,11 +134,28 @@ class _TripsScreenState extends State<TripsScreen>
 
     final filtered = _filtered(provider.trips, tabIndex);
 
-    if (filtered.isEmpty) {
+    // Invite card is shown at the top of the "All" tab only.
+    final showInvites = tabIndex == 0;
+
+    if (filtered.isEmpty && !showInvites) {
       return _EmptyState(tabIndex: tabIndex);
     }
 
-    return AppReorderableList<Trip>(
+    if (filtered.isEmpty && showInvites) {
+      return Consumer<InvitationsProvider>(
+        builder: (context, invitations, _) {
+          if (invitations.pendingCount == 0) {
+            return _EmptyState(tabIndex: tabIndex);
+          }
+          return ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [_InviteCard(invitations: invitations)],
+          );
+        },
+      );
+    }
+
+    final list = AppReorderableList<Trip>(
       padding: const EdgeInsets.symmetric(vertical: 8),
       items: filtered,
       keyOf: (trip) => ValueKey(trip.id),
@@ -150,6 +168,20 @@ class _TripsScreenState extends State<TripsScreen>
             );
       },
       itemBuilder: (context, trip, index) => _tripSlide(context, trip),
+    );
+
+    if (!showInvites) return list;
+
+    return Consumer<InvitationsProvider>(
+      builder: (context, invitations, _) {
+        if (invitations.pendingCount == 0) return list;
+        return Column(
+          children: [
+            _InviteCard(invitations: invitations),
+            Expanded(child: list),
+          ],
+        );
+      },
     );
   }
 
@@ -181,6 +213,201 @@ class _TripsScreenState extends State<TripsScreen>
         onPressed: () => context.push('/trip/new'),
       ),
     );
+  }
+}
+
+/// Section shown at the top of the Trips list when the user has pending invites.
+/// Each invite gets its own card with full-width Accept / Decline buttons.
+class _InviteCard extends StatelessWidget {
+  final InvitationsProvider invitations;
+
+  const _InviteCard({required this.invitations});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final accent = AppTheme.accent;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Row(
+              children: [
+                Icon(Icons.mark_email_unread_outlined,
+                    color: accent, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  l10n.tripInvitationsTitle(invitations.pendingCount),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // One card per invite
+          ...invitations.invites.map(
+            (invite) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _InviteRow(invite: invite),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteRow extends StatefulWidget {
+  final InvitationItem invite;
+
+  const _InviteRow({required this.invite});
+
+  @override
+  State<_InviteRow> createState() => _InviteRowState();
+}
+
+class _InviteRowState extends State<_InviteRow> {
+  bool _loading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final invite = widget.invite;
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: theme.dividerColor.withValues(alpha: 0.5),
+          width: 0.8,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Trip title
+            Text(
+              invite.tripTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (invite.destination != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      invite.destination!,
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 14),
+            if (_loading)
+              const Center(
+                child: SizedBox(
+                  height: 36,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Decline — minimal, no fill
+                  TextButton(
+                    onPressed: () => _decline(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey[500],
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    child: Text(l10n.declineInvite),
+                  ),
+                  const SizedBox(width: 6),
+                  // Accept — filled pill
+                  FilledButton.icon(
+                    onPressed: () => _accept(context),
+                    icon: const Icon(Icons.check_rounded, size: 15),
+                    label: Text(l10n.acceptInvite),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: const StadiumBorder(),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _accept(BuildContext context) async {
+    setState(() => _loading = true);
+    try {
+      await context
+          .read<InvitationsProvider>()
+          .accept(widget.invite.memberId, context.read<TripProvider>());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _decline(BuildContext context) async {
+    setState(() => _loading = true);
+    try {
+      await context
+          .read<InvitationsProvider>()
+          .decline(widget.invite.memberId, context.read<TripProvider>());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 }
 

@@ -147,5 +147,19 @@
   "memberSearching": "搜索中…",
   "memberAccountFound": "找到账户",
   "memberNoAccountFound": "未找到账户",
-  "memberLinkedAccount": "已关联账户"
+  "memberLinkedAccount": "已关联账户",
+  "invitePending": "待定",
+  "inviteAccepted": "已接受",
+  "inviteDeclined": "已拒绝",
+  "tripInvitationsTitle": "{count, plural, other{{count}个行程邀请}}",
+  "@tripInvitationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "acceptInvite": "接受",
+  "declineInvite": "拒绝",
+  "inviteNotifTitle": "行程邀请",
+  "inviteNotifBody": "您被邀请加入{tripTitle}",
+  "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
 }

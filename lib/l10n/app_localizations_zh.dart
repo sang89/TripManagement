@@ -462,4 +462,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memberLinkedAccount => '已关联账户';
+
+  @override
+  String get invitePending => '待定';
+
+  @override
+  String get inviteAccepted => '已接受';
+
+  @override
+  String get inviteDeclined => '已拒绝';
+
+  @override
+  String tripInvitationsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count个行程邀请',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get acceptInvite => '接受';
+
+  @override
+  String get declineInvite => '拒绝';
+
+  @override
+  String get inviteNotifTitle => '行程邀请';
+
+  @override
+  String inviteNotifBody(String tripTitle) {
+    return '您被邀请加入$tripTitle';
+  }
 }
