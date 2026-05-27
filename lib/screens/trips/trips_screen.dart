@@ -14,20 +14,60 @@ class TripsScreen extends StatefulWidget {
   State<TripsScreen> createState() => _TripsScreenState();
 }
 
-class _TripsScreenState extends State<TripsScreen> {
-  int _tabIndex = 0;
+class _TripsScreenState extends State<TripsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
 
-  List<Trip> _filtered(List<Trip> trips) {
+  // Tab order: 0 = All, 1 = Upcoming, 2 = Past
+  static const _tabs = [
+    (label: 'All',      icon: Icons.format_list_bulleted_rounded),
+    (label: 'Upcoming', icon: Icons.flight_takeoff_rounded),
+    (label: 'Past',     icon: Icons.history_rounded),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  List<Trip> _filtered(List<Trip> trips, int tabIndex) {
     final now = DateTime.now();
-    return switch (_tabIndex) {
-      0 => trips
+    return switch (tabIndex) {
+      0 => trips,
+      1 => trips
           .where((t) => t.endAt == null || t.endAt!.isAfter(now))
           .toList(),
-      1 => trips
+      2 => trips
           .where((t) => t.endAt != null && t.endAt!.isBefore(now))
           .toList(),
       _ => trips,
     };
+  }
+
+  Widget _tripSlide(BuildContext context, Trip trip) {
+    return Slidable(
+      key: ValueKey(trip.id),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        children: [
+          SlidableAction(
+            onPressed: (_) => _confirmDelete(context, trip),
+            backgroundColor: AppTheme.danger,
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline,
+            label: 'Delete',
+          ),
+        ],
+      ),
+      child: TripCard(trip: trip),
+    );
   }
 
   Future<void> _confirmDelete(BuildContext context, Trip trip) async {
@@ -54,81 +94,83 @@ class _TripsScreenState extends State<TripsScreen> {
     }
   }
 
+  Widget _tabBody(BuildContext context, int tabIndex) {
+    final provider = context.watch<TripProvider>();
+
+    if (!provider.loaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined,
+                  size: 48, color: AppTheme.danger),
+              const SizedBox(height: 12),
+              const Text('Could not load trips',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text(provider.loadError!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              const SizedBox(height: 16),
+              AppButton(
+                label: 'Retry',
+                onPressed: () => context.read<TripProvider>().load(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final filtered = _filtered(provider.trips, tabIndex);
+
+    if (filtered.isEmpty) {
+      return _EmptyState(tabIndex: tabIndex);
+    }
+
+    return AppReorderableList<Trip>(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      items: filtered,
+      keyOf: (trip) => ValueKey(trip.id),
+      onReorder: (oldIndex, newIndex) {
+        final visibleIds = filtered.map((t) => t.id).toList();
+        context.read<TripProvider>().reorderTrips(
+              visibleIds,
+              oldIndex,
+              newIndex,
+            );
+      },
+      itemBuilder: (context, trip, index) => _tripSlide(context, trip),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TripProvider>();
-    final filtered = _filtered(provider.trips);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Trips'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: AppTabSelector<int>(
-            items: const [
-              AppTabItem(label: 'Upcoming', value: 0),
-              AppTabItem(label: 'Past', value: 1),
-              AppTabItem(label: 'All', value: 2),
-            ],
-            selected: _tabIndex,
-            onChanged: (i) => setState(() => _tabIndex = i),
-          ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: _tabs
+              .map((t) => Tab(icon: Icon(t.icon, size: 20), text: t.label))
+              .toList(),
+          labelStyle:
+              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
-      body: !provider.loaded
-          ? const Center(child: CircularProgressIndicator())
-          : provider.loadError != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.cloud_off_outlined,
-                            size: 48, color: AppTheme.danger),
-                        const SizedBox(height: 12),
-                        const Text('Could not load trips',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        Text(provider.loadError!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 13)),
-                        const SizedBox(height: 16),
-                        AppButton(
-                          label: 'Retry',
-                          onPressed: () =>
-                              context.read<TripProvider>().load(),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-          : filtered.isEmpty
-          ? _EmptyState(tabIndex: _tabIndex)
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: filtered.length,
-              itemBuilder: (context, index) {
-                final trip = filtered[index];
-                return Slidable(
-                  key: ValueKey(trip.id),
-                  endActionPane: ActionPane(
-                    motion: const DrawerMotion(),
-                    children: [
-                      SlidableAction(
-                        onPressed: (_) => _confirmDelete(context, trip),
-                        backgroundColor: AppTheme.danger,
-                        foregroundColor: Colors.white,
-                        icon: Icons.delete_outline,
-                        label: 'Delete',
-                      ),
-                    ],
-                  ),
-                  child: TripCard(trip: trip),
-                );
-              },
-            ),
+      body: TabBarView(
+        controller: _tabController,
+        children: List.generate(
+          _tabs.length,
+          (i) => _tabBody(context, i),
+        ),
+      ),
       floatingActionButton: AppFab(
         onPressed: () => context.push('/trip/new'),
       ),
@@ -144,9 +186,9 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final messages = [
-      ('No upcoming trips', 'Tap + to plan your next adventure.'),
-      ('No past trips', 'Your completed trips will appear here.'),
-      ('No trips yet', 'Tap + to get started.'),
+      ('No trips yet',       'Tap + to get started.'),
+      ('No upcoming trips',  'Tap + to plan your next adventure.'),
+      ('No past trips',      'Your completed trips will appear here.'),
     ];
     final (title, subtitle) = messages[tabIndex];
     return Center(

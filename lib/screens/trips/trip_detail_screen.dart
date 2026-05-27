@@ -20,8 +20,33 @@ class TripDetailScreen extends StatefulWidget {
   State<TripDetailScreen> createState() => _TripDetailScreenState();
 }
 
-class _TripDetailScreenState extends State<TripDetailScreen> {
-  int _tabIndex = 0;
+class _TripDetailScreenState extends State<TripDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  int _tabIndex = 0; // tracked for FAB visibility
+
+  static const _tabs = [
+    (label: 'Overview',  icon: Icons.info_outline_rounded),
+    (label: 'Itinerary', icon: Icons.route_outlined),
+    (label: 'Map',       icon: Icons.map_outlined),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() => _tabIndex = _tabController.index);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   Future<void> _confirmDeleteStop(BuildContext context, TripStop stop) async {
     final confirmed = await showDialog<bool>(
@@ -92,17 +117,13 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(trip.title),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: AppTabSelector<int>(
-            items: const [
-              AppTabItem(label: 'Overview', value: 0),
-              AppTabItem(label: 'Itinerary', value: 1),
-              AppTabItem(label: 'Map', value: 2),
-            ],
-            selected: _tabIndex,
-            onChanged: (i) => setState(() => _tabIndex = i),
-          ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: _tabs
+              .map((t) => Tab(icon: Icon(t.icon, size: 20), text: t.label))
+              .toList(),
+          labelStyle:
+              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
         actions: [
           IconButton(
@@ -112,14 +133,17 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
         ],
       ),
-      body: switch (_tabIndex) {
-        1 => _ItineraryTab(
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _OverviewTab(trip: trip),
+          _ItineraryTab(
             trip: trip,
             onDeleteStop: (s) => _confirmDeleteStop(context, s),
           ),
-        2 => TripMapWidget(pins: _buildMapPins(trip)),
-        _ => _OverviewTab(trip: trip),
-      },
+          TripMapWidget(pins: _buildMapPins(trip)),
+        ],
+      ),
       floatingActionButton: _tabIndex == 1
           ? AppFab(
               onPressed: () => showTripStopFormSheet(context, tripId: trip.id),
