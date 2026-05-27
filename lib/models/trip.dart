@@ -5,6 +5,9 @@ class Trip {
   final String id;
   final String createdBy;
   final String title;
+  final String? startLocation;
+  final double? startLat;
+  final double? startLng;
   final String destination;
   final String notes;
   final double? destinationLat;
@@ -20,6 +23,9 @@ class Trip {
     required this.id,
     required this.createdBy,
     required this.title,
+    this.startLocation,
+    this.startLat,
+    this.startLng,
     required this.destination,
     required this.notes,
     this.destinationLat,
@@ -41,6 +47,9 @@ class Trip {
       id: json['id'] as String,
       createdBy: json['created_by'] as String,
       title: json['title'] as String? ?? '',
+      startLocation: json['start_location'] as String?,
+      startLat: (json['start_lat'] as num?)?.toDouble(),
+      startLng: (json['start_lng'] as num?)?.toDouble(),
       destination: json['destination'] as String? ?? '',
       notes: json['notes'] as String? ?? '',
       destinationLat: (json['destination_lat'] as num?)?.toDouble(),
@@ -62,6 +71,9 @@ class Trip {
 
   Map<String, dynamic> toJson() => {
         'title': title,
+        'start_location': ?startLocation,
+        'start_lat': ?startLat,
+        'start_lng': ?startLng,
         'destination': destination,
         'notes': notes,
         'destination_lat': ?destinationLat,
@@ -72,6 +84,12 @@ class Trip {
 
   Trip copyWith({
     String? title,
+    String? startLocation,
+    double? startLat,
+    double? startLng,
+    bool clearStartLocation = false,
+    bool clearStartLat = false,
+    bool clearStartLng = false,
     String? destination,
     String? notes,
     double? destinationLat,
@@ -87,6 +105,10 @@ class Trip {
         id: id,
         createdBy: createdBy,
         title: title ?? this.title,
+        startLocation:
+            clearStartLocation ? null : (startLocation ?? this.startLocation),
+        startLat: clearStartLat ? null : (startLat ?? this.startLat),
+        startLng: clearStartLng ? null : (startLng ?? this.startLng),
         destination: destination ?? this.destination,
         notes: notes ?? this.notes,
         destinationLat: destinationLat ?? this.destinationLat,

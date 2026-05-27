@@ -52,6 +52,9 @@ class TripProvider extends ChangeNotifier {
 
   Future<Trip> addTrip({
     required String title,
+    String? startLocation,
+    double? startLat,
+    double? startLng,
     required String destination,
     DateTime? startAt,
     DateTime? endAt,
@@ -67,6 +70,9 @@ class TripProvider extends ChangeNotifier {
     final tripData = await _db.from('trips').insert({
       'created_by': userId,
       'title': title,
+      'start_location': ?startLocation,
+      'start_lat': ?startLat,
+      'start_lng': ?startLng,
       'destination': destination,
       'start_at': startAt?.toUtc().toIso8601String(),
       'end_at': endAt?.toUtc().toIso8601String(),
