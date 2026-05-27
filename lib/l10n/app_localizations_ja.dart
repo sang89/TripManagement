@@ -361,7 +361,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addMember => 'メンバーを追加';
 
   @override
-  String get fullNameLabel => '氏名';
+  String get fullNameLabel => '名前';
 
   @override
   String get emailOptional => 'メール（任意）';
@@ -451,4 +451,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get journalComingSoon => '日記機能は近日公開';
+
+  @override
+  String get memberSearching => '検索中…';
+
+  @override
+  String get memberAccountFound => 'アカウントが見つかりました';
+
+  @override
+  String get memberNoAccountFound => 'アカウントが見つかりません';
+
+  @override
+  String get memberLinkedAccount => 'リンク済みアカウント';
 }

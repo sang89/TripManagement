@@ -113,7 +113,7 @@
   "mapSection": "地図",
   "membersSection": "メンバー",
   "addMember": "メンバーを追加",
-  "fullNameLabel": "氏名",
+  "fullNameLabel": "名前",
   "emailOptional": "メール（任意）",
   "phoneOptional": "電話（任意）",
   "saveTrip": "旅行を保存",
@@ -142,5 +142,10 @@
   "navTrips": "旅行",
   "navJournal": "日記",
   "navProfile": "プロフィール",
-  "journalComingSoon": "日記機能は近日公開"
+  "journalComingSoon": "日記機能は近日公開",
+
+  "memberSearching": "検索中…",
+  "memberAccountFound": "アカウントが見つかりました",
+  "memberNoAccountFound": "アカウントが見つかりません",
+  "memberLinkedAccount": "リンク済みアカウント"
 }

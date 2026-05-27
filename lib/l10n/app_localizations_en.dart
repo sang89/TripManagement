@@ -364,7 +364,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addMember => 'Add member';
 
   @override
-  String get fullNameLabel => 'Full name';
+  String get fullNameLabel => 'Name';
 
   @override
   String get emailOptional => 'Email (optional)';
@@ -454,4 +454,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get journalComingSoon => 'Journal coming soon';
+
+  @override
+  String get memberSearching => 'Searching…';
+
+  @override
+  String get memberAccountFound => 'Account found';
+
+  @override
+  String get memberNoAccountFound => 'No account found';
+
+  @override
+  String get memberLinkedAccount => 'Linked account';
 }

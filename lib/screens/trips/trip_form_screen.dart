@@ -14,6 +14,7 @@ import '../../providers/trip_provider.dart';
 import '../../services/trip_places_service.dart';
 import '../../widgets/places_autocomplete_field.dart';
 import '../../widgets/trip_map_widget.dart';
+import '../../widgets/add_member_sheet.dart';
 import '../../widgets/trip_stop_form_sheet.dart';
 
 class TripFormScreen extends StatefulWidget {
@@ -306,7 +307,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
           await provider.addMember(trip.id,
               displayName: m.displayName,
               email: m.email,
-              phone: m.phone);
+              phone: m.phone,
+              userId: m.userId);
         }
         for (int i = 0; i < _sortedStops.length; i++) {
           final s = _sortedStops[i];
@@ -331,108 +333,9 @@ class _TripFormScreenState extends State<TripFormScreen> {
   }
 
   void _openAddMemberSheet() {
-    final nameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    String phone = '';
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          final l10n = AppLocalizations.of(ctx);
-          return Padding(
-            padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 4),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      Text(l10n.addMember,
-                          style: Theme.of(ctx).textTheme.titleMedium),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: nameCtrl,
-                        autofocus: true,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: InputDecoration(
-                          labelText: l10n.fullNameLabel,
-                          prefixIcon: const Icon(Icons.person_outline),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          labelText: l10n.emailOptional,
-                          prefixIcon: const Icon(Icons.email_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      AppPhoneField(
-                        label: l10n.phoneOptional,
-                        onChanged: (v) => phone = v,
-                      ),
-                      const SizedBox(height: 20),
-                      AppButton(
-                        label: l10n.addMember,
-                        onPressed: () {
-                          final name = nameCtrl.text.trim();
-                          if (name.isEmpty) return;
-                          setState(() {
-                            _pendingMembers.add(TripMember(
-                              id: '',
-                              tripId: '',
-                              displayName: name,
-                              role: 'member',
-                              email: emailCtrl.text.trim().isEmpty
-                                  ? null
-                                  : emailCtrl.text.trim(),
-                              phone: phone.isEmpty ? null : phone,
-                              createdAt: DateTime.now(),
-                            ));
-                          });
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+    showAddMemberSheet(
+      context,
+      onAdd: (member) => setState(() => _pendingMembers.add(member)),
     );
   }
 
@@ -719,10 +622,20 @@ class _TripFormScreenState extends State<TripFormScreen> {
         ),
         title: Text(m.displayName),
         subtitle: detail.isNotEmpty ? Text(detail) : null,
-        trailing: IconButton(
-          icon: const Icon(Icons.remove_circle_outline,
-              color: AppTheme.danger, size: 20),
-          onPressed: () => setState(() => _pendingMembers.remove(m)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (m.userId != null)
+              const Padding(
+                padding: EdgeInsets.only(right: 4),
+                child: Icon(Icons.link, size: 16, color: AppTheme.accent),
+              ),
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline,
+                  color: AppTheme.danger, size: 20),
+              onPressed: () => setState(() => _pendingMembers.remove(m)),
+            ),
+          ],
         ),
         dense: true,
       );

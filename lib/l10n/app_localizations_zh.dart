@@ -360,7 +360,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addMember => '添加成员';
 
   @override
-  String get fullNameLabel => '全名';
+  String get fullNameLabel => '姓名';
 
   @override
   String get emailOptional => '邮箱（可选）';
@@ -450,4 +450,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get journalComingSoon => '日记即将推出';
+
+  @override
+  String get memberSearching => '搜索中…';
+
+  @override
+  String get memberAccountFound => '找到账户';
+
+  @override
+  String get memberNoAccountFound => '未找到账户';
+
+  @override
+  String get memberLinkedAccount => '已关联账户';
 }

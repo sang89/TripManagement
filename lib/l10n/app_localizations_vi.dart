@@ -365,7 +365,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addMember => 'Thêm thành viên';
 
   @override
-  String get fullNameLabel => 'Họ và tên';
+  String get fullNameLabel => 'Tên';
 
   @override
   String get emailOptional => 'Email (tùy chọn)';
@@ -455,4 +455,16 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get journalComingSoon => 'Nhật ký sắp ra mắt';
+
+  @override
+  String get memberSearching => 'Đang tìm kiếm…';
+
+  @override
+  String get memberAccountFound => 'Đã tìm thấy tài khoản';
+
+  @override
+  String get memberNoAccountFound => 'Không tìm thấy tài khoản';
+
+  @override
+  String get memberLinkedAccount => 'Tài khoản đã liên kết';
 }

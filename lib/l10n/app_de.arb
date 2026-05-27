@@ -113,7 +113,7 @@
   "mapSection": "Karte",
   "membersSection": "Mitglieder",
   "addMember": "Mitglied hinzufügen",
-  "fullNameLabel": "Vollständiger Name",
+  "fullNameLabel": "Name",
   "emailOptional": "E-Mail (optional)",
   "phoneOptional": "Telefon (optional)",
   "saveTrip": "Reise speichern",
@@ -142,5 +142,10 @@
   "navTrips": "Reisen",
   "navJournal": "Tagebuch",
   "navProfile": "Profil",
-  "journalComingSoon": "Tagebuch demnächst"
+  "journalComingSoon": "Tagebuch demnächst",
+
+  "memberSearching": "Suche läuft…",
+  "memberAccountFound": "Konto gefunden",
+  "memberNoAccountFound": "Kein Konto gefunden",
+  "memberLinkedAccount": "Verknüpftes Konto"
 }

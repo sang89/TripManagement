@@ -113,7 +113,7 @@
   "mapSection": "Bản đồ",
   "membersSection": "Thành viên",
   "addMember": "Thêm thành viên",
-  "fullNameLabel": "Họ và tên",
+  "fullNameLabel": "Tên",
   "emailOptional": "Email (tùy chọn)",
   "phoneOptional": "Số điện thoại (tùy chọn)",
   "saveTrip": "Lưu chuyến đi",
@@ -142,5 +142,10 @@
   "navTrips": "Chuyến đi",
   "navJournal": "Nhật ký",
   "navProfile": "Hồ sơ",
-  "journalComingSoon": "Nhật ký sắp ra mắt"
+  "journalComingSoon": "Nhật ký sắp ra mắt",
+
+  "memberSearching": "Đang tìm kiếm…",
+  "memberAccountFound": "Đã tìm thấy tài khoản",
+  "memberNoAccountFound": "Không tìm thấy tài khoản",
+  "memberLinkedAccount": "Tài khoản đã liên kết"
 }

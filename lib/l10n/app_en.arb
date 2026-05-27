@@ -137,7 +137,7 @@
   "mapSection": "Map",
   "membersSection": "Members",
   "addMember": "Add member",
-  "fullNameLabel": "Full name",
+  "fullNameLabel": "Name",
   "emailOptional": "Email (optional)",
   "phoneOptional": "Phone (optional)",
   "saveTrip": "Save trip",
@@ -173,5 +173,10 @@
   "navJournal": "Journal",
   "navProfile": "Profile",
 
-  "journalComingSoon": "Journal coming soon"
+  "journalComingSoon": "Journal coming soon",
+
+  "memberSearching": "Searching…",
+  "memberAccountFound": "Account found",
+  "memberNoAccountFound": "No account found",
+  "memberLinkedAccount": "Linked account"
 }

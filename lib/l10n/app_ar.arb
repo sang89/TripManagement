@@ -113,7 +113,7 @@
   "mapSection": "الخريطة",
   "membersSection": "الأعضاء",
   "addMember": "إضافة عضو",
-  "fullNameLabel": "الاسم الكامل",
+  "fullNameLabel": "الاسم",
   "emailOptional": "البريد الإلكتروني (اختياري)",
   "phoneOptional": "الهاتف (اختياري)",
   "saveTrip": "حفظ الرحلة",
@@ -142,5 +142,10 @@
   "navTrips": "الرحلات",
   "navJournal": "المذكرات",
   "navProfile": "الملف الشخصي",
-  "journalComingSoon": "المذكرات قريباً"
+  "journalComingSoon": "المذكرات قريباً",
+
+  "memberSearching": "جارٍ البحث…",
+  "memberAccountFound": "تم العثور على الحساب",
+  "memberNoAccountFound": "لم يتم العثور على حساب",
+  "memberLinkedAccount": "حساب مرتبط"
 }
