@@ -8,6 +8,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn =>
       Supabase.instance.client.auth.currentSession != null;
 
+  String? get userId => Supabase.instance.client.auth.currentUser?.id;
+
   String get userEmail =>
       Supabase.instance.client.auth.currentUser?.email ?? '';
 

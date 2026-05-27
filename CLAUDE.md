@@ -12,15 +12,20 @@ works in both apps. Supabase URL and anon key live in `lib/config/api_keys.dart`
 ```
 lib/
 ├── config/         API keys (git-ignored)
-├── models/         Data models (add as features are built)
-├── providers/      ChangeNotifier providers — auth, settings, and trip-domain providers
+├── models/         trip.dart, trip_member.dart, trip_stop.dart
+├── providers/      auth_provider, settings_provider, trip_provider
 ├── screens/        UI screens, organised by feature
 │   ├── auth/       Login, Register
-│   └── home/       Trip list (home screen)
+│   ├── shell/      ShellScaffold (bottom nav — Trips + Journal tabs)
+│   └── trips/      trips_screen (list), trip_form_screen (create/edit), trip_detail_screen
 ├── services/       Supabase queries, AI chat service
 ├── theme/          Re-export shim → shared_ui AppTheme
-└── main.dart       App entry point, GoRouter, provider wiring
+├── widgets/        trip_card, trip_stop_form_sheet
+└── main.dart       App entry point, StatefulShellRoute, provider wiring
 ```
+
+**Database migration:** `supabase/migrations/20260526000000_trips_schema.sql`
+Run in Supabase SQL editor or via `supabase db push`.
 
 ## Shared UI
 
@@ -44,16 +49,33 @@ trip-specific logic there; use the tools list passed in the request body instead
 
 ## Navigation
 
-GoRouter with auth redirect guard. Add new routes in `main.dart`.
-Current routes: `/login`, `/register`, `/home`.
-
-As the app grows, migrate to a `StatefulShellRoute` with bottom navigation tabs (see
-PropertyManagement's `shell_scaffold.dart` for the pattern).
+GoRouter with auth redirect guard and `StatefulShellRoute.indexedStack` for the 2-tab shell.
+Routes:
+- `/login`, `/register` — auth screens
+- `/trips` — trip list (shell tab 0)
+- `/trip/new`, `/trip/:id`, `/trip/:id/edit` — trip CRUD (also shell tab 0)
+- `/journal` — placeholder (shell tab 1)
 
 ## Database
 
-All Supabase schema changes must go through migration files. Create a `supabase/` folder
-mirroring PropertyManagement's structure when the first migration is needed.
+All Supabase schema changes must go through migration files in `supabase/migrations/`.
+Both apps share the same Supabase project (`qgeocaectbdfonrorwco`), so TripManagement's
+`supabase/migrations/` must contain ALL remote migrations (including PropertyManagement's).
+Keep it in sync by copying any new PropertyManagement migration files here too.
+
+**Migration workflow:**
+```bash
+# Link (first time or new machine)
+supabase link --project-ref qgeocaectbdfonrorwco
+
+# Push a new migration
+supabase db push
+
+# Check status
+supabase migration list
+```
+
+Never instruct the user to run SQL manually in the Supabase dashboard — always use `supabase db push`.
 
 Trip data is isolated per user via Supabase Row Level Security — add RLS policies to every
 new table.
