@@ -27,6 +27,7 @@ class TripFormScreen extends StatefulWidget {
 class _TripFormScreenState extends State<TripFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
+  final _startLocationCtrl = TextEditingController();
   final _destinationCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
@@ -34,6 +35,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
   DateTime? _endAt;
   bool _loading = false;
   String? _error;
+  double? _startLat;
+  double? _startLng;
   double? _destinationLat;
   double? _destinationLng;
 
@@ -45,16 +48,17 @@ class _TripFormScreenState extends State<TripFormScreen> {
 
   bool get _isEdit => widget.tripId != null;
 
+  // Pin order: start → stops (sorted) → destination — matches driving direction.
   List<TripMapPin> get _mapPins {
     final pins = <TripMapPin>[];
-    if (_destinationLat != null && _destinationLng != null) {
+    if (_startLat != null && _startLng != null) {
       pins.add(TripMapPin(
-        id: 'destination',
-        position: LatLng(_destinationLat!, _destinationLng!),
-        title: _destinationCtrl.text.isEmpty
-            ? 'Destination'
-            : _destinationCtrl.text,
-        isDestination: true,
+        id: 'start',
+        position: LatLng(_startLat!, _startLng!),
+        title: _startLocationCtrl.text.isEmpty
+            ? 'Start'
+            : _startLocationCtrl.text,
+        isStart: true,
       ));
     }
     for (int i = 0; i < _sortedStops.length; i++) {
@@ -67,6 +71,16 @@ class _TripFormScreenState extends State<TripFormScreen> {
           subtitle: s.address.isNotEmpty ? s.address : null,
         ));
       }
+    }
+    if (_destinationLat != null && _destinationLng != null) {
+      pins.add(TripMapPin(
+        id: 'destination',
+        position: LatLng(_destinationLat!, _destinationLng!),
+        title: _destinationCtrl.text.isEmpty
+            ? 'Destination'
+            : _destinationCtrl.text,
+        isDestination: true,
+      ));
     }
     return pins;
   }
@@ -103,11 +117,14 @@ class _TripFormScreenState extends State<TripFormScreen> {
     if (trip == null) return;
     _existing = trip;
     _titleCtrl.text = trip.title;
+    _startLocationCtrl.text = trip.startLocation ?? '';
     _destinationCtrl.text = trip.destination;
     _notesCtrl.text = trip.notes;
     setState(() {
       _startAt = trip.startAt;
       _endAt = trip.endAt;
+      _startLat = trip.startLat;
+      _startLng = trip.startLng;
       _destinationLat = trip.destinationLat;
       _destinationLng = trip.destinationLng;
       _pendingMembers = List.of(trip.members);
@@ -118,6 +135,7 @@ class _TripFormScreenState extends State<TripFormScreen> {
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _startLocationCtrl.dispose();
     _destinationCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
@@ -200,8 +218,15 @@ class _TripFormScreenState extends State<TripFormScreen> {
       final provider = context.read<TripProvider>();
 
       if (_isEdit && _existing != null) {
+        final startLocText = _startLocationCtrl.text.trim();
         final updated = _existing!.copyWith(
           title: _titleCtrl.text.trim(),
+          startLocation: startLocText.isEmpty ? null : startLocText,
+          clearStartLocation: startLocText.isEmpty,
+          startLat: _startLat,
+          clearStartLat: _startLat == null,
+          startLng: _startLng,
+          clearStartLng: _startLng == null,
           destination: _destinationCtrl.text.trim(),
           notes: _notesCtrl.text.trim(),
           startAt: _startAt,
@@ -249,8 +274,12 @@ class _TripFormScreenState extends State<TripFormScreen> {
 
         if (mounted) context.pop();
       } else {
+        final startLocText = _startLocationCtrl.text.trim();
         final trip = await provider.addTrip(
           title: _titleCtrl.text.trim(),
+          startLocation: startLocText.isEmpty ? null : startLocText,
+          startLat: _startLat,
+          startLng: _startLng,
           destination: _destinationCtrl.text.trim(),
           notes: _notesCtrl.text.trim(),
           startAt: _startAt,
@@ -417,6 +446,19 @@ class _TripFormScreenState extends State<TripFormScreen> {
               ),
               validator: (v) =>
                   v == null || v.trim().isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+
+            // Start location — optional Places autocomplete
+            PlacesAutocompleteField(
+              controller: _startLocationCtrl,
+              label: 'Starting from (optional)',
+              prefixIcon: Icons.trip_origin_outlined,
+              placesService: _places,
+              onCoordinatesChanged: (lat, lng) => setState(() {
+                _startLat = lat;
+                _startLng = lng;
+              }),
             ),
             const SizedBox(height: 16),
 

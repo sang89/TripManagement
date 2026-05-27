@@ -47,14 +47,16 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
+  // Pin order: start → stops (by sortOrder) → destination.
+  // This matches the driving direction passed to DirectionsService.
   List<TripMapPin> _buildMapPins(Trip trip) {
     final pins = <TripMapPin>[];
-    if (trip.destinationLat != null && trip.destinationLng != null) {
+    if (trip.startLat != null && trip.startLng != null) {
       pins.add(TripMapPin(
-        id: 'destination',
-        position: LatLng(trip.destinationLat!, trip.destinationLng!),
-        title: trip.destination,
-        isDestination: true,
+        id: 'start',
+        position: LatLng(trip.startLat!, trip.startLng!),
+        title: trip.startLocation ?? 'Start',
+        isStart: true,
       ));
     }
     for (final stop in trip.stops) {
@@ -66,6 +68,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           subtitle: stop.address.isNotEmpty ? stop.address : null,
         ));
       }
+    }
+    if (trip.destinationLat != null && trip.destinationLng != null) {
+      pins.add(TripMapPin(
+        id: 'destination',
+        position: LatLng(trip.destinationLat!, trip.destinationLng!),
+        title: trip.destination,
+        isDestination: true,
+      ));
     }
     return pins;
   }
@@ -130,6 +140,14 @@ class _OverviewTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (trip.startLocation != null && trip.startLocation!.isNotEmpty) ...[
+          _InfoRow(
+            icon: Icons.trip_origin_outlined,
+            label: 'Starting from',
+            value: trip.startLocation!,
+          ),
+          const SizedBox(height: 12),
+        ],
         _InfoRow(
           icon: Icons.location_on_outlined,
           label: 'Destination',

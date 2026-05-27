@@ -1,2 +1,4 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+// Secret keys (git-ignored). Copy ios/Secrets.xcconfig.template → ios/Secrets.xcconfig.
+#include? "../Secrets.xcconfig"

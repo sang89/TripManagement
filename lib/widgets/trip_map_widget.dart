@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_ui/shared_ui.dart';
 
+import '../services/directions_service.dart';
+
 class TripMapPin {
   final String id;
   final LatLng position;
   final String title;
   final String? subtitle;
-  // Destination pins render as a blue marker; stops get numbered circles.
+  // Start pin → green marker; destination pin → blue/azure marker;
+  // everything else → numbered circle.
+  final bool isStart;
   final bool isDestination;
 
   const TripMapPin({
@@ -17,6 +21,7 @@ class TripMapPin {
     required this.position,
     required this.title,
     this.subtitle,
+    this.isStart = false,
     this.isDestination = false,
   });
 }
@@ -45,9 +50,12 @@ class _TripMapWidgetState extends State<TripMapWidget> {
   // Compact maps defer mounting so the parent form renders without blocking.
   bool _mapMounted = false;
   List<TripMapPin> _lastPins = [];
+  // Real road route points from Directions API; null while loading or on error.
+  List<LatLng>? _routePoints;
 
+  // Only numbered stops — excludes start and destination pins.
   List<TripMapPin> get _stopPins =>
-      widget.pins.where((p) => !p.isDestination).toList();
+      widget.pins.where((p) => !p.isStart && !p.isDestination).toList();
 
   @override
   void initState() {
@@ -57,10 +65,12 @@ class _TripMapWidgetState extends State<TripMapWidget> {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) setState(() => _mapMounted = true);
         _loadIcons();
+        _loadRoute();
       });
     } else {
       _mapMounted = true;
       _loadIcons();
+      _loadRoute();
     }
   }
 
@@ -69,7 +79,9 @@ class _TripMapWidgetState extends State<TripMapWidget> {
     super.didUpdateWidget(old);
     if (!_pinsEqual(widget.pins, _lastPins)) {
       _lastPins = widget.pins;
+      _routePoints = null; // clear stale route while fetching the new one
       _loadIcons();
+      _loadRoute();
       WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
     }
   }
@@ -108,6 +120,14 @@ class _TripMapWidgetState extends State<TripMapWidget> {
       }
       _iconsLoaded = true;
     });
+  }
+
+  Future<void> _loadRoute() async {
+    if (widget.pins.length < 2) return;
+    final waypoints = widget.pins.map((p) => p.position).toList();
+    final points = await DirectionsService.getRoute(waypoints);
+    if (!mounted) return;
+    setState(() => _routePoints = points);
   }
 
   static Future<BitmapDescriptor> _makeStopIcon(int n) async {
@@ -151,14 +171,21 @@ class _TripMapWidgetState extends State<TripMapWidget> {
     final markers = <Marker>{};
     int stopIdx = 0;
     for (final pin in widget.pins) {
-      if (pin.isDestination) {
+      if (pin.isStart) {
+        markers.add(Marker(
+          markerId: MarkerId(pin.id),
+          position: pin.position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(title: pin.title, snippet: pin.subtitle),
+        ));
+      } else if (pin.isDestination) {
         markers.add(Marker(
           markerId: MarkerId(pin.id),
           position: pin.position,
           icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueAzure),
-          infoWindow:
-              InfoWindow(title: pin.title, snippet: pin.subtitle),
+          infoWindow: InfoWindow(title: pin.title, snippet: pin.subtitle),
         ));
       } else {
         stopIdx++;
@@ -179,14 +206,23 @@ class _TripMapWidgetState extends State<TripMapWidget> {
 
   Set<Polyline> _buildPolylines() {
     if (widget.pins.length < 2) return {};
+
+    // Use real road-following route points from the Directions API when
+    // available; fall back to straight lines while the request is in flight
+    // or if the API call failed.
+    final points = _routePoints ?? widget.pins.map((p) => p.position).toList();
+    final isRealRoute = _routePoints != null;
+
     return {
       Polyline(
         polylineId: const PolylineId('route'),
-        points: widget.pins.map((p) => p.position).toList(),
+        points: points,
         color: AppTheme.primary,
-        width: 3,
-        geodesic: true,
-        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+        width: isRealRoute ? 4 : 3,
+        geodesic: !isRealRoute, // geodesic only needed for straight-line fallback
+        patterns: isRealRoute
+            ? [] // solid line for real route
+            : [PatternItem.dash(20), PatternItem.gap(10)], // dashed for fallback
       ),
     };
   }

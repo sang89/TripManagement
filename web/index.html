@@ -41,8 +41,10 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!-- Google Maps JS API — replace key with value from lib/config/api_keys.dart -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBg-J1Xk-wMoJ0bgRTv0e88Ff02CYPvsq4"></script>
+  <!-- Google Maps JS API key is injected by scripts/setup_web.sh.
+       Do NOT put the real key here — this file is committed to git.
+       Run: scripts/setup_web.sh YOUR_KEY   (or see web/index.html.local) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=%%MAPS_API_KEY%%"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
