@@ -61,17 +61,20 @@ class _TripMapWidgetState extends State<TripMapWidget> {
   void initState() {
     super.initState();
     _lastPins = widget.pins;
-    if (widget.compact) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) setState(() => _mapMounted = true);
-        _loadIcons();
-        _loadRoute();
-      });
-    } else {
-      _mapMounted = true;
-      _loadIcons();
-      _loadRoute();
-    }
+
+    // Start network/compute work immediately — these are async and
+    // don't touch the platform view.
+    _loadIcons();
+    _loadRoute();
+
+    // Always defer the GoogleMap platform-view creation so it doesn't
+    // compete with the tab-switch animation.  The compact card uses a
+    // slightly longer delay because its parent ListView also needs to
+    // finish laying out.
+    Future.delayed(
+      Duration(milliseconds: widget.compact ? 300 : 220),
+      () { if (mounted) setState(() => _mapMounted = true); },
+    );
   }
 
   @override
@@ -263,8 +266,14 @@ class _TripMapWidgetState extends State<TripMapWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_mapMounted || widget.pins.isEmpty) {
+    if (widget.pins.isEmpty) {
       return _EmptyPlaceholder(compact: widget.compact);
+    }
+
+    // Platform view not yet created — show a neutral placeholder so the
+    // tab transition renders instantly while the map warms up off-frame.
+    if (!_mapMounted) {
+      return _LoadingPlaceholder(compact: widget.compact);
     }
 
     final map = GoogleMap(
@@ -292,6 +301,44 @@ class _TripMapWidgetState extends State<TripMapWidget> {
       );
     }
     return map;
+  }
+}
+
+// Shown for ~220 ms while the GoogleMap platform view warms up off-frame.
+class _LoadingPlaceholder extends StatelessWidget {
+  final bool compact;
+  const _LoadingPlaceholder({required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: AppTheme.primaryLight,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Loading map…',
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+          ),
+        ],
+      ),
+    );
+    if (compact) {
+      return Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: content,
+      );
+    }
+    return content;
   }
 }
 

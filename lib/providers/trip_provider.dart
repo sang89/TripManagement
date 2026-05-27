@@ -13,6 +13,7 @@ import '../services/offline_queue.dart';
 class TripProvider extends ChangeNotifier {
   static const _uuid = Uuid();
   static const _cacheKey = 'cache_trips_v1';
+  static const _orderKey = 'trips_order_v1';
 
   SupabaseClient get _db => Supabase.instance.client;
   List<Trip> _trips = [];
@@ -103,6 +104,84 @@ class TripProvider extends ChangeNotifier {
     unawaited(LocalCache.saveList('${_cacheKey}_$_userId', rows));
   }
 
+  // ─── Custom order ──────────────────────────────────────────────────────────
+
+  /// Persist the current trip order (list of IDs) to local cache.
+  Future<void> _saveOrder() async {
+    if (_userId == null) return;
+    await LocalCache.saveObject(
+      '${_orderKey}_$_userId',
+      {'ids': _trips.map((t) => t.id).toList()},
+    );
+  }
+
+  /// Load the previously saved trip order (list of IDs), or `null` if none.
+  Future<List<String>?> _loadOrder() async {
+    if (_userId == null) return null;
+    final obj = await LocalCache.loadObject('${_orderKey}_$_userId');
+    if (obj == null) return null;
+    final ids = obj['ids'];
+    if (ids is! List) return null;
+    return ids.cast<String>();
+  }
+
+  /// Reorder [trips] according to [order] (list of IDs).
+  ///
+  /// Trips whose ID appears in [order] are placed first (in that order).
+  /// Any trips not present in [order] — e.g. newly fetched items — are
+  /// appended to the end.
+  static List<Trip> applyOrder(List<Trip> trips, List<String>? order) {
+    if (order == null || order.isEmpty) return trips;
+    final byId = {for (final t in trips) t.id: t};
+    final result = <Trip>[];
+    for (final id in order) {
+      final trip = byId.remove(id);
+      if (trip != null) result.add(trip);
+    }
+    // Append any trips not captured by the saved order (new ones).
+    result.addAll(byId.values);
+    return result;
+  }
+
+  /// Reorder trips using [visibleIds] (the IDs currently shown in the list)
+  /// and the [oldIndex] / [newIndex] within that visible set.
+  ///
+  /// Hidden trips (those not in [visibleIds]) stay in their relative positions
+  /// via a slot-replacement strategy: each "visible slot" in the full list is
+  /// filled with the next trip from the newly ordered visible sequence.
+  ///
+  /// Pass `visibleIds: trips.map((t) => t.id).toList()` when the full list is
+  /// shown (e.g. "All" tab), or a filtered subset when reordering within a
+  /// filtered view (e.g. "Upcoming" tab).
+  Future<void> reorderTrips(
+    List<String> visibleIds,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    if (oldIndex == newIndex) return;
+
+    // Compute new visible order.
+    final movingId = visibleIds[oldIndex];
+    final newVisible = List<String>.from(visibleIds);
+    newVisible.removeAt(oldIndex);
+    newVisible.insert(newIndex, movingId);
+
+    // Slot-replacement: walk the full list and replace each "visible" trip
+    // with the next one from [newVisible], leaving hidden trips in place.
+    final byId = {for (final t in _trips) t.id: t};
+    final visibleSet = visibleIds.toSet();
+    var slot = 0;
+    _trips = _trips.map((trip) {
+      if (visibleSet.contains(trip.id)) {
+        return byId[newVisible[slot++]]!;
+      }
+      return trip;
+    }).toList();
+
+    notifyListeners();
+    unawaited(_saveOrder());
+  }
+
   // ─── Load / clear ──────────────────────────────────────────────────────────
 
   Future<void> load() async {
@@ -113,7 +192,11 @@ class TripProvider extends ChangeNotifier {
     if (!_isOnline) {
       final cached = await LocalCache.loadList('${_cacheKey}_$_userId');
       if (cached != null) {
-        _trips = cached.map((t) => Trip.fromJson(t)).toList();
+        final order = await _loadOrder();
+        _trips = applyOrder(
+          cached.map((t) => Trip.fromJson(t)).toList(),
+          order,
+        );
         _loadError = null;
       }
       _loaded = true;
@@ -128,7 +211,11 @@ class TripProvider extends ChangeNotifier {
           .select('*, trip_members(*), trip_stops(*)')
           .order('created_at', ascending: false);
       final rows = List<Map<String, dynamic>>.from(data as List);
-      _trips = rows.map((t) => Trip.fromJson(t)).toList();
+      final order = await _loadOrder();
+      _trips = applyOrder(
+        rows.map((t) => Trip.fromJson(t)).toList(),
+        order,
+      );
       _loadError = null;
       unawaited(LocalCache.saveList('${_cacheKey}_$_userId', rows));
     } catch (e, st) {
@@ -138,7 +225,11 @@ class TripProvider extends ChangeNotifier {
       if (_trips.isEmpty) {
         final cached = await LocalCache.loadList('${_cacheKey}_$_userId');
         if (cached != null) {
-          _trips = cached.map((t) => Trip.fromJson(t)).toList();
+          final order = await _loadOrder();
+          _trips = applyOrder(
+            cached.map((t) => Trip.fromJson(t)).toList(),
+            order,
+          );
         }
       }
     }
@@ -152,6 +243,7 @@ class TripProvider extends ChangeNotifier {
     _loadError = null;
     if (_userId != null) {
       unawaited(LocalCache.remove('${_cacheKey}_$_userId'));
+      unawaited(LocalCache.remove('${_orderKey}_$_userId'));
     }
     _userId = null;
     notifyListeners();
@@ -256,6 +348,7 @@ class TripProvider extends ChangeNotifier {
     _trips.insert(0, trip);
     notifyListeners();
     unawaited(_saveCache());
+    unawaited(_saveOrder());
     return trip;
   }
 
@@ -294,6 +387,7 @@ class TripProvider extends ChangeNotifier {
     _trips.removeWhere((t) => t.id == id);
     notifyListeners();
     unawaited(_saveCache());
+    unawaited(_saveOrder());
   }
 
   // ─── Members ──────────────────────────────────────────────────────────────

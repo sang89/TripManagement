@@ -282,4 +282,118 @@ void main() {
       expect(provider.getById('trip2')!.stops, isEmpty);
     });
   });
+
+  // ── reorderTrips ──────────────────────────────────────────────────────────
+  group('reorderTrips — full list (all visible)', () {
+    late List<Trip> three;
+
+    setUp(() {
+      three = [
+        _makeTrip(id: 't1', title: 'Alpha'),
+        _makeTrip(id: 't2', title: 'Beta'),
+        _makeTrip(id: 't3', title: 'Gamma'),
+      ];
+    });
+
+    List<String> ids() => ['t1', 't2', 't3'];
+
+    test('moves first item to last position', () async {
+      provider.seedForTest(three);
+      await provider.reorderTrips(ids(), 0, 2);
+      expect(provider.trips.map((t) => t.id).toList(), ['t2', 't3', 't1']);
+    });
+
+    test('moves last item to first position', () async {
+      provider.seedForTest(three);
+      await provider.reorderTrips(ids(), 2, 0);
+      expect(provider.trips.map((t) => t.id).toList(), ['t3', 't1', 't2']);
+    });
+
+    test('swaps adjacent items', () async {
+      provider.seedForTest(three);
+      await provider.reorderTrips(ids(), 0, 1);
+      expect(provider.trips.map((t) => t.id).toList(), ['t2', 't1', 't3']);
+    });
+
+    test('no-op when old == new', () async {
+      provider.seedForTest(three);
+      await provider.reorderTrips(ids(), 1, 1);
+      expect(provider.trips.map((t) => t.id).toList(), ['t1', 't2', 't3']);
+    });
+
+    test('notifies listeners', () async {
+      provider.seedForTest(three);
+      var notified = false;
+      provider.addListener(() => notified = true);
+      notified = false; // reset after seedForTest notification
+      await provider.reorderTrips(ids(), 0, 2);
+      expect(notified, isTrue);
+    });
+
+    test('list length stays the same', () async {
+      provider.seedForTest(three);
+      await provider.reorderTrips(ids(), 0, 2);
+      expect(provider.trips, hasLength(3));
+    });
+  });
+
+  group('reorderTrips — filtered list (slot-replacement)', () {
+    // Full list: [A(upcoming), B(past), C(upcoming)]
+    // Visible (upcoming): [A, C]
+    // Reorder visible 0→1 should produce: [C(upcoming), B(past), A(upcoming)]
+    test('reorders within filtered view, hidden trips keep their positions',
+        () async {
+      provider.seedForTest([
+        _makeTrip(id: 'A'),
+        _makeTrip(id: 'B'),
+        _makeTrip(id: 'C'),
+      ]);
+      // Only A and C are "visible" (e.g. Upcoming tab)
+      await provider.reorderTrips(['A', 'C'], 0, 1);
+      expect(provider.trips.map((t) => t.id).toList(), ['C', 'B', 'A']);
+    });
+
+    test('hidden trip at start stays at start', () async {
+      provider.seedForTest([
+        _makeTrip(id: 'H'), // hidden
+        _makeTrip(id: 'V1'), // visible
+        _makeTrip(id: 'V2'), // visible
+      ]);
+      await provider.reorderTrips(['V1', 'V2'], 0, 1);
+      expect(provider.trips.map((t) => t.id).toList(), ['H', 'V2', 'V1']);
+    });
+  });
+
+  // ── applyOrder ────────────────────────────────────────────────────────────
+  group('applyOrder', () {
+    final trips = [
+      _makeTrip(id: 'a'),
+      _makeTrip(id: 'b'),
+      _makeTrip(id: 'c'),
+    ];
+
+    test('null order returns original list', () {
+      expect(TripProvider.applyOrder(trips, null), equals(trips));
+    });
+
+    test('empty order returns original list', () {
+      expect(TripProvider.applyOrder(trips, []), equals(trips));
+    });
+
+    test('reorders according to saved IDs', () {
+      final ordered = TripProvider.applyOrder(trips, ['c', 'a', 'b']);
+      expect(ordered.map((t) => t.id).toList(), ['c', 'a', 'b']);
+    });
+
+    test('appends trips not in saved order at the end', () {
+      final ordered = TripProvider.applyOrder(trips, ['b']);
+      expect(ordered.first.id, 'b');
+      expect(ordered, hasLength(3));
+    });
+
+    test('ignores IDs in order that no longer exist', () {
+      final ordered = TripProvider.applyOrder(trips, ['c', 'deleted-id', 'a', 'b']);
+      expect(ordered.map((t) => t.id).toList(), ['c', 'a', 'b']);
+    });
+  });
 }
