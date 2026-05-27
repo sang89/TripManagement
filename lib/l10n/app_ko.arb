@@ -113,7 +113,7 @@
   "mapSection": "지도",
   "membersSection": "멤버",
   "addMember": "멤버 추가",
-  "fullNameLabel": "성명",
+  "fullNameLabel": "이름",
   "emailOptional": "이메일 (선택)",
   "phoneOptional": "전화 (선택)",
   "saveTrip": "여행 저장",
@@ -142,5 +142,10 @@
   "navTrips": "여행",
   "navJournal": "일지",
   "navProfile": "프로필",
-  "journalComingSoon": "일지 기능 출시 예정"
+  "journalComingSoon": "일지 기능 출시 예정",
+
+  "memberSearching": "검색 중…",
+  "memberAccountFound": "계정을 찾았습니다",
+  "memberNoAccountFound": "계정을 찾을 수 없습니다",
+  "memberLinkedAccount": "연결된 계정"
 }

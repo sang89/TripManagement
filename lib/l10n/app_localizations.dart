@@ -795,7 +795,7 @@ abstract class AppLocalizations {
   /// No description provided for @fullNameLabel.
   ///
   /// In en, this message translates to:
-  /// **'Full name'**
+  /// **'Name'**
   String get fullNameLabel;
 
   /// No description provided for @emailOptional.
@@ -971,6 +971,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Journal coming soon'**
   String get journalComingSoon;
+
+  /// No description provided for @memberSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching…'**
+  String get memberSearching;
+
+  /// No description provided for @memberAccountFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Account found'**
+  String get memberAccountFound;
+
+  /// No description provided for @memberNoAccountFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No account found'**
+  String get memberNoAccountFound;
+
+  /// No description provided for @memberLinkedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked account'**
+  String get memberLinkedAccount;
 }
 
 class _AppLocalizationsDelegate

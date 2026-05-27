@@ -113,7 +113,7 @@
   "mapSection": "地图",
   "membersSection": "成员",
   "addMember": "添加成员",
-  "fullNameLabel": "全名",
+  "fullNameLabel": "姓名",
   "emailOptional": "邮箱（可选）",
   "phoneOptional": "电话（可选）",
   "saveTrip": "保存行程",
@@ -142,5 +142,10 @@
   "navTrips": "行程",
   "navJournal": "日记",
   "navProfile": "资料",
-  "journalComingSoon": "日记即将推出"
+  "journalComingSoon": "日记即将推出",
+
+  "memberSearching": "搜索中…",
+  "memberAccountFound": "找到账户",
+  "memberNoAccountFound": "未找到账户",
+  "memberLinkedAccount": "已关联账户"
 }

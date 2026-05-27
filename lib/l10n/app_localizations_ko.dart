@@ -362,7 +362,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addMember => '멤버 추가';
 
   @override
-  String get fullNameLabel => '성명';
+  String get fullNameLabel => '이름';
 
   @override
   String get emailOptional => '이메일 (선택)';
@@ -452,4 +452,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get journalComingSoon => '일지 기능 출시 예정';
+
+  @override
+  String get memberSearching => '검색 중…';
+
+  @override
+  String get memberAccountFound => '계정을 찾았습니다';
+
+  @override
+  String get memberNoAccountFound => '계정을 찾을 수 없습니다';
+
+  @override
+  String get memberLinkedAccount => '연결된 계정';
 }

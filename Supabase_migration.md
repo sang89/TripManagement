@@ -107,12 +107,34 @@ supabase link --project-ref qgeocaectbdfonrorwco
 
 ---
 
-## Syncing migrations from PropertyManagement
+## Sync rules — read this before adding a migration
 
-Since both apps share the same Supabase project:
+Both apps share the same Supabase project, but the migration files are **not** mirrored symmetrically.
 
-1. When a new migration is added to PropertyManagement's `supabase/migrations/`, copy the `.sql` file to this repo's `supabase/migrations/`.
-2. You do **not** need to push it again — it will already be applied. Just keep the files in sync so `supabase migration list` doesn't flag discrepancies.
+| Repo | What goes in `supabase/migrations/` |
+|---|---|
+| **TripManagement** | ALL migrations — both its own and every PropertyManagement migration |
+| **PropertyManagement** | ONLY its own migrations — never copy TripManagement files here |
+
+**Why:** `supabase migration list` compares the local files against what is recorded in the remote's `supabase_migrations` table. TripManagement is the "full history" repo; PropertyManagement only needs to know about the schema it owns.
+
+### When PropertyManagement adds a new migration
+
+1. Push it from the PropertyManagement repo: `supabase db push`
+2. Copy the `.sql` file into TripManagement's `supabase/migrations/`
+3. Do **not** push again from TripManagement — it's already applied; copying the file just keeps the local history complete.
+
+### When TripManagement adds a new migration
+
+1. Push it from the TripManagement repo: `supabase db push`
+2. It depends on whether the migration is **app-specific** or **shared infrastructure**:
+
+| Type | Example | Copy to PropertyManagement? |
+|---|---|---|
+| TripManagement-specific | `find_user_by_contact` RPC (trip member lookup) | ❌ No |
+| Shared infrastructure | trigger on `auth.users`, changes to `user_profiles` | ✅ Yes — commit it there too |
+
+If you're unsure, ask: does this migration affect a table or function that PropertyManagement also uses? If yes → copy it.
 
 ---
 

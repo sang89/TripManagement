@@ -363,7 +363,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addMember => 'إضافة عضو';
 
   @override
-  String get fullNameLabel => 'الاسم الكامل';
+  String get fullNameLabel => 'الاسم';
 
   @override
   String get emailOptional => 'البريد الإلكتروني (اختياري)';
@@ -453,4 +453,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get journalComingSoon => 'المذكرات قريباً';
+
+  @override
+  String get memberSearching => 'جارٍ البحث…';
+
+  @override
+  String get memberAccountFound => 'تم العثور على الحساب';
+
+  @override
+  String get memberNoAccountFound => 'لم يتم العثور على حساب';
+
+  @override
+  String get memberLinkedAccount => 'حساب مرتبط';
 }
