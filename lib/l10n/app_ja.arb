@@ -88,7 +88,7 @@
   "upcoming": "予定",
   "past": "過去",
   "deleteTripTitle": "旅行を削除しますか？",
-  "deleteTripMessage": "\"{tripTitle}\"を削除しますか？この操作は元に戻せません。",
+  "deleteTripMessage": "{tripTitle}を削除しますか？この操作は元に戻せません。",
   "couldNotLoadTrips": "旅行を読み込めませんでした",
   "noTripsYet": "まだ旅行はありません",
   "noTripsHint": "+ をタップして始めましょう。",
@@ -151,6 +151,11 @@
   "invitePending": "保留中",
   "inviteAccepted": "承諾済み",
   "inviteDeclined": "辞退済み",
+  "memberLeft": "退出済み",
+  "invitedBy": "{name}から招待",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, other{{count}件の旅行招待}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "旅行招待",
   "inviteNotifBody": "{tripTitle}に招待されました",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "このトリップへの今後の招待を許可しない",
+  "reinviteBlockedError": "このユーザーはこのトリップへの今後の招待を拒否しています",
+  "declineInviteConfirmTitle": "招待を断りますか？",
+  "declineInviteConfirmMessage": "「{tripTitle}」への招待を断りますか？アクセスできなくなります。",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

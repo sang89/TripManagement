@@ -286,7 +286,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String deleteTripMessage(String tripTitle) {
-    return 'حذف \"$tripTitle\"؟ لا يمكن التراجع عن هذا الإجراء.';
+    return 'حذف $tripTitle؟ لا يمكن التراجع عن هذا الإجراء.';
+  }
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String get leaveTripTooltip => 'Leave trip';
+
+  @override
+  String get thisTripFallback => 'this trip';
+
+  @override
+  String get leaveTripTitle => 'Leave trip?';
+
+  @override
+  String leaveTripMessage(String tripTitle) {
+    return 'You will be removed from $tripTitle and lose access.';
   }
 
   @override
@@ -476,6 +493,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inviteDeclined => 'مرفوض';
 
   @override
+  String get memberLeft => 'غادر';
+
+  @override
+  String invitedBy(String name) {
+    return 'تمت الدعوة بواسطة $name';
+  }
+
+  @override
   String tripInvitationsTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -498,5 +523,20 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String inviteNotifBody(String tripTitle) {
     return 'لقد تمت دعوتك إلى $tripTitle';
+  }
+
+  @override
+  String get blockReinviteLabel => 'عدم السماح بالدعوات المستقبلية لهذه الرحلة';
+
+  @override
+  String get reinviteBlockedError =>
+      'اختار هذا المستخدم إلغاء الاشتراك في الدعوات المستقبلية لهذه الرحلة';
+
+  @override
+  String get declineInviteConfirmTitle => 'رفض الدعوة؟';
+
+  @override
+  String declineInviteConfirmMessage(String tripTitle) {
+    return 'رفض الدعوة إلى \'$tripTitle\'؟ ستفقد الوصول.';
   }
 }

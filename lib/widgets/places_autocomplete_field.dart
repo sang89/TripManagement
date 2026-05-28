@@ -46,7 +46,14 @@ class _PlacesAutocompleteFieldState extends State<PlacesAutocompleteField> {
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
         _debounce?.cancel();
-        setState(() => _suggestions = []);
+        // On web, mousedown on a suggestion causes the text field to lose focus
+        // (browser blur) BEFORE the pointer-up event fires ListTile.onTap.
+        // Clearing the dropdown immediately removes the widget from the tree,
+        // so the tap is never delivered and the selection is lost.
+        // A short delay keeps the dropdown alive long enough for onTap to run.
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (mounted && !_selecting) setState(() => _suggestions = []);
+        });
       }
     });
   }

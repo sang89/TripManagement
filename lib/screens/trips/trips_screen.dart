@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/invitations_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../widgets/trip_card.dart';
@@ -54,18 +55,29 @@ class _TripsScreenState extends State<TripsScreen>
 
   Widget _tripSlide(BuildContext context, Trip trip) {
     final l10n = AppLocalizations.of(context);
+    final currentUserId = context.read<AuthProvider>().userId;
+    final isOrganizer = trip.createdBy == currentUserId;
     return Slidable(
       key: ValueKey(trip.id),
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
         children: [
-          SlidableAction(
-            onPressed: (_) => _confirmDelete(context, trip),
-            backgroundColor: AppTheme.danger,
-            foregroundColor: Colors.white,
-            icon: Icons.delete_outline,
-            label: l10n.delete,
-          ),
+          if (isOrganizer)
+            SlidableAction(
+              onPressed: (_) => _confirmDelete(context, trip),
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+              icon: Icons.delete_outline,
+              label: l10n.delete,
+            )
+          else
+            SlidableAction(
+              onPressed: (_) => _confirmLeave(context, trip),
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+              icon: Icons.exit_to_app_outlined,
+              label: l10n.leave,
+            ),
         ],
       ),
       child: TripCard(trip: trip),
@@ -94,6 +106,51 @@ class _TripsScreenState extends State<TripsScreen>
     );
     if (confirmed == true && context.mounted) {
       await context.read<TripProvider>().deleteTrip(trip.id);
+    }
+  }
+
+  Future<void> _confirmLeave(BuildContext context, Trip trip) async {
+    final l10n = AppLocalizations.of(context);
+    bool blockReinvite = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(l10n.leaveTripTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.leaveTripMessage(
+                  trip.title.isNotEmpty ? trip.title : l10n.thisTripFallback)),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: blockReinvite,
+                onChanged: (v) => setS(() => blockReinvite = v),
+                title: Text(l10n.blockReinviteLabel,
+                    style: const TextStyle(fontSize: 13)),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.leave,
+                  style: const TextStyle(color: AppTheme.danger)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<TripProvider>().leaveTrip(trip.id, blockReinvite: blockReinvite);
     }
   }
 
@@ -400,11 +457,53 @@ class _InviteRowState extends State<_InviteRow> {
   }
 
   Future<void> _decline(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    bool blockReinvite = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(l10n.declineInviteConfirmTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.declineInviteConfirmMessage(widget.invite.tripTitle)),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: blockReinvite,
+                onChanged: (v) => setS(() => blockReinvite = v),
+                title: Text(l10n.blockReinviteLabel,
+                    style: const TextStyle(fontSize: 13)),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.declineInvite,
+                  style: const TextStyle(color: AppTheme.danger)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
     setState(() => _loading = true);
     try {
-      await context
-          .read<InvitationsProvider>()
-          .decline(widget.invite.memberId, context.read<TripProvider>());
+      await context.read<InvitationsProvider>().decline(
+            widget.invite.memberId,
+            context.read<TripProvider>(),
+            blockReinvite: blockReinvite,
+          );
     } finally {
       if (mounted) setState(() => _loading = false);
     }

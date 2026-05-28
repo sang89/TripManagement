@@ -14,7 +14,12 @@ class DirectionsService {
   /// Returns decoded [LatLng] points for the driving route through [waypoints]
   /// in order. Returns `null` when the API request fails or the key lacks
   /// Directions API access.
+  ///
+  /// Always returns `null` on web — the Directions REST API does not send
+  /// CORS headers, so browser requests are blocked. The caller falls back to
+  /// straight-line display automatically.
   static Future<List<LatLng>?> getRoute(List<LatLng> waypoints) async {
+    if (kIsWeb) return null; // Directions REST API blocked by CORS on web.
     if (waypoints.length < 2) return null;
 
     final origin =

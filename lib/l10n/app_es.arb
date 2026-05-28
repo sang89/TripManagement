@@ -88,7 +88,7 @@
   "upcoming": "Próximos",
   "past": "Pasados",
   "deleteTripTitle": "¿Eliminar viaje?",
-  "deleteTripMessage": "¿Eliminar \"{tripTitle}\"? Esta acción no se puede deshacer.",
+  "deleteTripMessage": "¿Eliminar {tripTitle}? Esta acción no se puede deshacer.",
   "couldNotLoadTrips": "No se pudieron cargar los viajes",
   "noTripsYet": "Sin viajes aún",
   "noTripsHint": "Toca + para comenzar.",
@@ -151,6 +151,11 @@
   "invitePending": "Pendiente",
   "inviteAccepted": "Aceptado",
   "inviteDeclined": "Rechazado",
+  "memberLeft": "Salió",
+  "invitedBy": "Invitado por {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{1 invitación de viaje} other{{count} invitaciones de viaje}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "Invitación de viaje",
   "inviteNotifBody": "Has sido invitado a {tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "No permitir futuras invitaciones a este viaje",
+  "reinviteBlockedError": "Este usuario ha rechazado futuras invitaciones a este viaje",
+  "declineInviteConfirmTitle": "¿Rechazar invitación?",
+  "declineInviteConfirmMessage": "¿Rechazar la invitación a «{tripTitle}»? Perderás el acceso.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

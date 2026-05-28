@@ -286,7 +286,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String deleteTripMessage(String tripTitle) {
-    return '\"$tripTitle\"을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.';
+    return '$tripTitle을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.';
+  }
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String get leaveTripTooltip => 'Leave trip';
+
+  @override
+  String get thisTripFallback => 'this trip';
+
+  @override
+  String get leaveTripTitle => 'Leave trip?';
+
+  @override
+  String leaveTripMessage(String tripTitle) {
+    return 'You will be removed from $tripTitle and lose access.';
   }
 
   @override
@@ -475,6 +492,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inviteDeclined => '거절됨';
 
   @override
+  String get memberLeft => '탈퇴함';
+
+  @override
+  String invitedBy(String name) {
+    return '$name님이 초대함';
+  }
+
+  @override
   String tripInvitationsTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -496,5 +521,19 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String inviteNotifBody(String tripTitle) {
     return '$tripTitle에 초대받으셨습니다';
+  }
+
+  @override
+  String get blockReinviteLabel => '이 여행에 대한 향후 초대 허용 안 함';
+
+  @override
+  String get reinviteBlockedError => '이 사용자는 이 여행에 대한 향후 초대를 거부했습니다';
+
+  @override
+  String get declineInviteConfirmTitle => '초대 거절?';
+
+  @override
+  String declineInviteConfirmMessage(String tripTitle) {
+    return '«$tripTitle» 초대를 거절하시겠습니까? 접근 권한을 잃게 됩니다.';
   }
 }

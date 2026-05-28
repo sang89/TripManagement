@@ -287,7 +287,24 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String deleteTripMessage(String tripTitle) {
-    return 'Xóa \"$tripTitle\"? Không thể hoàn tác.';
+    return 'Xóa $tripTitle? Không thể hoàn tác.';
+  }
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String get leaveTripTooltip => 'Leave trip';
+
+  @override
+  String get thisTripFallback => 'this trip';
+
+  @override
+  String get leaveTripTitle => 'Leave trip?';
+
+  @override
+  String leaveTripMessage(String tripTitle) {
+    return 'You will be removed from $tripTitle and lose access.';
   }
 
   @override
@@ -478,6 +495,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inviteDeclined => 'Đã từ chối';
 
   @override
+  String get memberLeft => 'Đã rời';
+
+  @override
+  String invitedBy(String name) {
+    return 'Được mời bởi $name';
+  }
+
+  @override
   String tripInvitationsTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -500,5 +525,21 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String inviteNotifBody(String tripTitle) {
     return 'Bạn đã được mời tham gia $tripTitle';
+  }
+
+  @override
+  String get blockReinviteLabel =>
+      'Không cho phép lời mời trong tương lai cho chuyến đi này';
+
+  @override
+  String get reinviteBlockedError =>
+      'Người dùng này đã từ chối lời mời trong tương lai cho chuyến đi này';
+
+  @override
+  String get declineInviteConfirmTitle => 'Từ chối lời mời?';
+
+  @override
+  String declineInviteConfirmMessage(String tripTitle) {
+    return 'Từ chối lời mời tới «$tripTitle»? Bạn sẽ mất quyền truy cập.';
   }
 }

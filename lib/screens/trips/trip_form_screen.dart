@@ -45,6 +45,8 @@ class _TripFormScreenState extends State<TripFormScreen> {
   Trip? _existing;
   List<TripMember> _pendingMembers = [];
   List<TripStop> _pendingStops = [];
+  // userIds that were re-invited in this edit session (left→pending).
+  final Set<String> _reinvitedUserIds = {};
 
   final _places = TripPlacesService(kGooglePlacesApiKey);
 
@@ -262,6 +264,19 @@ class _TripFormScreenState extends State<TripFormScreen> {
           }
         }
 
+        // Re-invite members whose status was changed from 'left'/'declined' to
+        // 'pending' in this session (upsert reactivates the existing DB row and
+        // fires the invite notification via the extended trigger).
+        for (final m in _pendingMembers) {
+          if (m.userId != null && _reinvitedUserIds.contains(m.userId)) {
+            await provider.addMember(widget.tripId!,
+                displayName: m.displayName,
+                email: m.email,
+                phone: m.phone,
+                userId: m.userId);
+          }
+        }
+
         // Sync stops: delete removed, add new drafts, update edited existing
         final existingStopIds = _existing!.stops.map((s) => s.id).toSet();
         final pendingExistingIds = _pendingStops
@@ -326,9 +341,13 @@ class _TripFormScreenState extends State<TripFormScreen> {
         if (mounted) context.go('/trip/${trip.id}');
       }
     } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = e is ReinviteBlockedException
+            ? l10n.reinviteBlockedError
+            : e.toString();
       });
     }
   }
@@ -336,7 +355,29 @@ class _TripFormScreenState extends State<TripFormScreen> {
   void _openAddMemberSheet() {
     showAddMemberSheet(
       context,
-      onAdd: (member) => setState(() => _pendingMembers.add(member)),
+      onAdd: (draft) => setState(() {
+        if (draft.userId != null) {
+          // Check if this user already has a row in the form (e.g. status='left'
+          // or 'declined'). If so, update in-place instead of adding a duplicate.
+          final existingIdx = _pendingMembers.indexWhere(
+            (m) =>
+                m.userId == draft.userId &&
+                (m.status == 'left' || m.status == 'declined'),
+          );
+          if (existingIdx >= 0) {
+            _reinvitedUserIds.add(draft.userId!);
+            _pendingMembers[existingIdx] =
+                _pendingMembers[existingIdx].copyWith(
+              displayName: draft.displayName,
+              status: 'pending',
+            );
+            return;
+          }
+          // Don't add a duplicate if already pending/accepted.
+          if (_pendingMembers.any((m) => m.userId == draft.userId)) return;
+        }
+        _pendingMembers.add(draft);
+      }),
     );
   }
 
@@ -348,7 +389,23 @@ class _TripFormScreenState extends State<TripFormScreen> {
     final timeFmt = DateFormat('MMM d  h:mm a');
     final sorted = _sortedStops;
 
-    return Scaffold(
+    return PopScope(
+      // Never allow the system back gesture / button to pop by itself.
+      // Instead, auto-save if the required fields are filled; otherwise
+      // discard and pop (avoids showing validation errors during back-nav).
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop || _loading) return;
+        final canSave = _titleCtrl.text.trim().isNotEmpty &&
+            _destinationCtrl.text.trim().isNotEmpty;
+        if (canSave) {
+          await _save();
+        } else {
+          // Required fields empty — just discard and go back.
+          if (mounted) Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? l10n.editTrip : l10n.newTrip),
         actions: [
@@ -592,6 +649,7 @@ class _TripFormScreenState extends State<TripFormScreen> {
           ],
         ),
       ),
+    ), // PopScope
     );
   }
 
@@ -614,12 +672,16 @@ class _TripFormScreenState extends State<TripFormScreen> {
         if (m.email != null) m.email!,
         if (m.phone != null) m.phone!,
       ].join(' · ');
+      final hasAvatar = m.avatarUrl != null && m.avatarUrl!.isNotEmpty;
       return ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(
           backgroundColor: Colors.grey[200],
-          child: Text(m.displayName[0].toUpperCase(),
-              style: const TextStyle(color: AppTheme.primary)),
+          backgroundImage: hasAvatar ? NetworkImage(m.avatarUrl!) : null,
+          child: hasAvatar
+              ? null
+              : Text(m.displayName[0].toUpperCase(),
+                  style: const TextStyle(color: AppTheme.primary)),
         ),
         title: Text(m.displayName),
         subtitle: detail.isNotEmpty ? Text(detail) : null,
@@ -655,16 +717,20 @@ class _TripFormScreenState extends State<TripFormScreen> {
       ].join(' · ');
       final subtitleText =
           contact.isNotEmpty ? '$roleLabel · $contact' : roleLabel;
+      final hasAvatar = m.avatarUrl != null && m.avatarUrl!.isNotEmpty;
       return ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(
           backgroundColor:
               m.role == 'organizer' ? AppTheme.primary : Colors.grey[200],
-          child: Text(m.displayName[0].toUpperCase(),
-              style: TextStyle(
-                  color: m.role == 'organizer'
-                      ? Colors.white
-                      : AppTheme.primary)),
+          backgroundImage: hasAvatar ? NetworkImage(m.avatarUrl!) : null,
+          child: hasAvatar
+              ? null
+              : Text(m.displayName[0].toUpperCase(),
+                  style: TextStyle(
+                      color: m.role == 'organizer'
+                          ? Colors.white
+                          : AppTheme.primary)),
         ),
         title: Text(isMe ? l10n.you : m.displayName),
         subtitle: Text(subtitleText),
@@ -678,20 +744,23 @@ class _TripFormScreenState extends State<TripFormScreen> {
                       label: switch (m.status) {
                         'pending' => l10n.invitePending,
                         'declined' => l10n.inviteDeclined,
+                        'left' => l10n.memberLeft,
                         _ => l10n.inviteAccepted,
                       },
                       color: switch (m.status) {
                         'pending' => Colors.orange,
                         'declined' => AppTheme.danger,
+                        'left' => Colors.grey,
                         _ => Colors.green,
                       },
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: AppTheme.danger, size: 20),
-                    onPressed: () =>
-                        setState(() => _pendingMembers.remove(m)),
-                  ),
+                  if (m.status != 'left')
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline,
+                          color: AppTheme.danger, size: 20),
+                      onPressed: () =>
+                          setState(() => _pendingMembers.remove(m)),
+                    ),
                 ],
               ),
         dense: true,

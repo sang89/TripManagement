@@ -88,7 +88,7 @@
   "upcoming": "Bevorstehend",
   "past": "Vergangen",
   "deleteTripTitle": "Reise löschen?",
-  "deleteTripMessage": "\"{tripTitle}\" löschen? Dies kann nicht rückgängig gemacht werden.",
+  "deleteTripMessage": "{tripTitle} löschen? Dies kann nicht rückgängig gemacht werden.",
   "couldNotLoadTrips": "Reisen konnten nicht geladen werden",
   "noTripsYet": "Noch keine Reisen",
   "noTripsHint": "Tippe + um zu starten.",
@@ -151,6 +151,11 @@
   "invitePending": "Ausstehend",
   "inviteAccepted": "Akzeptiert",
   "inviteDeclined": "Abgelehnt",
+  "memberLeft": "Verlassen",
+  "invitedBy": "Eingeladen von {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{1 Reiseeinladung} other{{count} Reiseeinladungen}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "Reiseeinladung",
   "inviteNotifBody": "Sie wurden zu {tripTitle} eingeladen",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "Zukünftige Einladungen zu dieser Reise nicht erlauben",
+  "reinviteBlockedError": "Dieser Nutzer hat zukünftige Einladungen zu dieser Reise abgelehnt",
+  "declineInviteConfirmTitle": "Einladung ablehnen?",
+  "declineInviteConfirmMessage": "Einladung zu „{tripTitle}“ ablehnen? Du verlierst den Zugang.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

@@ -10,6 +10,12 @@ import '../services/connectivity_service.dart';
 import '../services/local_cache.dart';
 import '../services/offline_queue.dart';
 
+/// Thrown when [TripProvider.addMember] is called for a user who has opted out
+/// of future invitations to a specific trip (block_reinvite = true).
+class ReinviteBlockedException implements Exception {
+  const ReinviteBlockedException();
+}
+
 class TripProvider extends ChangeNotifier {
   static const _uuid = Uuid();
   static const _cacheKey = 'cache_trips_v1';
@@ -20,7 +26,7 @@ class TripProvider extends ChangeNotifier {
   bool _loaded = false;
   String? _loadError;
   String? _userId;
-  RealtimeChannel? _memberUpdateChannel;
+  RealtimeChannel? _realtimeChannel;
 
   final ConnectivityService? _connectivity;
   final OfflineQueue? _queue;
@@ -73,6 +79,9 @@ class TripProvider extends ChangeNotifier {
                   'email': m.email,
                   'phone': m.phone,
                   'status': m.status,
+                  'invited_by': m.invitedBy,
+                  'block_reinvite': m.blockReinvite,
+                  'avatar_url': m.avatarUrl,
                   'created_at': m.createdAt.toIso8601String(),
                 })
             .toList(),
@@ -219,7 +228,11 @@ class TripProvider extends ChangeNotifier {
         order,
       );
       _loadError = null;
-      unawaited(LocalCache.saveList('${_cacheKey}_$_userId', rows));
+      // Enrich member displayNames from user_profiles (SECURITY DEFINER
+      // bypasses RLS so every member's name is visible to all trip members).
+      await _enrichMemberNames();
+      // Save the enriched state so offline sessions also show correct names.
+      unawaited(_saveCache());
     } catch (e, st) {
       _loadError = e.toString();
       debugPrint('TripProvider.load error: $e\n$st');
@@ -237,17 +250,160 @@ class TripProvider extends ChangeNotifier {
     }
     _loaded = true;
     notifyListeners();
-    _subscribeMemberUpdates();
+    _subscribeRealtime();
   }
 
-  /// Listens for trip_members UPDATE events (e.g. invitee accepts/declines)
-  /// and patches the in-memory member status so the inviter sees changes
-  /// in real time without a full reload.
-  void _subscribeMemberUpdates() {
+  /// Fetches canonical profile names for all linked members via the
+  /// `get_profile_names` SECURITY DEFINER function and patches the in-memory
+  /// `displayName` so the UI shows real names even when the stored value is
+  /// an email address (e.g. for the trip organizer on older records).
+  ///
+  /// No-ops when offline or when there are no linked members.
+  Future<void> _enrichMemberNames() async {
+    // Collect every unique user_id across all trips.
+    final userIds = <String>{};
+    for (final trip in _trips) {
+      for (final m in trip.members) {
+        if (m.userId != null) userIds.add(m.userId!);
+      }
+    }
+    if (userIds.isEmpty) return;
+
+    try {
+      final rows = await _db.rpc(
+        'get_profile_names',
+        params: {'p_user_ids': userIds.toList()},
+      ) as List<dynamic>;
+      if (rows.isEmpty) return;
+
+      // Build userId → {fullName, avatarUrl} lookups.
+      final nameMap = <String, String>{};
+      final avatarMap = <String, String?>{};
+      for (final row in rows) {
+        final r = row as Map;
+        final uid = r['user_id'] as String;
+        nameMap[uid] = r['full_name'] as String? ?? '';
+        avatarMap[uid] = r['avatar_url'] as String?;
+      }
+
+      // Patch displayName and avatarUrl for every linked member.
+      _trips = _trips.map((trip) {
+        final enriched = trip.members.map((m) {
+          if (m.userId == null) return m;
+          final name = nameMap[m.userId!];
+          final avatar = avatarMap[m.userId!];
+          final nameChanged =
+              name != null && name.isNotEmpty && name != m.displayName;
+          final avatarChanged = avatar != m.avatarUrl;
+          if (!nameChanged && !avatarChanged) return m;
+          return m.copyWith(
+            displayName: nameChanged ? name : null,
+            avatarUrl: avatar ?? m.avatarUrl,
+          );
+        }).toList();
+        return trip.copyWith(members: enriched);
+      }).toList();
+    } catch (e) {
+      debugPrint('TripProvider._enrichMemberNames error: $e');
+    }
+  }
+
+  /// Single Realtime channel that keeps every in-memory trip fully in sync
+  /// for all accepted members without requiring a full reload.
+  ///
+  /// Tables covered (all added to supabase_realtime publication):
+  ///   • trips          — UPDATE only (organizer edited trip metadata)
+  ///   • trip_members   — INSERT (new member added), UPDATE (full row sync),
+  ///                      DELETE (hard-remove by organizer)
+  ///   • trip_stops     — INSERT / UPDATE / DELETE (itinerary changes)
+  ///
+  /// REPLICA IDENTITY FULL is required on trip_members and trip_stops so that
+  /// DELETE payloads include trip_id (not just the PK).
+  void _subscribeRealtime() {
     if (_userId == null) return;
-    _memberUpdateChannel?.unsubscribe();
-    _memberUpdateChannel = _db
-        .channel('member_updates_$_userId')
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = _db
+        .channel('trip_sync_$_userId')
+
+        // ── trips UPDATE ────────────────────────────────────────────────────
+        // Supabase Realtime only sends the scalar trips columns — no nested
+        // trip_members or trip_stops.  Reconstruct the Trip using the new row
+        // values and preserve the current in-memory members + stops.
+        //
+        // ⚠  If a new column is added to the trips table it MUST be added here.
+        // Stops and member handlers use fromJson and are automatically complete.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'trips',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final tripId = row['id'] as String?;
+            if (tripId == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final existing = _trips[tripIdx];
+            _trips[tripIdx] = Trip(
+              id: existing.id,
+              createdBy: existing.createdBy,
+              title: row['title'] as String? ?? existing.title,
+              startLocation: row['start_location'] as String?,
+              startLat: (row['start_lat'] as num?)?.toDouble(),
+              startLng: (row['start_lng'] as num?)?.toDouble(),
+              destination: row['destination'] as String? ?? existing.destination,
+              notes: row['notes'] as String? ?? '',
+              destinationLat: (row['destination_lat'] as num?)?.toDouble(),
+              destinationLng: (row['destination_lng'] as num?)?.toDouble(),
+              startAt: row['start_at'] != null
+                  ? DateTime.parse(row['start_at'] as String)
+                  : null,
+              endAt: row['end_at'] != null
+                  ? DateTime.parse(row['end_at'] as String)
+                  : null,
+              createdAt: existing.createdAt,
+              updatedAt: row['updated_at'] != null
+                  ? DateTime.parse(row['updated_at'] as String)
+                  : existing.updatedAt,
+              members: existing.members, // always preserved from in-memory
+              stops: existing.stops,     // always preserved from in-memory
+            );
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+
+        // ── trip_members INSERT ─────────────────────────────────────────────
+        // A new member was added to a trip the current user is part of.
+        // Dedup guard prevents double-append when the local device did the add
+        // (optimistic in-memory update already ran in addMember()).
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'trip_members',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final tripId = row['trip_id'] as String?;
+            if (tripId == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final member = TripMember.fromJson(row);
+            final trip = _trips[tripIdx];
+            if (trip.members.any((m) => m.id == member.id)) return; // dedup
+            _trips[tripIdx] = trip.copyWith(
+              members: [...trip.members, member],
+            );
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+
+        // ── trip_members UPDATE ─────────────────────────────────────────────
+        // Full row sync — covers status, display_name, email, phone,
+        // invited_by, block_reinvite, etc.  Previously only status was patched.
         .onPostgresChanges(
           event: PostgresChangeEvent.update,
           schema: 'public',
@@ -256,31 +412,133 @@ class TripProvider extends ChangeNotifier {
             final row = payload.newRecord;
             final memberId = row['id'] as String?;
             final tripId = row['trip_id'] as String?;
-            final status = row['status'] as String?;
-            if (memberId == null || tripId == null || status == null) return;
+            if (memberId == null || tripId == null) return;
 
             final tripIdx = _trips.indexWhere((t) => t.id == tripId);
             if (tripIdx < 0) return;
 
             final trip = _trips[tripIdx];
-            final memberIdx =
-                trip.members.indexWhere((m) => m.id == memberId);
+            final memberIdx = trip.members.indexWhere((m) => m.id == memberId);
             if (memberIdx < 0) return;
 
+            final updatedMember = TripMember.fromJson(row);
             final updatedMembers = List<TripMember>.of(trip.members)
-              ..[memberIdx] =
-                  trip.members[memberIdx].copyWith(status: status);
+              ..[memberIdx] = updatedMember;
             _trips[tripIdx] = trip.copyWith(members: updatedMembers);
             notifyListeners();
             unawaited(_saveCache());
           },
         )
+
+        // ── trip_members DELETE ─────────────────────────────────────────────
+        // Hard-remove by organizer.  Requires REPLICA IDENTITY FULL so that
+        // oldRecord contains trip_id (not just the PK).
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'trip_members',
+          callback: (payload) {
+            final row = payload.oldRecord;
+            final memberId = row['id'] as String?;
+            final tripId = row['trip_id'] as String?;
+            if (memberId == null || tripId == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final trip = _trips[tripIdx];
+            _trips[tripIdx] = trip.copyWith(
+              members: trip.members.where((m) => m.id != memberId).toList(),
+            );
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+
+        // ── trip_stops INSERT ───────────────────────────────────────────────
+        // A new stop was added.  Dedup guard prevents double-append when the
+        // local device added the stop (addStop() already updated in-memory).
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'trip_stops',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final tripId = row['trip_id'] as String?;
+            if (tripId == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final stop = TripStop.fromJson(row);
+            final trip = _trips[tripIdx];
+            if (trip.stops.any((s) => s.id == stop.id)) return; // dedup
+            final updatedStops = [...trip.stops, stop]
+              ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+            _trips[tripIdx] = trip.copyWith(stops: updatedStops);
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+
+        // ── trip_stops UPDATE ───────────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'trip_stops',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final tripId = row['trip_id'] as String?;
+            if (tripId == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final stop = TripStop.fromJson(row);
+            final trip = _trips[tripIdx];
+            final stopIdx = trip.stops.indexWhere((s) => s.id == stop.id);
+            if (stopIdx < 0) return;
+
+            final updatedStops = List<TripStop>.of(trip.stops)
+              ..[stopIdx] = stop;
+            updatedStops.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+            _trips[tripIdx] = trip.copyWith(stops: updatedStops);
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+
+        // ── trip_stops DELETE ───────────────────────────────────────────────
+        // Requires REPLICA IDENTITY FULL on trip_stops (migration 001700) so
+        // that oldRecord contains trip_id.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'trip_stops',
+          callback: (payload) {
+            final row = payload.oldRecord;
+            final stopId = row['id'] as String?;
+            final tripId = row['trip_id'] as String?;
+            if (stopId == null || tripId == null) return;
+
+            final tripIdx = _trips.indexWhere((t) => t.id == tripId);
+            if (tripIdx < 0) return;
+
+            final trip = _trips[tripIdx];
+            _trips[tripIdx] = trip.copyWith(
+              stops: trip.stops.where((s) => s.id != stopId).toList(),
+            );
+            notifyListeners();
+            unawaited(_saveCache());
+          },
+        )
+
         .subscribe();
   }
 
   void clear() {
-    _memberUpdateChannel?.unsubscribe();
-    _memberUpdateChannel = null;
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
     _trips = [];
     _loaded = false;
     _loadError = null;
@@ -313,9 +571,32 @@ class TripProvider extends ChangeNotifier {
     double? destinationLng,
   }) async {
     final userId = _db.auth.currentUser!.id;
-    final userName = _db.auth.currentUser!.userMetadata?['name'] as String? ??
-        _db.auth.currentUser!.email ??
-        'Me';
+
+    // Prefer the profile name from user_profiles (bypasses RLS via SECURITY
+    // DEFINER).  Falls back to auth metadata or email for offline / error cases.
+    String userName;
+    if (_isOnline) {
+      try {
+        final rows = await _db.rpc(
+          'get_profile_names',
+          params: {'p_user_ids': <String>[userId]},
+        ) as List<dynamic>;
+        final profileName = rows.isNotEmpty
+            ? (rows.first as Map)['full_name'] as String? ?? ''
+            : '';
+        userName = profileName.isNotEmpty
+            ? profileName
+            : _db.auth.currentUser!.email ?? 'Me';
+      } catch (_) {
+        userName = _db.auth.currentUser!.userMetadata?['name'] as String? ??
+            _db.auth.currentUser!.email ??
+            'Me';
+      }
+    } else {
+      userName = _db.auth.currentUser!.userMetadata?['name'] as String? ??
+          _db.auth.currentUser!.email ??
+          'Me';
+    }
     final tripId = _uuid.v4();
     final memberId = _uuid.v4();
     final now = DateTime.now().toUtc();
@@ -447,6 +728,8 @@ class TripProvider extends ChangeNotifier {
     // Linked members (userId != null) start as pending until they accept.
     // Unlinked guests (no account) are immediately accepted.
     final status = userId != null ? 'pending' : 'accepted';
+    // Record who sent this invite so the UI can show "Invited by …".
+    final invitedBy = _db.auth.currentUser?.id;
 
     final payload = <String, dynamic>{
       'id': memberId,
@@ -457,26 +740,116 @@ class TripProvider extends ChangeNotifier {
       'user_id': ?userId,
       'role': 'member',
       'status': status,
+      'invited_by': ?invitedBy,
     };
+
+    // Fast-reject if the in-memory row already has block_reinvite = true.
+    // The DB trigger (migration 20260527001300) is the authoritative guard, but
+    // this avoids an unnecessary network round-trip and gives an instant error.
+    if (userId != null) {
+      final cached = getById(tripId);
+      if (cached != null) {
+        for (final m in cached.members) {
+          if (m.userId == userId && m.blockReinvite) {
+            throw const ReinviteBlockedException();
+          }
+        }
+      }
+    }
 
     late TripMember member;
 
     if (_isOnline) {
-      final data = await _db.from('trip_members').insert(payload).select().single();
-      member = TripMember.fromJson(data);
+      if (userId != null) {
+        // Upsert: if this user already has a row for this trip (e.g. status='left'
+        // after leaving, or 'declined'), reset it to 'pending' instead of inserting
+        // a duplicate. The partial unique index on (trip_id, user_id) WHERE
+        // user_id IS NOT NULL (migration 20260527001200) handles the conflict.
+        // The extended trigger also fires on this UPDATE → sends FCM notification.
+        try {
+          final data = await _db
+              .from('trip_members')
+              .upsert(payload, onConflict: 'trip_id,user_id')
+              .select()
+              .single();
+          member = TripMember.fromJson(data);
+        } on PostgrestException catch (e) {
+          // DB trigger raises 'blocked_reinvite' when the row has block_reinvite=true.
+          if (e.message.contains('blocked_reinvite') ||
+              (e.details ?? '').toString().contains('blocked_reinvite')) {
+            throw const ReinviteBlockedException();
+          }
+          rethrow;
+        }
+      } else {
+        // Guest members have no user_id — no unique constraint, always insert.
+        final data =
+            await _db.from('trip_members').insert(payload).select().single();
+        member = TripMember.fromJson(data);
+      }
     } else {
-      member = TripMember.fromJson({...payload, 'created_at': now});
-      await _enqueue(OfflineOperation(
-        operationId: _uuid.v4(),
-        table: 'trip_members',
-        type: OfflineOperationType.insert,
-        data: {...payload, 'created_at': now},
-      ));
+      // Offline: detect an existing row for this userId and queue update vs insert.
+      final existingTrip = getById(tripId);
+      TripMember? existingForUser;
+      if (userId != null && existingTrip != null) {
+        for (final m in existingTrip.members) {
+          if (m.userId == userId) {
+            existingForUser = m;
+            break;
+          }
+        }
+      }
+
+      if (existingForUser != null) {
+        // Re-invite: queue an update on the existing row.
+        member = existingForUser.copyWith(
+          displayName: displayName,
+          status: 'pending',
+          invitedBy: invitedBy,
+        );
+        await _enqueue(OfflineOperation(
+          operationId: _uuid.v4(),
+          table: 'trip_members',
+          type: OfflineOperationType.update,
+          data: <String, dynamic>{
+            'display_name': displayName,
+            'status': 'pending',
+            'invited_by': ?invitedBy,
+            'email': ?email,
+            'phone': ?phone,
+          },
+          filters: {'id': existingForUser.id},
+        ));
+      } else {
+        member = TripMember.fromJson({...payload, 'created_at': now});
+        await _enqueue(OfflineOperation(
+          operationId: _uuid.v4(),
+          table: 'trip_members',
+          type: OfflineOperationType.insert,
+          data: {...payload, 'created_at': now},
+        ));
+      }
     }
 
     final trip = getById(tripId);
     if (trip == null) return;
-    final updated = trip.copyWith(members: [...trip.members, member]);
+
+    // Replace any existing row for this userId (e.g. after re-invite), or append.
+    final List<TripMember> newMembers;
+    if (userId != null) {
+      final existingIdx = trip.members.indexWhere((m) => m.userId == userId);
+      if (existingIdx >= 0) {
+        final mutable = List.of(trip.members);
+        mutable[existingIdx] = member;
+        newMembers = mutable;
+      } else {
+        newMembers = [...trip.members, member];
+      }
+    } else {
+      newMembers = [...trip.members, member];
+    }
+
+    final updated = trip.copyWith(members: newMembers);
     final idx = _trips.indexWhere((t) => t.id == tripId);
     if (idx >= 0) _trips[idx] = updated;
     notifyListeners();
@@ -504,6 +877,56 @@ class TripProvider extends ChangeNotifier {
     if (idx >= 0) _trips[idx] = updated;
     notifyListeners();
     unawaited(_saveCache());
+  }
+
+  /// Marks the current user's member row as 'left' and removes the trip from
+  /// the local list (they no longer have RLS access since
+  /// auth_user_is_trip_member only counts 'accepted' rows).
+  ///
+  /// If [blockReinvite] is true, also sets block_reinvite = true so that no
+  /// one can re-invite this user to the same trip in the future.
+  ///
+  /// Using UPDATE instead of DELETE preserves the row so that other members
+  /// can see a "Left" chip on the member tile in real-time via the existing
+  /// UPDATE realtime handler.
+  Future<void> leaveTrip(String tripId, {bool blockReinvite = false}) async {
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final trip = getById(tripId);
+    if (trip == null) return;
+
+    TripMember? myMember;
+    for (final m in trip.members) {
+      if (m.userId == userId) {
+        myMember = m;
+        break;
+      }
+    }
+    if (myMember == null) return;
+
+    final update = <String, dynamic>{
+      'status': 'left',
+      if (blockReinvite) 'block_reinvite': true,
+    };
+
+    if (_isOnline) {
+      await _db.from('trip_members').update(update).eq('id', myMember.id);
+    } else {
+      await _enqueue(OfflineOperation(
+        operationId: _uuid.v4(),
+        table: 'trip_members',
+        type: OfflineOperationType.update,
+        data: update,
+        filters: {'id': myMember.id},
+      ));
+    }
+
+    // Remove the trip from the local list — the user no longer has access.
+    _trips.removeWhere((t) => t.id == tripId);
+    notifyListeners();
+    unawaited(_saveCache());
+    unawaited(_saveOrder());
   }
 
   // ─── Stops ────────────────────────────────────────────────────────────────

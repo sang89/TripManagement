@@ -88,7 +88,15 @@
   "upcoming": "À venir",
   "past": "Passés",
   "deleteTripTitle": "Supprimer le voyage ?",
-  "deleteTripMessage": "Supprimer \"{tripTitle}\" ? Cette action est irréversible.",
+  "deleteTripMessage": "Supprimer {tripTitle} ? Cette action est irréversible.",
+  "leave": "Quitter",
+  "leaveTripTooltip": "Quitter le voyage",
+  "thisTripFallback": "ce voyage",
+  "leaveTripTitle": "Quitter le voyage ?",
+  "leaveTripMessage": "Vous serez retiré de {tripTitle} et perdrez l'accès.",
+  "@leaveTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
   "couldNotLoadTrips": "Impossible de charger les voyages",
   "noTripsYet": "Aucun voyage",
   "noTripsHint": "Appuyez sur + pour commencer.",
@@ -151,6 +159,11 @@
   "invitePending": "En attente",
   "inviteAccepted": "Accepté",
   "inviteDeclined": "Refusé",
+  "memberLeft": "Parti",
+  "invitedBy": "Invité par {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{1 invitation de voyage} other{{count} invitations de voyage}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +173,14 @@
   "inviteNotifTitle": "Invitation de voyage",
   "inviteNotifBody": "Vous avez été invité à {tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+
+  "blockReinviteLabel": "Ne plus autoriser les invitations à ce voyage",
+  "reinviteBlockedError": "Cet utilisateur a refusé les futures invitations à ce voyage",
+  "declineInviteConfirmTitle": "Refuser l'invitation ?",
+  "declineInviteConfirmMessage": "Refuser l'invitation pour « {tripTitle} » ? Vous perdrez l'accès.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

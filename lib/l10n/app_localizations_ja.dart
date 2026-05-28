@@ -285,7 +285,24 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String deleteTripMessage(String tripTitle) {
-    return '\"$tripTitle\"を削除しますか？この操作は元に戻せません。';
+    return '$tripTitleを削除しますか？この操作は元に戻せません。';
+  }
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String get leaveTripTooltip => 'Leave trip';
+
+  @override
+  String get thisTripFallback => 'this trip';
+
+  @override
+  String get leaveTripTitle => 'Leave trip?';
+
+  @override
+  String leaveTripMessage(String tripTitle) {
+    return 'You will be removed from $tripTitle and lose access.';
   }
 
   @override
@@ -474,6 +491,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inviteDeclined => '辞退済み';
 
   @override
+  String get memberLeft => '退出済み';
+
+  @override
+  String invitedBy(String name) {
+    return '$nameから招待';
+  }
+
+  @override
   String tripInvitationsTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -495,5 +520,19 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String inviteNotifBody(String tripTitle) {
     return '$tripTitleに招待されました';
+  }
+
+  @override
+  String get blockReinviteLabel => 'このトリップへの今後の招待を許可しない';
+
+  @override
+  String get reinviteBlockedError => 'このユーザーはこのトリップへの今後の招待を拒否しています';
+
+  @override
+  String get declineInviteConfirmTitle => '招待を断りますか？';
+
+  @override
+  String declineInviteConfirmMessage(String tripTitle) {
+    return '「$tripTitle」への招待を断りますか？アクセスできなくなります。';
   }
 }
