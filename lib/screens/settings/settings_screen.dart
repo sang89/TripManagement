@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/settings_provider.dart';
+import '../../services/biometric_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -19,6 +20,8 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: const [
           _AccountCard(),
+          SizedBox(height: 12),
+          _SecurityCard(),
           SizedBox(height: 12),
           _LanguageCard(),
           SizedBox(height: 12),
@@ -71,6 +74,57 @@ class _SectionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Security Card ────────────────────────────────────────────────────────────
+
+class _SecurityCard extends StatefulWidget {
+  const _SecurityCard();
+
+  @override
+  State<_SecurityCard> createState() => _SecurityCardState();
+}
+
+class _SecurityCardState extends State<_SecurityCard> {
+  bool _available = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAvailability();
+  }
+
+  Future<void> _checkAvailability() async {
+    final available = await context.read<BiometricService>().isAvailable();
+    if (mounted) setState(() => _available = available);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_available) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final enabled = context.watch<SettingsProvider>().biometricLockEnabled;
+    return _SectionCard(
+      title: l10n.securitySectionTitle,
+      icon: Icons.security_outlined,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.fingerprint),
+          title: Text(l10n.biometricToggleTitle),
+          subtitle: Text(
+            l10n.biometricToggleSubtitle,
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          ),
+          value: enabled,
+          activeThumbColor: AppTheme.primary,
+          activeTrackColor: AppTheme.primaryLight,
+          onChanged: (v) =>
+              context.read<SettingsProvider>().setBiometricLockEnabled(v),
+        ),
+      ],
     );
   }
 }

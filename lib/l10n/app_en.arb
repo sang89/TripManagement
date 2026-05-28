@@ -102,6 +102,9 @@
   "passwordMinimum6": "Minimum 6 characters",
   "confirmPassword": "Confirm Password",
   "rememberMe": "Remember me",
+  "continueWithGoogle": "Continue with Google",
+  "continueWithApple": "Continue with Apple",
+  "orSignInWith": "or",
 
   "myTrips": "My Trips",
   "all": "All",
@@ -214,5 +217,17 @@
   "declineInviteConfirmMessage": "Decline the invitation to {tripTitle}? You will lose access.",
   "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
+  },
+
+  "securitySectionTitle": "Security",
+  "biometricToggleTitle": "Face ID / Touch ID",
+  "biometricToggleSubtitle": "Use biometrics to unlock the app",
+  "biometricLockTitle": "Verify It's You",
+  "biometricLockSubtitle": "Authenticate to access your account",
+  "biometricSignInWithFace": "Sign in with Face ID",
+  "biometricSignInWithFingerprint": "Sign in with Fingerprint",
+  "biometricSignInWithBiometrics": "Sign in with Biometrics",
+  "biometricReason": "Authenticate to access your account",
+  "biometricFailed": "Authentication failed. Please try again.",
+  "usePasswordInstead": "Use password instead"
 }

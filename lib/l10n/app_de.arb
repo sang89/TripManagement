@@ -83,6 +83,9 @@
   "passwordMinimum6": "Mindestens 6 Zeichen",
   "confirmPassword": "Passwort bestätigen",
   "rememberMe": "Angemeldet bleiben",
+  "continueWithGoogle": "Mit Google fortfahren",
+  "continueWithApple": "Mit Apple fortfahren",
+  "orSignInWith": "oder",
   "myTrips": "Meine Reisen",
   "all": "Alle",
   "upcoming": "Bevorstehend",
@@ -166,14 +169,25 @@
   "inviteNotifBody": "Sie wurden zu {tripTitle} eingeladen",
   "@inviteNotifBody": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
+  },
 
   "blockReinviteLabel": "Zukünftige Einladungen zu dieser Reise nicht erlauben",
   "reinviteBlockedError": "Dieser Nutzer hat zukünftige Einladungen zu dieser Reise abgelehnt",
   "declineInviteConfirmTitle": "Einladung ablehnen?",
-  "declineInviteConfirmMessage": "Einladung zu „{tripTitle}“ ablehnen? Du verlierst den Zugang.",
+  "declineInviteConfirmMessage": "Einladung zu «{tripTitle}» ablehnen? Du verlierst den Zugang.",
   "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
+  },
+
+  "securitySectionTitle": "Sicherheit",
+  "biometricToggleTitle": "Face ID / Touch ID",
+  "biometricToggleSubtitle": "Biometrie zum Entsperren der App verwenden",
+  "biometricLockTitle": "Identität bestätigen",
+  "biometricLockSubtitle": "Authentifizieren Sie sich für den Kontozugriff",
+  "biometricSignInWithFace": "Mit Face ID anmelden",
+  "biometricSignInWithFingerprint": "Mit Fingerabdruck anmelden",
+  "biometricSignInWithBiometrics": "Mit Biometrie anmelden",
+  "biometricReason": "Authentifizieren Sie sich für den Kontozugriff",
+  "biometricFailed": "Authentifizierung fehlgeschlagen. Bitte erneut versuchen.",
+  "usePasswordInstead": "Passwort verwenden"
 }

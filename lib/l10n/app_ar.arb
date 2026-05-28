@@ -83,6 +83,9 @@
   "passwordMinimum6": "6 أحرف على الأقل",
   "confirmPassword": "تأكيد كلمة المرور",
   "rememberMe": "تذكرني",
+  "continueWithGoogle": "المتابعة مع Google",
+  "continueWithApple": "المتابعة مع Apple",
+  "orSignInWith": "أو",
   "myTrips": "رحلاتي",
   "all": "الكل",
   "upcoming": "القادمة",
@@ -175,5 +178,17 @@
   "declineInviteConfirmMessage": "رفض الدعوة إلى '{tripTitle}'؟ ستفقد الوصول.",
   "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
+  },
+
+  "securitySectionTitle": "الأمان",
+  "biometricToggleTitle": "Face ID / Touch ID",
+  "biometricToggleSubtitle": "استخدام المقاييس الحيوية لفتح التطبيق",
+  "biometricLockTitle": "تحقق من هويتك",
+  "biometricLockSubtitle": "المصادقة للوصول إلى حسابك",
+  "biometricSignInWithFace": "تسجيل الدخول بـ Face ID",
+  "biometricSignInWithFingerprint": "تسجيل الدخول ببصمة الإصبع",
+  "biometricSignInWithBiometrics": "تسجيل الدخول بالمقاييس الحيوية",
+  "biometricReason": "المصادقة للوصول إلى حسابك",
+  "biometricFailed": "فشلت المصادقة. يرجى المحاولة مرة أخرى.",
+  "usePasswordInstead": "استخدام كلمة المرور"
 }

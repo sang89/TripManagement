@@ -83,6 +83,9 @@
   "passwordMinimum6": "最低6文字",
   "confirmPassword": "パスワードを確認",
   "rememberMe": "ログイン状態を保持",
+  "continueWithGoogle": "Googleで続ける",
+  "continueWithApple": "Appleで続ける",
+  "orSignInWith": "または",
   "myTrips": "マイトリップ",
   "all": "すべて",
   "upcoming": "予定",
@@ -175,5 +178,17 @@
   "declineInviteConfirmMessage": "「{tripTitle}」への招待を断りますか？アクセスできなくなります。",
   "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
+  },
+
+  "securitySectionTitle": "セキュリティ",
+  "biometricToggleTitle": "Face ID / Touch ID",
+  "biometricToggleSubtitle": "生体認証でアプリのロックを解除する",
+  "biometricLockTitle": "本人確認",
+  "biometricLockSubtitle": "アカウントにアクセスするために認証してください",
+  "biometricSignInWithFace": "Face IDでサインイン",
+  "biometricSignInWithFingerprint": "指紋でサインイン",
+  "biometricSignInWithBiometrics": "生体認証でサインイン",
+  "biometricReason": "アカウントにアクセスするために認証してください",
+  "biometricFailed": "認証に失敗しました。もう一度お試しください。",
+  "usePasswordInstead": "パスワードを使用する"
 }

@@ -270,6 +270,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get rememberMe => '로그인 유지';
 
   @override
+  String get continueWithGoogle => 'Google로 계속하기';
+
+  @override
+  String get continueWithApple => 'Apple로 계속하기';
+
+  @override
+  String get orSignInWith => '또는';
+
+  @override
   String get myTrips => '내 여행';
 
   @override
@@ -536,4 +545,37 @@ class AppLocalizationsKo extends AppLocalizations {
   String declineInviteConfirmMessage(String tripTitle) {
     return '«$tripTitle» 초대를 거절하시겠습니까? 접근 권한을 잃게 됩니다.';
   }
+
+  @override
+  String get securitySectionTitle => '보안';
+
+  @override
+  String get biometricToggleTitle => 'Face ID / Touch ID';
+
+  @override
+  String get biometricToggleSubtitle => '생체 인식으로 앱 잠금 해제';
+
+  @override
+  String get biometricLockTitle => '본인 확인';
+
+  @override
+  String get biometricLockSubtitle => '계정에 접근하려면 인증하세요';
+
+  @override
+  String get biometricSignInWithFace => 'Face ID로 로그인';
+
+  @override
+  String get biometricSignInWithFingerprint => '지문으로 로그인';
+
+  @override
+  String get biometricSignInWithBiometrics => '생체 인식으로 로그인';
+
+  @override
+  String get biometricReason => '계정에 접근하려면 인증하세요';
+
+  @override
+  String get biometricFailed => '인증에 실패했습니다. 다시 시도해 주세요.';
+
+  @override
+  String get usePasswordInstead => '비밀번호 사용';
 }

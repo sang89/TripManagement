@@ -271,6 +271,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get rememberMe => 'Ghi nhớ đăng nhập';
 
   @override
+  String get continueWithGoogle => 'Tiếp tục với Google';
+
+  @override
+  String get continueWithApple => 'Tiếp tục với Apple';
+
+  @override
+  String get orSignInWith => 'hoặc';
+
+  @override
   String get myTrips => 'Chuyến đi của tôi';
 
   @override
@@ -542,4 +551,38 @@ class AppLocalizationsVi extends AppLocalizations {
   String declineInviteConfirmMessage(String tripTitle) {
     return 'Từ chối lời mời tới «$tripTitle»? Bạn sẽ mất quyền truy cập.';
   }
+
+  @override
+  String get securitySectionTitle => 'Bảo mật';
+
+  @override
+  String get biometricToggleTitle => 'Face ID / Touch ID';
+
+  @override
+  String get biometricToggleSubtitle =>
+      'Dùng sinh trắc học để mở khóa ứng dụng';
+
+  @override
+  String get biometricLockTitle => 'Xác minh danh tính';
+
+  @override
+  String get biometricLockSubtitle => 'Xác thực để truy cập tài khoản của bạn';
+
+  @override
+  String get biometricSignInWithFace => 'Đăng nhập bằng Face ID';
+
+  @override
+  String get biometricSignInWithFingerprint => 'Đăng nhập bằng vân tay';
+
+  @override
+  String get biometricSignInWithBiometrics => 'Đăng nhập bằng sinh trắc học';
+
+  @override
+  String get biometricReason => 'Xác thực để truy cập tài khoản của bạn';
+
+  @override
+  String get biometricFailed => 'Xác thực thất bại. Vui lòng thử lại.';
+
+  @override
+  String get usePasswordInstead => 'Dùng mật khẩu thay thế';
 }

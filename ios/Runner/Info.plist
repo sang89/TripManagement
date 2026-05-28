@@ -34,6 +34,19 @@
 	<string>Select a profile photo from your photo library</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a profile photo with your camera</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to quickly and securely sign in to your account.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.824615270003-5714kre5m6si8t8st5e45aqn0sgi863e</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

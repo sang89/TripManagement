@@ -268,6 +268,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rememberMe => '记住我';
 
   @override
+  String get continueWithGoogle => '使用 Google 继续';
+
+  @override
+  String get continueWithApple => '使用 Apple 继续';
+
+  @override
+  String get orSignInWith => '或';
+
+  @override
   String get myTrips => '我的行程';
 
   @override
@@ -534,4 +543,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String declineInviteConfirmMessage(String tripTitle) {
     return '拒绝«$tripTitle»的邀请？您将失去访问权限。';
   }
+
+  @override
+  String get securitySectionTitle => '安全';
+
+  @override
+  String get biometricToggleTitle => 'Face ID / Touch ID';
+
+  @override
+  String get biometricToggleSubtitle => '使用生物识别解锁应用';
+
+  @override
+  String get biometricLockTitle => '验证您的身份';
+
+  @override
+  String get biometricLockSubtitle => '请验证身份以访问您的账户';
+
+  @override
+  String get biometricSignInWithFace => '使用 Face ID 登录';
+
+  @override
+  String get biometricSignInWithFingerprint => '使用指纹登录';
+
+  @override
+  String get biometricSignInWithBiometrics => '使用生物识别登录';
+
+  @override
+  String get biometricReason => '请验证身份以访问您的账户';
+
+  @override
+  String get biometricFailed => '身份验证失败，请重试。';
+
+  @override
+  String get usePasswordInstead => '使用密码登录';
 }

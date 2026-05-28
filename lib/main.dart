@@ -15,8 +15,10 @@ import 'providers/invitations_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/trip_provider.dart';
 import 'providers/user_profile_provider.dart';
+import 'screens/auth/biometric_lock_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'services/biometric_service.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/shell/shell_scaffold.dart';
@@ -61,6 +63,7 @@ void main() async {
     queue: offlineQueue,
   );
   final invitations = InvitationsProvider();
+  final biometricService = BiometricService();
 
   if (auth.isLoggedIn) {
     await trips.load();
@@ -77,6 +80,7 @@ void main() async {
     invitations: invitations,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
+    biometricService: biometricService,
   ));
 }
 
@@ -88,6 +92,7 @@ class TripManagementApp extends StatefulWidget {
   final InvitationsProvider invitations;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
+  final BiometricService biometricService;
 
   const TripManagementApp({
     super.key,
@@ -98,6 +103,7 @@ class TripManagementApp extends StatefulWidget {
     required this.invitations,
     required this.connectivity,
     required this.offlineQueue,
+    required this.biometricService,
   });
 
   @override
@@ -119,13 +125,24 @@ class _TripManagementAppState extends State<TripManagementApp> {
     widget.auth.addListener(_onAuthChanged);
 
     _router = GoRouter(
-      refreshListenable: widget.auth,
+      refreshListenable: Listenable.merge([widget.auth, widget.settings]),
       redirect: (context, state) {
         final loggedIn = widget.auth.isLoggedIn;
         final loc = state.matchedLocation;
         final onAuth = loc == '/login' || loc == '/register';
-        if (!loggedIn && !onAuth) return '/login';
-        if (loggedIn && onAuth) return '/trips';
+        final onBiometricLock = loc == '/biometric-lock';
+
+        if (!loggedIn && !onBiometricLock && !onAuth) return '/login';
+        if (!loggedIn && onBiometricLock) return '/login';
+
+        final needsBiometric = widget.settings.biometricLockEnabled &&
+            !widget.auth.biometricVerified;
+
+        if (loggedIn && onAuth) return needsBiometric ? '/biometric-lock' : '/trips';
+        if (loggedIn && !onAuth && !onBiometricLock && needsBiometric) {
+          return '/biometric-lock';
+        }
+        if (loggedIn && onBiometricLock && !needsBiometric) return '/trips';
         return null;
       },
       routes: [
@@ -133,6 +150,10 @@ class _TripManagementAppState extends State<TripManagementApp> {
         GoRoute(path: '/home', redirect: (_, _) => '/trips'),
         GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
         GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+        GoRoute(
+          path: '/biometric-lock',
+          builder: (_, _) => const BiometricLockScreen(),
+        ),
         StatefulShellRoute.indexedStack(
           builder: (_, _, shell) => ShellScaffold(navigationShell: shell),
           branches: [
@@ -218,6 +239,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.invitations),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
+        Provider<BiometricService>.value(value: widget.biometricService),
       ],
       child: Consumer<SettingsProvider>(
         builder: (_, settings, _) => MaterialApp.router(

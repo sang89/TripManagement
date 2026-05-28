@@ -83,6 +83,9 @@
   "passwordMinimum6": "Tối thiểu 6 ký tự",
   "confirmPassword": "Xác nhận mật khẩu",
   "rememberMe": "Ghi nhớ đăng nhập",
+  "continueWithGoogle": "Tiếp tục với Google",
+  "continueWithApple": "Tiếp tục với Apple",
+  "orSignInWith": "hoặc",
   "myTrips": "Chuyến đi của tôi",
   "all": "Tất cả",
   "upcoming": "Sắp tới",
@@ -175,5 +178,17 @@
   "declineInviteConfirmMessage": "Từ chối lời mời tới «{tripTitle}»? Bạn sẽ mất quyền truy cập.",
   "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
+  },
+
+  "securitySectionTitle": "Bảo mật",
+  "biometricToggleTitle": "Face ID / Touch ID",
+  "biometricToggleSubtitle": "Dùng sinh trắc học để mở khóa ứng dụng",
+  "biometricLockTitle": "Xác minh danh tính",
+  "biometricLockSubtitle": "Xác thực để truy cập tài khoản của bạn",
+  "biometricSignInWithFace": "Đăng nhập bằng Face ID",
+  "biometricSignInWithFingerprint": "Đăng nhập bằng vân tay",
+  "biometricSignInWithBiometrics": "Đăng nhập bằng sinh trắc học",
+  "biometricReason": "Xác thực để truy cập tài khoản của bạn",
+  "biometricFailed": "Xác thực thất bại. Vui lòng thử lại.",
+  "usePasswordInstead": "Dùng mật khẩu thay thế"
 }
