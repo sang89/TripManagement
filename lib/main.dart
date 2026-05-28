@@ -24,6 +24,7 @@ import 'screens/trips/trip_detail_screen.dart';
 import 'screens/trips/trip_form_screen.dart';
 import 'screens/trips/trips_screen.dart';
 import 'services/connectivity_service.dart';
+import 'services/maps_loader.dart';
 import 'services/offline_queue.dart';
 import 'services/push_notification_service.dart';
 
@@ -31,6 +32,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await AppLogger.init();
+
+  // Inject Google Maps JS API on web. On mobile this is a no-op — the
+  // native SDK is used instead. We await here so the script is fully loaded
+  // before any map widget renders.
+  try {
+    await injectGoogleMapsScript();
+  } catch (e, st) {
+    AppLogger.logError(e, st); // Map won't work but app continues.
+  }
   await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonKey);
 
   final connectivity = ConnectivityService();

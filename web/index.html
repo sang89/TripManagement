@@ -34,17 +34,10 @@
 </head>
 <body>
   <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
+    The Google Maps JS API is loaded dynamically by lib/services/web_maps_loader.dart
+    in main() before runApp(). The API key comes from lib/config/api_keys.dart
+    (git-ignored) — no key ever appears in this committed file.
   -->
-  <!-- Google Maps JS API key is injected by scripts/setup_web.sh.
-       Do NOT put the real key here — this file is committed to git.
-       Run: scripts/setup_web.sh YOUR_KEY   (or see web/index.html.local) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=%%MAPS_API_KEY%%"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

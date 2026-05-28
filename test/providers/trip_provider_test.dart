@@ -375,6 +375,322 @@ void main() {
     });
   });
 
+  // ── Realtime in-memory handlers (simulate _subscribeRealtime callbacks) ──
+  // The actual Supabase WebSocket is not available in tests, so we exercise
+  // the same in-memory mutation logic directly via seedForTest.  Each test
+  // mirrors exactly what the corresponding Realtime callback does.
+
+  group('Realtime — trips UPDATE', () {
+    late Trip original;
+
+    setUp(() {
+      original = Trip(
+        id: 'rt1',
+        createdBy: 'uid1',
+        title: 'Old Title',
+        destination: 'Paris',
+        notes: 'old notes',
+        startLocation: 'NYC',
+        startLat: 40.7,
+        startLng: -74.0,
+        destinationLat: 48.8,
+        destinationLng: 2.3,
+        startAt: DateTime(2026, 7, 1),
+        endAt: DateTime(2026, 7, 15),
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+        members: [_makeMember(id: 'm1', tripId: 'rt1')],
+        stops: [_makeStop(id: 's1', tripId: 'rt1')],
+      );
+      provider.seedForTest([original]);
+    });
+
+    test('updates scalar fields (title, destination, notes) from payload', () {
+      // Simulate the trips UPDATE Realtime callback.
+      final payload = {
+        'id': 'rt1', 'created_by': 'uid1',
+        'title': 'New Title', 'destination': 'Berlin',
+        'notes': 'updated notes',
+        'start_location': null, 'start_lat': null, 'start_lng': null,
+        'destination_lat': 52.5, 'destination_lng': 13.4,
+        'start_at': null, 'end_at': null,
+        'updated_at': '2026-06-01T00:00:00.000Z',
+      };
+      final existing = provider.getById('rt1')!;
+      final updated = Trip(
+        id: existing.id,
+        createdBy: existing.createdBy,
+        title: payload['title'] as String? ?? existing.title,
+        startLocation: payload['start_location'] as String?,
+        startLat: (payload['start_lat'] as num?)?.toDouble(),
+        startLng: (payload['start_lng'] as num?)?.toDouble(),
+        destination: payload['destination'] as String? ?? existing.destination,
+        notes: payload['notes'] as String? ?? '',
+        destinationLat: (payload['destination_lat'] as num?)?.toDouble(),
+        destinationLng: (payload['destination_lng'] as num?)?.toDouble(),
+        startAt: null,
+        endAt: null,
+        createdAt: existing.createdAt,
+        updatedAt: DateTime.parse(payload['updated_at'] as String),
+        members: existing.members,
+        stops: existing.stops,
+      );
+      provider.seedForTest([updated]);
+
+      final result = provider.getById('rt1')!;
+      expect(result.title, 'New Title');
+      expect(result.destination, 'Berlin');
+      expect(result.notes, 'updated notes');
+      expect(result.startLocation, isNull); // cleared
+      expect(result.startAt, isNull);
+    });
+
+    test('preserves in-memory members after trips UPDATE', () {
+      final existing = provider.getById('rt1')!;
+      final merged = existing.copyWith(title: 'Merged');
+      provider.seedForTest([merged]);
+      expect(provider.getById('rt1')!.members, hasLength(1));
+      expect(provider.getById('rt1')!.members.first.id, 'm1');
+    });
+
+    test('preserves in-memory stops after trips UPDATE', () {
+      final existing = provider.getById('rt1')!;
+      final merged = existing.copyWith(title: 'Merged');
+      provider.seedForTest([merged]);
+      expect(provider.getById('rt1')!.stops, hasLength(1));
+      expect(provider.getById('rt1')!.stops.first.id, 's1');
+    });
+  });
+
+  group('Realtime — trip_members INSERT', () {
+    late Trip trip;
+
+    setUp(() {
+      trip = _makeTrip(id: 't_mi', members: [_makeMember(id: 'ma', tripId: 't_mi')]);
+      provider.seedForTest([trip]);
+    });
+
+    test('appends a new member to the trip', () {
+      final newMember = TripMember(
+        id: 'mb', tripId: 't_mi', displayName: 'Bob',
+        role: 'member', status: 'pending', createdAt: DateTime(2026, 1, 2),
+      );
+      final updated = trip.copyWith(members: [...trip.members, newMember]);
+      provider.seedForTest([updated]);
+      expect(provider.getById('t_mi')!.members, hasLength(2));
+    });
+
+    test('dedup: does not double-append a member already in-memory', () {
+      // Simulate what the INSERT callback does: skip if id already present.
+      final existing = provider.getById('t_mi')!;
+      final newMember = existing.members.first; // already there
+      final dedupMembers = existing.members.any((m) => m.id == newMember.id)
+          ? existing.members
+          : [...existing.members, newMember];
+      provider.seedForTest([existing.copyWith(members: dedupMembers)]);
+      expect(provider.getById('t_mi')!.members, hasLength(1));
+    });
+  });
+
+  group('Realtime — trip_members UPDATE (full fields)', () {
+    late TripMember oldMember;
+    late Trip trip;
+
+    setUp(() {
+      oldMember = TripMember(
+        id: 'mc', tripId: 't_mu', displayName: 'old@example.com',
+        role: 'member', status: 'pending', email: 'old@example.com',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      trip = _makeTrip(id: 't_mu', members: [oldMember]);
+      provider.seedForTest([trip]);
+    });
+
+    test('replaces full member row (not just status)', () {
+      // Simulate: TripMember.fromJson(row) → replace in-place.
+      final updatedMember = oldMember.copyWith(
+        displayName: 'Real Name',
+        status: 'accepted',
+      );
+      final updatedTrip = trip.copyWith(members: [updatedMember]);
+      provider.seedForTest([updatedTrip]);
+      final m = provider.getById('t_mu')!.members.first;
+      expect(m.displayName, 'Real Name');
+      expect(m.status, 'accepted');
+    });
+  });
+
+  group('Realtime — trip_stops INSERT', () {
+    late Trip trip;
+
+    setUp(() {
+      trip = _makeTrip(
+        id: 't_si',
+        stops: [_makeStop(id: 'sa', tripId: 't_si', sortOrder: 0)],
+      );
+      provider.seedForTest([trip]);
+    });
+
+    test('appends a new stop', () {
+      final newStop = _makeStop(id: 'sb', tripId: 't_si', sortOrder: 1);
+      final updatedStops = [...trip.stops, newStop]
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      provider.seedForTest([trip.copyWith(stops: updatedStops)]);
+      expect(provider.getById('t_si')!.stops, hasLength(2));
+    });
+
+    test('stops remain sorted by sortOrder after INSERT', () {
+      final newStop = _makeStop(id: 'sc', tripId: 't_si', sortOrder: 1);
+      final anotherStop = _makeStop(id: 'sd', tripId: 't_si', sortOrder: 2);
+      final updatedStops = [...trip.stops, anotherStop, newStop]
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      provider.seedForTest([trip.copyWith(stops: updatedStops)]);
+      expect(
+        provider.getById('t_si')!.stops.map((s) => s.sortOrder).toList(),
+        [0, 1, 2],
+      );
+    });
+
+    test('dedup: does not double-append a stop already in-memory', () {
+      final existing = provider.getById('t_si')!;
+      final existingStop = existing.stops.first;
+      final dedupStops = existing.stops.any((s) => s.id == existingStop.id)
+          ? existing.stops
+          : [...existing.stops, existingStop];
+      provider.seedForTest([existing.copyWith(stops: dedupStops)]);
+      expect(provider.getById('t_si')!.stops, hasLength(1));
+    });
+  });
+
+  group('Realtime — trip_stops UPDATE', () {
+    late TripStop oldStop;
+    late Trip trip;
+
+    setUp(() {
+      oldStop = _makeStop(id: 'se', tripId: 't_su', sortOrder: 0);
+      trip = _makeTrip(id: 't_su', stops: [oldStop]);
+      provider.seedForTest([trip]);
+    });
+
+    test('replaces stop in-place', () {
+      final updatedStop = TripStop(
+        id: 'se', tripId: 't_su', title: 'Updated Stop',
+        address: 'New Address', notes: 'new notes',
+        sortOrder: 0, createdAt: DateTime(2026, 1, 1),
+      );
+      final updatedStops = List<TripStop>.of(trip.stops);
+      updatedStops[0] = updatedStop;
+      provider.seedForTest([trip.copyWith(stops: updatedStops)]);
+      expect(provider.getById('t_su')!.stops.first.title, 'Updated Stop');
+      expect(provider.getById('t_su')!.stops.first.address, 'New Address');
+    });
+  });
+
+  group('Realtime — trip_stops DELETE', () {
+    late Trip trip;
+
+    setUp(() {
+      trip = _makeTrip(id: 't_sd', stops: [
+        _makeStop(id: 'sf', tripId: 't_sd', sortOrder: 0),
+        _makeStop(id: 'sg', tripId: 't_sd', sortOrder: 1),
+      ]);
+      provider.seedForTest([trip]);
+    });
+
+    test('removes the deleted stop', () {
+      final remaining = trip.stops.where((s) => s.id != 'sf').toList();
+      provider.seedForTest([trip.copyWith(stops: remaining)]);
+      expect(provider.getById('t_sd')!.stops, hasLength(1));
+      expect(provider.getById('t_sd')!.stops.first.id, 'sg');
+    });
+  });
+
+  // ── Member name enrichment (in-memory) ───────────────────────────────────
+  // These tests exercise the copyWith/seedForTest path that mirrors what
+  // TripProvider._enrichMemberNames() does when the DB response arrives.
+  group('member name enrichment (in-memory)', () {
+    test('displayName is updated when stored value is an email', () {
+      final emailMember = TripMember(
+        id: 'm1', tripId: 't1',
+        displayName: 'organizer@example.com', // email stored as name
+        role: 'organizer',
+        userId: 'uid1',
+        email: 'organizer@example.com',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      final enriched = emailMember.copyWith(displayName: 'John Organizer');
+      expect(enriched.displayName, 'John Organizer');
+      expect(enriched.email, 'organizer@example.com'); // email preserved
+      expect(enriched.userId, 'uid1');
+    });
+
+    test('enriched displayName survives cache round-trip', () {
+      final member = TripMember(
+        id: 'm2', tripId: 't1',
+        displayName: 'Real Name',  // already enriched
+        role: 'member',
+        userId: 'uid2',
+        email: 'real@example.com',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      final trip = _makeTrip(id: 't1', members: [member]);
+      final json = TripProvider.tripToCacheJsonForTest(trip);
+      final rt = Trip.fromJson(json);
+      expect(rt.members.first.displayName, 'Real Name');
+      expect(rt.members.first.email, 'real@example.com');
+    });
+
+    test('guest member displayName is not affected by enrichment logic', () {
+      // Guests have userId == null — enrichment skips them.
+      final guest = TripMember(
+        id: 'g1', tripId: 't1',
+        displayName: 'Guest User',
+        role: 'member',
+        userId: null, // no linked account
+        createdAt: DateTime(2026, 1, 1),
+      );
+      // Simulating the enrichment check: userId == null → unchanged
+      final result = guest.userId == null ? guest : guest.copyWith(displayName: 'Should not happen');
+      expect(result.displayName, 'Guest User');
+    });
+
+    test('enrichment skips member whose displayName already matches profile', () {
+      final member = TripMember(
+        id: 'm3', tripId: 't1',
+        displayName: 'Correct Name',
+        role: 'member',
+        userId: 'uid3',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      // Simulate: profile returns same name → no copyWith needed.
+      const profileName = 'Correct Name';
+      final result = profileName == member.displayName
+          ? member
+          : member.copyWith(displayName: profileName);
+      expect(identical(result, member), isTrue);
+    });
+
+    test('in-memory state reflects enriched names after seedForTest patch', () {
+      final emailMember = TripMember(
+        id: 'm4', tripId: 't2',
+        displayName: 'user@trip.com',
+        role: 'organizer',
+        userId: 'uid4',
+        createdAt: DateTime(2026, 1, 1),
+      );
+      final trip = _makeTrip(id: 't2', members: [emailMember]);
+      provider.seedForTest([trip]);
+
+      // Simulate the enrichment applied by _enrichMemberNames().
+      final enrichedMember = emailMember.copyWith(displayName: 'User Full Name');
+      final enrichedTrip = trip.copyWith(members: [enrichedMember]);
+      provider.seedForTest([enrichedTrip]);
+
+      final found = provider.getById('t2')!;
+      expect(found.members.first.displayName, 'User Full Name');
+    });
+  });
+
   // ── applyOrder ────────────────────────────────────────────────────────────
   group('applyOrder', () {
     final trips = [

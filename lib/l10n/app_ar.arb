@@ -88,7 +88,7 @@
   "upcoming": "القادمة",
   "past": "الماضية",
   "deleteTripTitle": "حذف الرحلة؟",
-  "deleteTripMessage": "حذف \"{tripTitle}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+  "deleteTripMessage": "حذف {tripTitle}؟ لا يمكن التراجع عن هذا الإجراء.",
   "couldNotLoadTrips": "تعذر تحميل الرحلات",
   "noTripsYet": "لا توجد رحلات بعد",
   "noTripsHint": "اضغط + للبدء.",
@@ -151,6 +151,11 @@
   "invitePending": "معلق",
   "inviteAccepted": "مقبول",
   "inviteDeclined": "مرفوض",
+  "memberLeft": "غادر",
+  "invitedBy": "تمت الدعوة بواسطة {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{دعوة رحلة واحدة} other{{count} دعوات رحلات}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "دعوة رحلة",
   "inviteNotifBody": "لقد تمت دعوتك إلى {tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "عدم السماح بالدعوات المستقبلية لهذه الرحلة",
+  "reinviteBlockedError": "اختار هذا المستخدم إلغاء الاشتراك في الدعوات المستقبلية لهذه الرحلة",
+  "declineInviteConfirmTitle": "رفض الدعوة؟",
+  "declineInviteConfirmMessage": "رفض الدعوة إلى '{tripTitle}'؟ ستفقد الوصول.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

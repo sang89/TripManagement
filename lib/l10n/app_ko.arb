@@ -88,7 +88,7 @@
   "upcoming": "예정",
   "past": "지난",
   "deleteTripTitle": "여행을 삭제하시겠습니까?",
-  "deleteTripMessage": "\"{tripTitle}\"을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+  "deleteTripMessage": "{tripTitle}을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
   "couldNotLoadTrips": "여행을 불러올 수 없습니다",
   "noTripsYet": "아직 여행이 없습니다",
   "noTripsHint": "+ 를 탭하여 시작하세요.",
@@ -151,6 +151,11 @@
   "invitePending": "대기 중",
   "inviteAccepted": "수락됨",
   "inviteDeclined": "거절됨",
+  "memberLeft": "탈퇴함",
+  "invitedBy": "{name}님이 초대함",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, other{여행 초대 {count}건}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "여행 초대",
   "inviteNotifBody": "{tripTitle}에 초대받으셨습니다",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "이 여행에 대한 향후 초대 허용 안 함",
+  "reinviteBlockedError": "이 사용자는 이 여행에 대한 향후 초대를 거부했습니다",
+  "declineInviteConfirmTitle": "초대 거절?",
+  "declineInviteConfirmMessage": "«{tripTitle}» 초대를 거절하시겠습니까? 접근 권한을 잃게 됩니다.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

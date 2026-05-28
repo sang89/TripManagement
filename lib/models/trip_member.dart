@@ -6,7 +6,13 @@ class TripMember {
   final String? userId;
   final String? email;
   final String? phone;
-  final String status; // 'pending' | 'accepted' | 'declined'
+  final String status; // 'pending' | 'accepted' | 'declined' | 'left'
+  final String? invitedBy; // userId of the person who sent the invite; null for the organizer's own row
+  /// When true the user has opted out of future invitations to this specific trip.
+  final bool blockReinvite;
+  /// Profile picture URL — enriched in-memory from user_profiles; not stored
+  /// directly in the trip_members table.
+  final String? avatarUrl;
   final DateTime createdAt;
 
   const TripMember({
@@ -18,6 +24,9 @@ class TripMember {
     this.email,
     this.phone,
     this.status = 'accepted',
+    this.invitedBy,
+    this.blockReinvite = false,
+    this.avatarUrl,
     required this.createdAt,
   });
 
@@ -30,6 +39,9 @@ class TripMember {
         email: json['email'] as String?,
         phone: json['phone'] as String?,
         status: json['status'] as String? ?? 'accepted',
+        invitedBy: json['invited_by'] as String?,
+        blockReinvite: json['block_reinvite'] as bool? ?? false,
+        avatarUrl: json['avatar_url'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
@@ -39,6 +51,7 @@ class TripMember {
         'user_id': ?userId,
         'email': ?email,
         'phone': ?phone,
+        'invited_by': ?invitedBy,
       };
 
   TripMember copyWith({
@@ -48,6 +61,9 @@ class TripMember {
     String? email,
     String? phone,
     String? status,
+    String? invitedBy,
+    bool? blockReinvite,
+    String? avatarUrl,
   }) =>
       TripMember(
         id: id,
@@ -58,6 +74,9 @@ class TripMember {
         email: email ?? this.email,
         phone: phone ?? this.phone,
         status: status ?? this.status,
+        invitedBy: invitedBy ?? this.invitedBy,
+        blockReinvite: blockReinvite ?? this.blockReinvite,
+        avatarUrl: avatarUrl ?? this.avatarUrl,
         createdAt: createdAt,
       );
 }

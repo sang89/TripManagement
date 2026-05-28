@@ -287,7 +287,24 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String deleteTripMessage(String tripTitle) {
-    return 'Excluir \"$tripTitle\"? Isso não pode ser desfeito.';
+    return 'Excluir $tripTitle? Isso não pode ser desfeito.';
+  }
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String get leaveTripTooltip => 'Leave trip';
+
+  @override
+  String get thisTripFallback => 'this trip';
+
+  @override
+  String get leaveTripTitle => 'Leave trip?';
+
+  @override
+  String leaveTripMessage(String tripTitle) {
+    return 'You will be removed from $tripTitle and lose access.';
   }
 
   @override
@@ -478,6 +495,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get inviteDeclined => 'Recusado';
 
   @override
+  String get memberLeft => 'Saiu';
+
+  @override
+  String invitedBy(String name) {
+    return 'Convidado por $name';
+  }
+
+  @override
   String tripInvitationsTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -500,5 +525,21 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String inviteNotifBody(String tripTitle) {
     return 'Você foi convidado para $tripTitle';
+  }
+
+  @override
+  String get blockReinviteLabel =>
+      'Não permitir convites futuros para esta viagem';
+
+  @override
+  String get reinviteBlockedError =>
+      'Este utilizador optou por não receber convites futuros para esta viagem';
+
+  @override
+  String get declineInviteConfirmTitle => 'Recusar convite?';
+
+  @override
+  String declineInviteConfirmMessage(String tripTitle) {
+    return 'Recusar o convite para «$tripTitle»? Perderá o acesso.';
   }
 }

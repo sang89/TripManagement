@@ -108,8 +108,16 @@
   "upcoming": "Upcoming",
   "past": "Past",
   "deleteTripTitle": "Delete trip?",
-  "deleteTripMessage": "Delete \"{tripTitle}\"? This cannot be undone.",
+  "deleteTripMessage": "Delete {tripTitle}? This cannot be undone.",
   "@deleteTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+  "leave": "Leave",
+  "leaveTripTooltip": "Leave trip",
+  "thisTripFallback": "this trip",
+  "leaveTripTitle": "Leave trip?",
+  "leaveTripMessage": "You will be removed from {tripTitle} and lose access.",
+  "@leaveTripMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "couldNotLoadTrips": "Could not load trips",
@@ -183,6 +191,11 @@
   "invitePending": "Pending",
   "inviteAccepted": "Accepted",
   "inviteDeclined": "Declined",
+  "memberLeft": "Left",
+  "invitedBy": "Invited by {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{1 trip invitation} other{{count} trip invitations}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -192,6 +205,14 @@
   "inviteNotifTitle": "Trip invitation",
   "inviteNotifBody": "You've been invited to {tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+
+  "blockReinviteLabel": "Don't allow future invitations to this trip",
+  "reinviteBlockedError": "This user has opted out of future invitations to this trip",
+  "declineInviteConfirmTitle": "Decline invitation?",
+  "declineInviteConfirmMessage": "Decline the invitation to {tripTitle}? You will lose access.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

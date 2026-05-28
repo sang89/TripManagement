@@ -88,7 +88,7 @@
   "upcoming": "Próximas",
   "past": "Passadas",
   "deleteTripTitle": "Excluir viagem?",
-  "deleteTripMessage": "Excluir \"{tripTitle}\"? Isso não pode ser desfeito.",
+  "deleteTripMessage": "Excluir {tripTitle}? Isso não pode ser desfeito.",
   "couldNotLoadTrips": "Não foi possível carregar as viagens",
   "noTripsYet": "Sem viagens ainda",
   "noTripsHint": "Toque + para começar.",
@@ -151,6 +151,11 @@
   "invitePending": "Pendente",
   "inviteAccepted": "Aceito",
   "inviteDeclined": "Recusado",
+  "memberLeft": "Saiu",
+  "invitedBy": "Convidado por {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{1 convite de viagem} other{{count} convites de viagem}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "Convite de viagem",
   "inviteNotifBody": "Você foi convidado para {tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "Não permitir convites futuros para esta viagem",
+  "reinviteBlockedError": "Este utilizador optou por não receber convites futuros para esta viagem",
+  "declineInviteConfirmTitle": "Recusar convite?",
+  "declineInviteConfirmMessage": "Recusar o convite para «{tripTitle}»? Perderá o acesso.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

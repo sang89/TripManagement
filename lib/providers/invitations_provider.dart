@@ -144,12 +144,19 @@ class InvitationsProvider extends ChangeNotifier {
 
   /// Decline a pending invite. Reloads [tripProvider] so the trip is removed
   /// from the list (the invitee no longer has access once declined).
-  Future<void> decline(String memberId, TripProvider tripProvider) async {
+  ///
+  /// If [blockReinvite] is true, also sets block_reinvite = true so that the
+  /// organiser cannot re-invite this user to the same trip.
+  Future<void> decline(
+    String memberId,
+    TripProvider tripProvider, {
+    bool blockReinvite = false,
+  }) async {
     try {
-      await _db
-          .from('trip_members')
-          .update({'status': 'declined'})
-          .eq('id', memberId);
+      await _db.from('trip_members').update({
+        'status': 'declined',
+        if (blockReinvite) 'block_reinvite': true,
+      }).eq('id', memberId);
       _invites.removeWhere((i) => i.memberId == memberId);
       notifyListeners();
       await tripProvider.load();

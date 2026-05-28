@@ -645,8 +645,38 @@ abstract class AppLocalizations {
   /// No description provided for @deleteTripMessage.
   ///
   /// In en, this message translates to:
-  /// **'Delete \"{tripTitle}\"? This cannot be undone.'**
+  /// **'Delete {tripTitle}? This cannot be undone.'**
   String deleteTripMessage(String tripTitle);
+
+  /// No description provided for @leave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get leave;
+
+  /// No description provided for @leaveTripTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave trip'**
+  String get leaveTripTooltip;
+
+  /// No description provided for @thisTripFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'this trip'**
+  String get thisTripFallback;
+
+  /// No description provided for @leaveTripTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave trip?'**
+  String get leaveTripTitle;
+
+  /// No description provided for @leaveTripMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be removed from {tripTitle} and lose access.'**
+  String leaveTripMessage(String tripTitle);
 
   /// No description provided for @couldNotLoadTrips.
   ///
@@ -1014,6 +1044,18 @@ abstract class AppLocalizations {
   /// **'Declined'**
   String get inviteDeclined;
 
+  /// No description provided for @memberLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get memberLeft;
+
+  /// No description provided for @invitedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited by {name}'**
+  String invitedBy(String name);
+
   /// No description provided for @tripInvitationsTitle.
   ///
   /// In en, this message translates to:
@@ -1043,6 +1085,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You\'ve been invited to {tripTitle}'**
   String inviteNotifBody(String tripTitle);
+
+  /// No description provided for @blockReinviteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t allow future invitations to this trip'**
+  String get blockReinviteLabel;
+
+  /// No description provided for @reinviteBlockedError.
+  ///
+  /// In en, this message translates to:
+  /// **'This user has opted out of future invitations to this trip'**
+  String get reinviteBlockedError;
+
+  /// No description provided for @declineInviteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline invitation?'**
+  String get declineInviteConfirmTitle;
+
+  /// No description provided for @declineInviteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline the invitation to {tripTitle}? You will lose access.'**
+  String declineInviteConfirmMessage(String tripTitle);
 }
 
 class _AppLocalizationsDelegate

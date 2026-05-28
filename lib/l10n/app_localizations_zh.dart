@@ -284,7 +284,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String deleteTripMessage(String tripTitle) {
-    return '删除\"$tripTitle\"？此操作无法撤销。';
+    return '删除$tripTitle？此操作无法撤销。';
+  }
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String get leaveTripTooltip => 'Leave trip';
+
+  @override
+  String get thisTripFallback => 'this trip';
+
+  @override
+  String get leaveTripTitle => 'Leave trip?';
+
+  @override
+  String leaveTripMessage(String tripTitle) {
+    return 'You will be removed from $tripTitle and lose access.';
   }
 
   @override
@@ -473,6 +490,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inviteDeclined => '已拒绝';
 
   @override
+  String get memberLeft => '已离开';
+
+  @override
+  String invitedBy(String name) {
+    return '由$name邀请';
+  }
+
+  @override
   String tripInvitationsTitle(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -494,5 +519,19 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String inviteNotifBody(String tripTitle) {
     return '您被邀请加入$tripTitle';
+  }
+
+  @override
+  String get blockReinviteLabel => '不允许此行程的未来邀请';
+
+  @override
+  String get reinviteBlockedError => '该用户已选择拒绝此行程的未来邀请';
+
+  @override
+  String get declineInviteConfirmTitle => '拒绝邀请？';
+
+  @override
+  String declineInviteConfirmMessage(String tripTitle) {
+    return '拒绝«$tripTitle»的邀请？您将失去访问权限。';
   }
 }

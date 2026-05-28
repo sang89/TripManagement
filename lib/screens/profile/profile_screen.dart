@@ -27,14 +27,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _uploading = false;
 
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _jobCtrl;
   String _phone = '';
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController();
-    _jobCtrl = TextEditingController();
 
     final provider = context.read<UserProfileProvider>();
     if (provider.profile == null && !provider.isLoading) {
@@ -45,7 +43,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _jobCtrl.dispose();
     super.dispose();
   }
 
@@ -157,7 +154,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _enterEdit(UserProfile profile) {
     _nameCtrl.text = profile.fullName;
-    _jobCtrl.text = profile.jobTitle;
     _phone = profile.phone;
     setState(() => _editing = true);
   }
@@ -170,7 +166,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final updated = current.copyWith(
       fullName: _nameCtrl.text.trim(),
-      jobTitle: _jobCtrl.text.trim(),
       phone: _phone,
     );
 
@@ -296,7 +291,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _ProfileHeader(
               displayName: displayName,
               email: auth.userEmail,
-              jobTitle: profile.jobTitle,
               avatarUrl: profile.avatarUrl,
               updatedAt: profile.updatedAt,
               uploading: _uploading,
@@ -321,13 +315,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     }
                     return null;
                   },
-                ),
-                _Field(
-                  label: l10n.jobTitle,
-                  value: profile.jobTitle,
-                  controller: _jobCtrl,
-                  editing: _editing,
-                  hint: l10n.jobTitleHint,
                 ),
               ],
             ),
@@ -415,7 +402,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _ProfileHeader extends StatelessWidget {
   final String displayName;
   final String email;
-  final String jobTitle;
   final String avatarUrl;
   final DateTime updatedAt;
   final bool uploading;
@@ -424,7 +410,6 @@ class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({
     required this.displayName,
     required this.email,
-    required this.jobTitle,
     required this.avatarUrl,
     required this.updatedAt,
     required this.uploading,
@@ -552,14 +537,6 @@ class _ProfileHeader extends StatelessWidget {
             style: const TextStyle(color: Colors.white70, fontSize: 14),
             textAlign: TextAlign.center,
           ),
-          if (jobTitle.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              jobTitle,
-              style: const TextStyle(color: Colors.white60, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ],
       ),
     );

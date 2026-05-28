@@ -88,7 +88,7 @@
   "upcoming": "即将出行",
   "past": "已完成",
   "deleteTripTitle": "删除行程？",
-  "deleteTripMessage": "删除\"{tripTitle}\"？此操作无法撤销。",
+  "deleteTripMessage": "删除{tripTitle}？此操作无法撤销。",
   "couldNotLoadTrips": "无法加载行程",
   "noTripsYet": "暂无行程",
   "noTripsHint": "点击 + 开始规划。",
@@ -151,6 +151,11 @@
   "invitePending": "待定",
   "inviteAccepted": "已接受",
   "inviteDeclined": "已拒绝",
+  "memberLeft": "已离开",
+  "invitedBy": "由{name}邀请",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, other{{count}个行程邀请}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "行程邀请",
   "inviteNotifBody": "您被邀请加入{tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "不允许此行程的未来邀请",
+  "reinviteBlockedError": "该用户已选择拒绝此行程的未来邀请",
+  "declineInviteConfirmTitle": "拒绝邀请？",
+  "declineInviteConfirmMessage": "拒绝«{tripTitle}»的邀请？您将失去访问权限。",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

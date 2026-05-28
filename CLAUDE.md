@@ -10,11 +10,14 @@ implementing any feature in its domain:
 
 | File | Contents |
 |---|---|
-| `architecture.md` | Full folder structure, tech stack, nav routes, state management, DB schema, map/route details |
+| `architecture.md` | Full folder structure, tech stack, nav routes, state management, DB schema (tables, columns, RLS, triggers), Realtime coverage, push notifications, key conventions |
+| `invite_flow.md` | Complete invite lifecycle — add member, accept, decline, leave, block reinvite, re-invite, RLS policy table, DB objects reference |
 | `api.md` | Every external API — Supabase, Gemini, Google Places, Maps SDK, Directions API |
 | `Supabase_migration.md` | Migration workflow, how to add/push migrations, syncing with PropertyManagement |
 
 **Rule:** When adding a new external API, add an entry to `api.md` first. When changing the DB schema, follow `Supabase_migration.md` — never run SQL in the Supabase dashboard.
+
+**Rule:** After any session that adds a feature, changes the DB schema, adds a new provider/widget/screen, or changes a behaviour described in these docs — **update `architecture.md` and any relevant domain doc (`invite_flow.md`, etc.) before finishing**. These files must always reflect the current state of the codebase so future Claude sessions start with accurate context.
 
 ## App architecture
 
@@ -27,14 +30,16 @@ See `architecture.md` for the full folder structure and conventions. Quick refer
 lib/
 ├── config/         API keys (git-ignored)
 ├── models/         trip.dart, trip_member.dart, trip_stop.dart
-├── providers/      auth_provider, settings_provider, trip_provider
-├── screens/        UI screens, organised by feature
+├── providers/      auth_provider, trip_provider, invitations_provider, settings_provider
+├── screens/
 │   ├── auth/       Login, Register
-│   ├── shell/      ShellScaffold (bottom nav — Trips + Journal tabs)
-│   └── trips/      trips_screen (list), trip_form_screen (create/edit), trip_detail_screen
-├── services/       Places, Directions, AI chat (see api.md)
+│   ├── profile/    Profile edit screen
+│   ├── settings/   Settings screen (theme, language, account)
+│   ├── shell/      ShellScaffold (bottom nav — Trips + Journal tabs; invite badge)
+│   └── trips/      trips_screen (list + invite banner), trip_form_screen (create/edit), trip_detail_screen
+├── services/       Places, Directions, AI chat, push notifications (see api.md)
 ├── theme/          Re-export shim → shared_ui AppTheme
-├── widgets/        trip_card, trip_map_widget, trip_stop_form_sheet
+├── widgets/        trip_card, trip_map_widget, trip_stop_form_sheet, add_member_sheet
 └── main.dart       App entry point, StatefulShellRoute, provider wiring
 ```
 
@@ -83,6 +88,14 @@ Never instruct the user to run SQL manually in the Supabase dashboard — always
 Trip data is isolated per user via Supabase Row Level Security — add RLS policies to every
 new table.
 
+## Invite & membership
+
+See `invite_flow.md` for the full reference. Key rules:
+- Every mutation to `trip_members` must propagate to all members' devices via Supabase Realtime — see `architecture.md → Consistency guarantee`.
+- Prefer UPDATE over DELETE for state transitions (e.g. `status = 'left'`).
+- `trip_members` has `REPLICA IDENTITY FULL` — DELETE payloads carry the full old row.
+- The `trip_members_trip_user_unique` UNIQUE CONSTRAINT (not a partial index) on `(trip_id, user_id)` enables PostgREST upsert. NULLs are treated as distinct, so guest rows are unaffected.
+
 ## Map & routes
 
 `TripMapWidget` (`lib/widgets/trip_map_widget.dart`) renders destination + numbered stops.
@@ -94,9 +107,10 @@ See `api.md → Google Maps — Directions API` for full details.
 
 ## Localization
 
-English strings are currently hardcoded. When adding a second language, set up Flutter's
-built-in l10n (ARB files, `flutter gen-l10n`) following the same pattern as PropertyManagement.
-Add `generate: true` to `pubspec.yaml` and create `lib/l10n/` at that point.
+10 languages: en, fr, de, es, ar, ja, ko, pt, vi, zh. ARB files live in `lib/l10n/`.
+Run `flutter gen-l10n` after editing any `.arb` file. Always add new strings to **all 10**
+language files — use a Python script to batch-insert into non-English files anchored on a
+nearby key, then verify with `flutter gen-l10n`.
 
 ## Running analysis
 

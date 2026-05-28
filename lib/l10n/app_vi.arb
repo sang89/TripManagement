@@ -88,7 +88,7 @@
   "upcoming": "Sắp tới",
   "past": "Đã qua",
   "deleteTripTitle": "Xóa chuyến đi?",
-  "deleteTripMessage": "Xóa \"{tripTitle}\"? Không thể hoàn tác.",
+  "deleteTripMessage": "Xóa {tripTitle}? Không thể hoàn tác.",
   "couldNotLoadTrips": "Không thể tải chuyến đi",
   "noTripsYet": "Chưa có chuyến đi",
   "noTripsHint": "Nhấn + để bắt đầu.",
@@ -151,6 +151,11 @@
   "invitePending": "Đang chờ",
   "inviteAccepted": "Đã chấp nhận",
   "inviteDeclined": "Đã từ chối",
+  "memberLeft": "Đã rời",
+  "invitedBy": "Được mời bởi {name}",
+  "@invitedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "tripInvitationsTitle": "{count, plural, =1{1 lời mời chuyến đi} other{{count} lời mời chuyến đi}}",
   "@tripInvitationsTitle": {
     "placeholders": { "count": { "type": "int" } }
@@ -160,6 +165,15 @@
   "inviteNotifTitle": "Lời mời chuyến đi",
   "inviteNotifBody": "Bạn đã được mời tham gia {tripTitle}",
   "@inviteNotifBody": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  }
+,
+
+  "blockReinviteLabel": "Không cho phép lời mời trong tương lai cho chuyến đi này",
+  "reinviteBlockedError": "Người dùng này đã từ chối lời mời trong tương lai cho chuyến đi này",
+  "declineInviteConfirmTitle": "Từ chối lời mời?",
+  "declineInviteConfirmMessage": "Từ chối lời mời tới «{tripTitle}»? Bạn sẽ mất quyền truy cập.",
+  "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
   }
 }

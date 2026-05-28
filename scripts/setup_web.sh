@@ -1,26 +1,15 @@
 #!/usr/bin/env bash
-# Injects the Google Maps API key into web/index.html before running/building for web.
-# The committed web/index.html contains %%MAPS_API_KEY%% as a placeholder.
+# NOTE: This script is no longer required for local development.
 #
-# Usage:
-#   scripts/setup_web.sh YOUR_KEY
-#   scripts/setup_web.sh          # reads MAPS_API_KEY from environment
+# The Google Maps JS API is now loaded dynamically from Dart code in
+# lib/services/web_maps_loader.dart. The key is read from
+# lib/config/api_keys.dart (git-ignored) at compile time — no key ever
+# appears in web/index.html.
 #
-# The output is written to web/index.html.local (git-ignored).
-# Then run:   flutter run -d chrome --web-launch-url http://localhost:PORT
-# Or build:   flutter build web   (after running this script)
+# Just run:  flutter run -d chrome
 #
-# In CI: set MAPS_API_KEY env var and pipe output to web/index.html before building.
+# For CI/CD: ensure lib/config/api_keys.dart is restored from your secret
+# manager before running `flutter build web`.
 
-set -euo pipefail
-
-KEY="${1:-${MAPS_API_KEY:-}}"
-
-if [[ -z "$KEY" ]]; then
-  echo "Error: pass the API key as the first argument or set MAPS_API_KEY env var." >&2
-  exit 1
-fi
-
-sed "s/%%MAPS_API_KEY%%/${KEY}/g" web/index.html > web/index.html.local
-echo "✓ web/index.html.local created with key injected (git-ignored)."
-echo "  Run flutter with: --web-renderer html (or use the .local file manually)."
+echo "ℹ  setup_web.sh is no longer needed — the Maps key is injected automatically."
+echo "   Just run: flutter run -d chrome"

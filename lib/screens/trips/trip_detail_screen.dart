@@ -8,7 +8,9 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
 import '../../models/trip_stop.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
+import '../../widgets/add_member_sheet.dart';
 import '../../widgets/trip_map_widget.dart';
 import '../../widgets/trip_stop_form_sheet.dart';
 
@@ -107,6 +109,82 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     return pins;
   }
 
+  Future<void> _confirmLeave(Trip trip) async {
+    final l10n = AppLocalizations.of(context);
+    bool blockReinvite = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(l10n.leaveTripTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.leaveTripMessage(
+                  trip.title.isNotEmpty ? trip.title : l10n.thisTripFallback)),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: blockReinvite,
+                onChanged: (v) => setS(() => blockReinvite = v),
+                title: Text(l10n.blockReinviteLabel,
+                    style: const TextStyle(fontSize: 13)),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.leave,
+                  style: const TextStyle(color: AppTheme.danger)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await context.read<TripProvider>().leaveTrip(trip.id, blockReinvite: blockReinvite);
+      if (mounted) context.go('/trips');
+    }
+  }
+
+  void _addMember(Trip trip) {
+    showAddMemberSheet(
+      context,
+      onAdd: (member) {
+        context
+            .read<TripProvider>()
+            .addMember(
+              trip.id,
+              displayName: member.displayName,
+              email: member.email,
+              phone: member.phone,
+              userId: member.userId,
+            )
+            .catchError((Object e) {
+          if (!mounted) return;
+          final l10n = AppLocalizations.of(context);
+          final msg = e is ReinviteBlockedException
+              ? l10n.reinviteBlockedError
+              : e.toString();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: AppTheme.danger,
+            ),
+          );
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -118,6 +196,15 @@ class _TripDetailScreenState extends State<TripDetailScreen>
         body: Center(child: Text(l10n.tripNotFound)),
       );
     }
+
+    final currentUserId = context.read<AuthProvider>().userId;
+    final isOrganizer = trip.createdBy == currentUserId;
+    // Any accepted member (including the organizer) may invite others.
+    final canInvite = isOrganizer ||
+        trip.members.any(
+          (m) => m.userId == currentUserId && m.status == 'accepted',
+        );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(trip.title),
@@ -131,17 +218,26 @@ class _TripDetailScreenState extends State<TripDetailScreen>
               const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: l10n.editTripTooltip,
-            onPressed: () => context.push('/trip/${trip.id}/edit'),
-          ),
+          // Only the organizer can edit trip details.
+          if (isOrganizer)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l10n.editTripTooltip,
+              onPressed: () => context.push('/trip/${trip.id}/edit'),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.exit_to_app_outlined,
+                  color: AppTheme.danger),
+              tooltip: l10n.leaveTripTooltip,
+              onPressed: () => _confirmLeave(trip),
+            ),
         ],
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _OverviewTab(trip: trip),
+          _OverviewTab(trip: trip, currentUserId: currentUserId),
           _ItineraryTab(
             trip: trip,
             onDeleteStop: (s) => _confirmDeleteStop(context, s),
@@ -149,20 +245,24 @@ class _TripDetailScreenState extends State<TripDetailScreen>
           TripMapWidget(pins: _buildMapPins(trip)),
         ],
       ),
-      floatingActionButton: _tabIndex == 1
-          ? AppFab(
-              onPressed: () =>
-                  showTripStopFormSheet(context, tripId: trip.id),
-            )
-          : null,
+      floatingActionButton: switch (_tabIndex) {
+        // Overview tab — add member (all accepted members can invite).
+        0 when canInvite => AppFab(onPressed: () => _addMember(trip)),
+        // Itinerary tab — add stop.
+        1 => AppFab(
+            onPressed: () => showTripStopFormSheet(context, tripId: trip.id),
+          ),
+        _ => null,
+      },
     );
   }
 }
 
 class _OverviewTab extends StatelessWidget {
   final Trip trip;
+  final String? currentUserId;
 
-  const _OverviewTab({required this.trip});
+  const _OverviewTab({required this.trip, this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
@@ -211,46 +311,99 @@ class _OverviewTab extends StatelessWidget {
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: AppTheme.primary, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ...trip.members.map((m) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                backgroundColor: m.role == 'organizer'
-                    ? AppTheme.primary
-                    : Colors.grey[200],
-                child: Text(
-                    m.displayName.isNotEmpty
-                        ? m.displayName[0].toUpperCase()
-                        : '?',
-                    style: TextStyle(
-                        color: m.role == 'organizer'
-                            ? Colors.white
-                            : AppTheme.primary)),
-              ),
-              title: Text(m.displayName),
-              subtitle: Row(
-                children: [
-                  Text(m.role == 'organizer'
-                      ? l10n.organizer
-                      : l10n.member),
-                  if (m.userId != null) ...[
-                    const SizedBox(width: 6),
-                    _StatusChip(
-                      label: switch (m.status) {
-                        'pending' => l10n.invitePending,
-                        'declined' => l10n.inviteDeclined,
-                        _ => l10n.inviteAccepted,
-                      },
-                      color: switch (m.status) {
-                        'pending' => Colors.orange,
-                        'declined' => AppTheme.danger,
-                        _ => Colors.green,
-                      },
+        ...trip.members.map((m) {
+              final isMe = m.userId != null && m.userId == currentUserId;
+
+              // Resolve inviter name from the already-loaded members list.
+              String? inviterLabel;
+              if (m.invitedBy != null) {
+                if (m.invitedBy == currentUserId) {
+                  inviterLabel = l10n.invitedBy(l10n.you);
+                } else {
+                  final inviter = trip.members
+                      .where((x) => x.userId == m.invitedBy)
+                      .firstOrNull;
+                  if (inviter != null) {
+                    inviterLabel = l10n.invitedBy(inviter.displayName);
+                  }
+                }
+              }
+
+              final hasEmail =
+                  m.email != null && m.email!.isNotEmpty && !isMe;
+              final hasExtraLine = hasEmail || inviterLabel != null;
+
+              final hasAvatar =
+                  m.avatarUrl != null && m.avatarUrl!.isNotEmpty;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: m.role == 'organizer'
+                      ? AppTheme.primary
+                      : Colors.grey[200],
+                  backgroundImage:
+                      hasAvatar ? NetworkImage(m.avatarUrl!) : null,
+                  child: hasAvatar
+                      ? null
+                      : Text(
+                          m.displayName.isNotEmpty
+                              ? m.displayName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                              color: m.role == 'organizer'
+                                  ? Colors.white
+                                  : AppTheme.primary)),
+                ),
+                title: Text(isMe ? l10n.you : m.displayName),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(m.role == 'organizer'
+                            ? l10n.organizer
+                            : l10n.member),
+                        if (m.userId != null) ...[
+                          const SizedBox(width: 6),
+                          _StatusChip(
+                            label: switch (m.status) {
+                              'pending'  => l10n.invitePending,
+                              'declined' => l10n.inviteDeclined,
+                              'left'     => l10n.memberLeft,
+                              _          => l10n.inviteAccepted,
+                            },
+                            color: switch (m.status) {
+                              'pending'  => Colors.orange,
+                              'declined' => AppTheme.danger,
+                              'left'     => Colors.grey,
+                              _          => Colors.green,
+                            },
+                          ),
+                        ],
+                      ],
                     ),
+                    if (hasEmail)
+                      Text(
+                        m.email!,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (inviterLabel != null)
+                      Text(
+                        inviterLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                   ],
-                ],
-              ),
-              dense: true,
-            )),
+                ),
+                dense: true,
+                isThreeLine: hasExtraLine,
+              );
+            }),
       ],
     );
   }

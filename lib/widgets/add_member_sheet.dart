@@ -56,6 +56,9 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
   _LookupState _lookupState = _LookupIdle();
   Timer? _debounce;
   bool _nameTouched = false;
+  // Incremented before every lookup; responses from earlier lookups are
+  // discarded when this value has moved on (stale-result guard).
+  int _lookupGeneration = 0;
 
   final _lookupService = UserLookupService();
 
@@ -67,22 +70,35 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     super.dispose();
   }
 
-  void _onEmailChanged(String value) {
-    if (value.contains('@')) {
-      _scheduleLookup(email: value);
-    } else {
-      _debounce?.cancel();
-      if (_lookupState is! _LookupIdle) {
-        setState(() => _lookupState = _LookupIdle());
-      }
-    }
+  // Returns true only when the string looks like a complete email address:
+  // at least one character before @, a domain segment, and a TLD ≥ 2 chars.
+  bool _isValidEmail(String value) {
+    final atIndex = value.indexOf('@');
+    if (atIndex < 1) return false;
+    final domain = value.substring(atIndex + 1);
+    final dotIndex = domain.lastIndexOf('.');
+    if (dotIndex < 1) return false;
+    return domain.length - dotIndex - 1 >= 2;
   }
+
+  // Both field-change handlers funnel into one place so the debounce always
+  // fires with the latest values of *both* fields. This prevents the phone
+  // field's debounce from cancelling an in-flight email lookup and vice-versa.
+  void _onEmailChanged(String _) => _scheduleOrClear();
 
   void _onPhoneChanged(String value) {
     _phone = value;
-    final digits = value.replaceAll(RegExp(r'\D'), '');
-    if (digits.length >= 7) {
-      _scheduleLookup(phone: value);
+    _scheduleOrClear();
+  }
+
+  void _scheduleOrClear() {
+    final hasEmail = _isValidEmail(_emailCtrl.text.trim());
+    final hasPhone = _phone.replaceAll(RegExp(r'\D'), '').length >= 7;
+
+    if (hasEmail || hasPhone) {
+      _debounce?.cancel();
+      _debounce =
+          Timer(const Duration(milliseconds: 400), _performLookup);
     } else {
       _debounce?.cancel();
       if (_lookupState is! _LookupIdle) {
@@ -91,26 +107,32 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     }
   }
 
-  void _scheduleLookup({String? email, String? phone}) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
-      _performLookup(email: email, phone: phone);
-    });
-  }
-
-  Future<void> _performLookup({String? email, String? phone}) async {
+  Future<void> _performLookup() async {
     if (!mounted) return;
+
+    // Snapshot current field values at the moment the debounce fires.
+    final email = _emailCtrl.text.trim();
+    final phone = _phone;
+    final hasEmail = _isValidEmail(email);
+    final hasPhone = phone.replaceAll(RegExp(r'\D'), '').length >= 7;
+    if (!hasEmail && !hasPhone) return;
+
     final connectivity = context.read<ConnectivityService>();
     if (!connectivity.isOnline) return; // silent skip when offline
 
+    // Tag this request so we can discard any response that arrives after
+    // a newer lookup has already been started.
+    final generation = ++_lookupGeneration;
     setState(() => _lookupState = _LookupSearching());
 
     final result = await _lookupService.findUserByContact(
-      email: email,
-      phone: phone,
+      email: hasEmail ? email : null,
+      phone: hasPhone ? phone : null,
     );
 
-    if (!mounted) return;
+    // Drop stale responses (user kept typing while this request was in-flight).
+    if (!mounted || _lookupGeneration != generation) return;
+
     setState(() {
       if (result != null) {
         _lookupState = _LookupFound(result);
@@ -121,7 +143,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
         if (!_nameTouched && _nameCtrl.text.isEmpty) {
           final autoName = result.fullName.isNotEmpty
               ? result.fullName
-              : _emailCtrl.text.trim().split('@').first;
+              : email.split('@').first;
           if (autoName.isNotEmpty) _nameCtrl.text = autoName;
         }
       } else {
@@ -144,6 +166,9 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
       tripId: '',
       displayName: name,
       role: 'member',
+      // Linked users start as pending (await acceptance); unlinked guests are
+      // immediately accepted.  Mirrors the logic in TripProvider.addMember().
+      status: userId != null ? 'pending' : 'accepted',
       email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
       phone: _phone.isEmpty ? null : _phone,
       userId: userId,
