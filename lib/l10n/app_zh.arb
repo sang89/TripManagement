@@ -83,6 +83,9 @@
   "passwordMinimum6": "最少6个字符",
   "confirmPassword": "确认密码",
   "rememberMe": "记住我",
+  "continueWithGoogle": "使用 Google 继续",
+  "continueWithApple": "使用 Apple 继续",
+  "orSignInWith": "或",
   "myTrips": "我的行程",
   "all": "全部",
   "upcoming": "即将出行",
@@ -175,5 +178,17 @@
   "declineInviteConfirmMessage": "拒绝«{tripTitle}»的邀请？您将失去访问权限。",
   "@declineInviteConfirmMessage": {
     "placeholders": { "tripTitle": { "type": "String" } }
-  }
+  },
+
+  "securitySectionTitle": "安全",
+  "biometricToggleTitle": "Face ID / Touch ID",
+  "biometricToggleSubtitle": "使用生物识别解锁应用",
+  "biometricLockTitle": "验证您的身份",
+  "biometricLockSubtitle": "请验证身份以访问您的账户",
+  "biometricSignInWithFace": "使用 Face ID 登录",
+  "biometricSignInWithFingerprint": "使用指纹登录",
+  "biometricSignInWithBiometrics": "使用生物识别登录",
+  "biometricReason": "请验证身份以访问您的账户",
+  "biometricFailed": "身份验证失败，请重试。",
+  "usePasswordInstead": "使用密码登录"
 }

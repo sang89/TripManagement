@@ -269,6 +269,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get rememberMe => 'ログイン状態を保持';
 
   @override
+  String get continueWithGoogle => 'Googleで続ける';
+
+  @override
+  String get continueWithApple => 'Appleで続ける';
+
+  @override
+  String get orSignInWith => 'または';
+
+  @override
   String get myTrips => 'マイトリップ';
 
   @override
@@ -535,4 +544,37 @@ class AppLocalizationsJa extends AppLocalizations {
   String declineInviteConfirmMessage(String tripTitle) {
     return '「$tripTitle」への招待を断りますか？アクセスできなくなります。';
   }
+
+  @override
+  String get securitySectionTitle => 'セキュリティ';
+
+  @override
+  String get biometricToggleTitle => 'Face ID / Touch ID';
+
+  @override
+  String get biometricToggleSubtitle => '生体認証でアプリのロックを解除する';
+
+  @override
+  String get biometricLockTitle => '本人確認';
+
+  @override
+  String get biometricLockSubtitle => 'アカウントにアクセスするために認証してください';
+
+  @override
+  String get biometricSignInWithFace => 'Face IDでサインイン';
+
+  @override
+  String get biometricSignInWithFingerprint => '指紋でサインイン';
+
+  @override
+  String get biometricSignInWithBiometrics => '生体認証でサインイン';
+
+  @override
+  String get biometricReason => 'アカウントにアクセスするために認証してください';
+
+  @override
+  String get biometricFailed => '認証に失敗しました。もう一度お試しください。';
+
+  @override
+  String get usePasswordInstead => 'パスワードを使用する';
 }

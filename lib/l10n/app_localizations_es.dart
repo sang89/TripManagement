@@ -272,6 +272,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rememberMe => 'Recordarme';
 
   @override
+  String get continueWithGoogle => 'Continuar con Google';
+
+  @override
+  String get continueWithApple => 'Continuar con Apple';
+
+  @override
+  String get orSignInWith => 'o';
+
+  @override
   String get myTrips => 'Mis viajes';
 
   @override
@@ -542,4 +551,39 @@ class AppLocalizationsEs extends AppLocalizations {
   String declineInviteConfirmMessage(String tripTitle) {
     return '¿Rechazar la invitación a «$tripTitle»? Perderás el acceso.';
   }
+
+  @override
+  String get securitySectionTitle => 'Seguridad';
+
+  @override
+  String get biometricToggleTitle => 'Face ID / Touch ID';
+
+  @override
+  String get biometricToggleSubtitle =>
+      'Usar biometría para desbloquear la app';
+
+  @override
+  String get biometricLockTitle => 'Verifica tu identidad';
+
+  @override
+  String get biometricLockSubtitle => 'Autentícate para acceder a tu cuenta';
+
+  @override
+  String get biometricSignInWithFace => 'Iniciar sesión con Face ID';
+
+  @override
+  String get biometricSignInWithFingerprint =>
+      'Iniciar sesión con huella dactilar';
+
+  @override
+  String get biometricSignInWithBiometrics => 'Iniciar sesión con biometría';
+
+  @override
+  String get biometricReason => 'Autentícate para acceder a tu cuenta';
+
+  @override
+  String get biometricFailed => 'Autenticación fallida. Inténtalo de nuevo.';
+
+  @override
+  String get usePasswordInstead => 'Usar contraseña';
 }

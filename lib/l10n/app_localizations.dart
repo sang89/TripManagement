@@ -612,6 +612,24 @@ abstract class AppLocalizations {
   /// **'Remember me'**
   String get rememberMe;
 
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @continueWithApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Apple'**
+  String get continueWithApple;
+
+  /// No description provided for @orSignInWith.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get orSignInWith;
+
   /// No description provided for @myTrips.
   ///
   /// In en, this message translates to:
@@ -1109,6 +1127,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Decline the invitation to {tripTitle}? You will lose access.'**
   String declineInviteConfirmMessage(String tripTitle);
+
+  /// No description provided for @securitySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get securitySectionTitle;
+
+  /// No description provided for @biometricToggleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Face ID / Touch ID'**
+  String get biometricToggleTitle;
+
+  /// No description provided for @biometricToggleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use biometrics to unlock the app'**
+  String get biometricToggleSubtitle;
+
+  /// No description provided for @biometricLockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify It\'s You'**
+  String get biometricLockTitle;
+
+  /// No description provided for @biometricLockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to access your account'**
+  String get biometricLockSubtitle;
+
+  /// No description provided for @biometricSignInWithFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Face ID'**
+  String get biometricSignInWithFace;
+
+  /// No description provided for @biometricSignInWithFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Fingerprint'**
+  String get biometricSignInWithFingerprint;
+
+  /// No description provided for @biometricSignInWithBiometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Biometrics'**
+  String get biometricSignInWithBiometrics;
+
+  /// No description provided for @biometricReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to access your account'**
+  String get biometricReason;
+
+  /// No description provided for @biometricFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Please try again.'**
+  String get biometricFailed;
+
+  /// No description provided for @usePasswordInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Use password instead'**
+  String get usePasswordInstead;
 }
 
 class _AppLocalizationsDelegate

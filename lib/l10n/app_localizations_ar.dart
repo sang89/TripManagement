@@ -270,6 +270,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rememberMe => 'تذكرني';
 
   @override
+  String get continueWithGoogle => 'المتابعة مع Google';
+
+  @override
+  String get continueWithApple => 'المتابعة مع Apple';
+
+  @override
+  String get orSignInWith => 'أو';
+
+  @override
   String get myTrips => 'رحلاتي';
 
   @override
@@ -539,4 +548,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String declineInviteConfirmMessage(String tripTitle) {
     return 'رفض الدعوة إلى \'$tripTitle\'؟ ستفقد الوصول.';
   }
+
+  @override
+  String get securitySectionTitle => 'الأمان';
+
+  @override
+  String get biometricToggleTitle => 'Face ID / Touch ID';
+
+  @override
+  String get biometricToggleSubtitle => 'استخدام المقاييس الحيوية لفتح التطبيق';
+
+  @override
+  String get biometricLockTitle => 'تحقق من هويتك';
+
+  @override
+  String get biometricLockSubtitle => 'المصادقة للوصول إلى حسابك';
+
+  @override
+  String get biometricSignInWithFace => 'تسجيل الدخول بـ Face ID';
+
+  @override
+  String get biometricSignInWithFingerprint => 'تسجيل الدخول ببصمة الإصبع';
+
+  @override
+  String get biometricSignInWithBiometrics => 'تسجيل الدخول بالمقاييس الحيوية';
+
+  @override
+  String get biometricReason => 'المصادقة للوصول إلى حسابك';
+
+  @override
+  String get biometricFailed => 'فشلت المصادقة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get usePasswordInstead => 'استخدام كلمة المرور';
 }

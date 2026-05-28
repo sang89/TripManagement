@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -66,6 +67,36 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() { _loading = true; _error = null; });
+    final error = await context.read<AuthProvider>().signInWithGoogle();
+    if (!mounted) return;
+    if (error != null) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    } else if (!context.read<AuthProvider>().isLoggedIn) {
+      setState(() => _loading = false);
+    }
+    // null + isLoggedIn = success: GoRouter redirect handles navigation.
+    // On web: page has already redirected away.
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() { _loading = true; _error = null; });
+    final error = await context.read<AuthProvider>().signInWithApple();
+    if (!mounted) return;
+    if (error != null) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    } else if (!context.read<AuthProvider>().isLoggedIn) {
+      setState(() => _loading = false);
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -80,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (error == null) {
       await _saveOrClearCredentials();
-      if (mounted) context.go('/home');
+      // GoRouter redirect handles navigation to /trips.
     } else {
       setState(() {
         _loading = false;
@@ -205,6 +236,44 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // "or" divider
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          l10n.orSignInWith,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Continue with Google (all platforms)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _loading ? null : _signInWithGoogle,
+                      icon: const Icon(Icons.g_mobiledata, size: 22),
+                      label: Text(l10n.continueWithGoogle),
+                    ),
+                  ),
+                  // Continue with Apple — hidden on Android native only;
+                  // always visible on web (OAuth redirect works cross-platform).
+                  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _loading ? null : _signInWithApple,
+                        icon: const Icon(Icons.apple, size: 22),
+                        label: Text(l10n.continueWithApple),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
