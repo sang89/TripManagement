@@ -213,6 +213,11 @@
 
   "blockReinviteLabel": "Don't allow future invitations to this trip",
   "reinviteBlockedError": "This user has opted out of future invitations to this trip",
+  "resendInvite": "Resend invite",
+  "inviteResentTo": "Invite resent to {name}",
+  "@inviteResentTo": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "declineInviteConfirmTitle": "Decline invitation?",
   "declineInviteConfirmMessage": "Decline the invitation to {tripTitle}? You will lose access.",
   "@declineInviteConfirmMessage": {

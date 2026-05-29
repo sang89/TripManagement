@@ -544,6 +544,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'This user has opted out of future invitations to this trip';
 
   @override
+  String get resendInvite => 'Resend invite';
+
+  @override
+  String inviteResentTo(String name) {
+    return 'Invite resent to $name';
+  }
+
+  @override
   String get declineInviteConfirmTitle => 'Decline invitation?';
 
   @override

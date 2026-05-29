@@ -173,6 +173,8 @@
 
   "blockReinviteLabel": "Zukünftige Einladungen zu dieser Reise nicht erlauben",
   "reinviteBlockedError": "Dieser Nutzer hat zukünftige Einladungen zu dieser Reise abgelehnt",
+  "resendInvite": "Einladung erneut senden",
+  "inviteResentTo": "Einladung erneut gesendet an {name}",
   "declineInviteConfirmTitle": "Einladung ablehnen?",
   "declineInviteConfirmMessage": "Einladung zu «{tripTitle}» ablehnen? Du verlierst den Zugang.",
   "@declineInviteConfirmMessage": {

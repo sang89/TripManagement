@@ -34,6 +34,24 @@ Guest members (`user_id IS NULL`) are inserted directly as `accepted` — no pen
 
 ---
 
+## Resending a Pending Invite
+
+An invite stays `pending` until the invitee acts on it. Organizers and accepted members can re-send the FCM push notification to remind the invitee — without changing the member's status.
+
+**UI:** A `Icons.send_outlined` `IconButton` appears in the trailing position of each pending member's `ListTile` in the Trip Detail Overview tab. Visible only to users with `canInvite` permission (organizer or accepted member), and never shown for the current user's own row.
+
+**Provider:** `TripProvider.resendInvite(memberId)` calls the `resend_invite` Supabase RPC.
+
+**DB function `resend_invite(p_member_id uuid)`** (`SECURITY DEFINER`):
+- Verifies `status = 'pending'` and `user_id IS NOT NULL`.
+- Checks caller is organizer or accepted member.
+- Reads service role key from Vault and calls `send-invite-notification` Edge Function with the same payload shape as the `on_invite_inserted` trigger.
+- The existing trigger cannot be reused here because it only fires when status *changes to* `pending`; a pending-to-pending UPDATE is excluded.
+
+**Loading state:** The send icon is replaced with a `CircularProgressIndicator.adaptive` while the RPC is in flight. On success: SnackBar "Invite resent to {name}". On error: red SnackBar.
+
+---
+
 ## Adding a Member (`AddMemberSheet`)
 
 **Entry points:**
@@ -175,6 +193,7 @@ If `block_reinvite = false`:
 
 | Object | Type | Purpose |
 |---|---|---|
+| `resend_invite(p_member_id uuid)` | Function (SECURITY DEFINER) | Resends FCM push for an already-pending invite; callable by authenticated users who are organizer or accepted member |
 | `find_user_by_contact(p_email, p_phone)` | Function | Account lookup by email or phone for the add-member sheet |
 | `auth_user_is_trip_member(p_trip_id)` | Function (SECURITY DEFINER) | True if current user has `accepted` row for the trip — used in RLS to avoid recursion |
 | `auth_user_has_pending_invite(p_trip_id)` | Function (SECURITY DEFINER) | True if current user has `pending` row — lets invitees read trip details |

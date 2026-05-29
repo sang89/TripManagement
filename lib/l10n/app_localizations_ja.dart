@@ -538,6 +538,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reinviteBlockedError => 'このユーザーはこのトリップへの今後の招待を拒否しています';
 
   @override
+  String get resendInvite => '招待を再送信';
+
+  @override
+  String inviteResentTo(String name) {
+    return '$nameに招待を再送信しました';
+  }
+
+  @override
   String get declineInviteConfirmTitle => '招待を断りますか？';
 
   @override

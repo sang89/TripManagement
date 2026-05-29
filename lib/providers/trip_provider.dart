@@ -1030,4 +1030,10 @@ class TripProvider extends ChangeNotifier {
     notifyListeners();
     unawaited(_saveCache());
   }
+
+  // ─── Resend invite ─────────────────────────────────────────────────────────
+
+  Future<void> resendInvite(String memberId) async {
+    await _db.rpc('resend_invite', params: {'p_member_id': memberId});
+  }
 }

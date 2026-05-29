@@ -545,6 +545,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Este usuario ha rechazado futuras invitaciones a este viaje';
 
   @override
+  String get resendInvite => 'Reenviar invitación';
+
+  @override
+  String inviteResentTo(String name) {
+    return 'Invitación reenviada a $name';
+  }
+
+  @override
   String get declineInviteConfirmTitle => '¿Rechazar invitación?';
 
   @override

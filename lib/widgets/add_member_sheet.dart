@@ -251,14 +251,15 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
                     ),
                     onChanged: (_) => _nameTouched = true,
                   ),
-                  const SizedBox(height: 20),
-                  AppButton(
-                    label: l10n.addMember,
-                    onPressed: _submit,
-                  ),
-                  const SizedBox(height: 8),
                 ],
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: AppButton(
+              label: l10n.addMember,
+              onPressed: _submit,
             ),
           ),
         ],

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/trip.dart';
+import '../../models/trip_member.dart';
 import '../../models/trip_stop.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trip_provider.dart';
@@ -237,7 +238,8 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _OverviewTab(trip: trip, currentUserId: currentUserId),
+          _OverviewTab(
+              trip: trip, currentUserId: currentUserId, canInvite: canInvite),
           _ItineraryTab(
             trip: trip,
             onDeleteStop: (s) => _confirmDeleteStop(context, s),
@@ -258,18 +260,56 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   }
 }
 
-class _OverviewTab extends StatelessWidget {
+class _OverviewTab extends StatefulWidget {
   final Trip trip;
   final String? currentUserId;
+  final bool canInvite;
 
-  const _OverviewTab({required this.trip, this.currentUserId});
+  const _OverviewTab({
+    required this.trip,
+    this.currentUserId,
+    required this.canInvite,
+  });
+
+  @override
+  State<_OverviewTab> createState() => _OverviewTabState();
+}
+
+class _OverviewTabState extends State<_OverviewTab> {
+  final Set<String> _resendingIds = {};
+
+  Future<void> _resend(TripMember member) async {
+    setState(() => _resendingIds.add(member.id));
+    final l10n = AppLocalizations.of(context);
+    try {
+      await context.read<TripProvider>().resendInvite(member.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.inviteResentTo(member.displayName))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _resendingIds.remove(member.id));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final trip = widget.trip;
+    final currentUserId = widget.currentUserId;
     final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('MMM d, y  h:mm a');
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
       children: [
         if (trip.startLocation != null &&
             trip.startLocation!.isNotEmpty) ...[
@@ -313,6 +353,10 @@ class _OverviewTab extends StatelessWidget {
         const SizedBox(height: 8),
         ...trip.members.map((m) {
               final isMe = m.userId != null && m.userId == currentUserId;
+              final canResend = m.status == 'pending' &&
+                  widget.canInvite &&
+                  m.userId != null &&
+                  m.userId != currentUserId;
 
               // Resolve inviter name from the already-loaded members list.
               String? inviterLabel;
@@ -400,6 +444,25 @@ class _OverviewTab extends StatelessWidget {
                       ),
                   ],
                 ),
+                trailing: canResend
+                    ? _resendingIds.contains(m.id)
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 2),
+                          )
+                        : Tooltip(
+                            message: l10n.resendInvite,
+                            waitDuration: Duration.zero,
+                            preferBelow: false,
+                            child: IconButton(
+                              icon: const Icon(Icons.send_outlined),
+                              iconSize: 20,
+                              onPressed: () => _resend(m),
+                            ),
+                          )
+                    : null,
                 dense: true,
                 isThreeLine: hasExtraLine,
               );
