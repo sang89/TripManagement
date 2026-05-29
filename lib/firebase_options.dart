@@ -19,7 +19,6 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    // TODO: replace this file by running `flutterfire configure`
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
