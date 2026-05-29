@@ -542,6 +542,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'اختار هذا المستخدم إلغاء الاشتراك في الدعوات المستقبلية لهذه الرحلة';
 
   @override
+  String get resendInvite => 'إعادة إرسال الدعوة';
+
+  @override
+  String inviteResentTo(String name) {
+    return 'تمت إعادة إرسال الدعوة إلى $name';
+  }
+
+  @override
   String get declineInviteConfirmTitle => 'رفض الدعوة؟';
 
   @override

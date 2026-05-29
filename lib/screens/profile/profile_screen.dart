@@ -285,111 +285,126 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        child: Column(
           children: [
-            _ProfileHeader(
-              displayName: displayName,
-              email: auth.userEmail,
-              avatarUrl: profile.avatarUrl,
-              updatedAt: profile.updatedAt,
-              uploading: _uploading,
-              onAvatarTap: () => _showAvatarOptions(profile),
-            ),
-            const SizedBox(height: 20),
-            _InfoCard(
-              title: l10n.personalInfoSection,
-              icon: Icons.person_outline,
-              children: [
-                _Field(
-                  label: l10n.fullName,
-                  value: profile.fullName,
-                  controller: _nameCtrl,
-                  editing: _editing,
-                  keyboardType: TextInputType.name,
-                  textCapitalization: TextCapitalization.words,
-                  hint: l10n.fullNameHint,
-                  validator: (v) {
-                    if (v != null && v.trim().length > 100) {
-                      return l10n.nameTooLong;
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _InfoCard(
-              title: l10n.contactInfoSection,
-              icon: Icons.contact_phone_outlined,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                children: [
+                  _ProfileHeader(
+                    displayName: displayName,
+                    email: auth.userEmail,
+                    avatarUrl: profile.avatarUrl,
+                    updatedAt: profile.updatedAt,
+                    uploading: _uploading,
+                    onAvatarTap: () => _showAvatarOptions(profile),
+                  ),
+                  const SizedBox(height: 20),
+                  _InfoCard(
+                    title: l10n.personalInfoSection,
+                    icon: Icons.person_outline,
                     children: [
-                      Text(
-                        l10n.email,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              auth.userEmail,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.lock_outline,
-                              size: 11, color: Colors.grey[400]),
-                          const SizedBox(width: 3),
-                          Text(
-                            l10n.managedByAccount,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[400],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
+                      _Field(
+                        label: l10n.fullName,
+                        value: profile.fullName,
+                        controller: _nameCtrl,
+                        editing: _editing,
+                        keyboardType: TextInputType.name,
+                        textCapitalization: TextCapitalization.words,
+                        hint: l10n.fullNameHint,
+                        validator: (v) {
+                          if (v != null && v.trim().length > 100) {
+                            return l10n.nameTooLong;
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _editing
-                      ? AppPhoneField(
-                          label: l10n.phone,
-                          initialValue: _phone,
-                          onChanged: (v) => setState(() => _phone = v),
-                        )
-                      : _ViewRow(
-                          label: l10n.phone,
-                          value: profile.phone.isEmpty ? '—' : profile.phone,
+                  const SizedBox(height: 12),
+                  _InfoCard(
+                    title: l10n.contactInfoSection,
+                    icon: Icons.contact_phone_outlined,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.email,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[500],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    auth.userEmail,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(Icons.lock_outline,
+                                    size: 11, color: Colors.grey[400]),
+                                const SizedBox(width: 3),
+                                Text(
+                                  l10n.managedByAccount,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[400],
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _editing
+                            ? AppPhoneField(
+                                label: l10n.phone,
+                                initialValue: _phone,
+                                onChanged: (v) => setState(() => _phone = v),
+                              )
+                            : _ViewRow(
+                                label: l10n.phone,
+                                value: profile.phone.isEmpty ? '—' : profile.phone,
+                              ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _AccountCard(
+                    l10n: l10n,
+                    memberSince: memberSinceText,
+                    onLogout: _logout,
+                  ),
+                ],
+              ),
+            ),
+            if (_editing)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: AppButton(
+                    label: l10n.saveChanges,
+                    onPressed: () => _save(profile),
+                    loading: _saving,
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _AccountCard(
-              l10n: l10n,
-              memberSince: memberSinceText,
-              editing: _editing,
-              saving: _saving,
-              onSave: () => _save(profile),
-              onLogout: _logout,
-            ),
+              ),
           ],
         ),
       ),
@@ -679,17 +694,11 @@ class _ViewRow extends StatelessWidget {
 class _AccountCard extends StatelessWidget {
   final AppLocalizations l10n;
   final String memberSince;
-  final bool editing;
-  final bool saving;
-  final VoidCallback onSave;
   final VoidCallback onLogout;
 
   const _AccountCard({
     required this.l10n,
     required this.memberSince,
-    required this.editing,
-    required this.saving,
-    required this.onSave,
     required this.onLogout,
   });
 
@@ -722,14 +731,6 @@ class _AccountCard extends StatelessWidget {
             const SizedBox(height: 12),
             _ViewRow(label: l10n.memberSince, value: memberSince),
             const SizedBox(height: 16),
-            if (editing) ...[
-              AppButton(
-                label: l10n.saveChanges,
-                onPressed: onSave,
-                loading: saving,
-              ),
-              const SizedBox(height: 8),
-            ],
             OutlinedButton.icon(
               onPressed: onLogout,
               icon: const Icon(Icons.logout, color: AppTheme.danger),

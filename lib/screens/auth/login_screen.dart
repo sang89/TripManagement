@@ -126,14 +126,17 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+        bottom: false,
+        child: Column(
+          children: [
+          Expanded(child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                   const Icon(Icons.flight_takeoff_rounded,
                       size: 72, color: AppTheme.primary),
                   const SizedBox(height: 16),
@@ -225,12 +228,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 textAlign: TextAlign.center,
                               ),
                             ],
-                            const SizedBox(height: 16),
-                            AppButton(
-                              label: l10n.signIn,
-                              onPressed: _login,
-                              loading: _loading,
-                            ),
                           ],
                         ),
                       ),
@@ -289,7 +286,23 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-        ),
+        )), // Expanded + Center
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: AppButton(
+                  label: l10n.signIn,
+                  onPressed: _login,
+                  loading: _loading,
+                ),
+              ),
+            ),
+          ),
+        ], // Column children
+        ), // Column
       ),
     );
   }

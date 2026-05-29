@@ -545,6 +545,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Người dùng này đã từ chối lời mời trong tương lai cho chuyến đi này';
 
   @override
+  String get resendInvite => 'Gửi lại lời mời';
+
+  @override
+  String inviteResentTo(String name) {
+    return 'Đã gửi lại lời mời tới $name';
+  }
+
+  @override
   String get declineInviteConfirmTitle => 'Từ chối lời mời?';
 
   @override

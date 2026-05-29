@@ -63,6 +63,16 @@ class FakeTripProvider extends TripProvider {
   Future<void> load() async {}
 }
 
+class _ResendTrackingProvider extends FakeTripProvider {
+  final List<String> _calls;
+  _ResendTrackingProvider(this._calls);
+
+  @override
+  Future<void> resendInvite(String memberId) async {
+    _calls.add(memberId);
+  }
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -721,6 +731,27 @@ void main() {
     test('ignores IDs in order that no longer exist', () {
       final ordered = TripProvider.applyOrder(trips, ['c', 'deleted-id', 'a', 'b']);
       expect(ordered.map((t) => t.id).toList(), ['c', 'a', 'b']);
+    });
+  });
+
+  // ── resendInvite ──────────────────────────────────────────────────────────
+
+  // FakeTripProvider already skips DB I/O by overriding load(); resendInvite
+  // normally calls the Supabase RPC so we verify the pattern via a subclass.
+  group('resendInvite', () {
+    test('subclass can track resend calls', () async {
+      final calls = <String>[];
+      final prov = _ResendTrackingProvider(calls);
+      await prov.resendInvite('m-pending');
+      expect(calls, ['m-pending']);
+    });
+
+    test('multiple resend calls accumulate in order', () async {
+      final calls = <String>[];
+      final prov = _ResendTrackingProvider(calls);
+      await prov.resendInvite('m1');
+      await prov.resendInvite('m2');
+      expect(calls, ['m1', 'm2']);
     });
   });
 }

@@ -1116,6 +1116,18 @@ abstract class AppLocalizations {
   /// **'This user has opted out of future invitations to this trip'**
   String get reinviteBlockedError;
 
+  /// No description provided for @resendInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend invite'**
+  String get resendInvite;
+
+  /// No description provided for @inviteResentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite resent to {name}'**
+  String inviteResentTo(String name);
+
   /// No description provided for @declineInviteConfirmTitle.
   ///
   /// In en, this message translates to:

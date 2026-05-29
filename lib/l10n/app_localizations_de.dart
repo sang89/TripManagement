@@ -545,6 +545,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dieser Nutzer hat zukünftige Einladungen zu dieser Reise abgelehnt';
 
   @override
+  String get resendInvite => 'Einladung erneut senden';
+
+  @override
+  String inviteResentTo(String name) {
+    return 'Einladung erneut gesendet an $name';
+  }
+
+  @override
   String get declineInviteConfirmTitle => 'Einladung ablehnen?';
 
   @override

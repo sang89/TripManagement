@@ -181,6 +181,8 @@
 
   "blockReinviteLabel": "Ne plus autoriser les invitations à ce voyage",
   "reinviteBlockedError": "Cet utilisateur a refusé les futures invitations à ce voyage",
+  "resendInvite": "Renvoyer l'invitation",
+  "inviteResentTo": "Invitation renvoyée à {name}",
   "declineInviteConfirmTitle": "Refuser l'invitation ?",
   "declineInviteConfirmMessage": "Refuser l'invitation pour « {tripTitle} » ? Vous perdrez l'accès.",
   "@declineInviteConfirmMessage": {

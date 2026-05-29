@@ -545,6 +545,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Este utilizador optou por não receber convites futuros para esta viagem';
 
   @override
+  String get resendInvite => 'Reenviar convite';
+
+  @override
+  String inviteResentTo(String name) {
+    return 'Convite reenviado para $name';
+  }
+
+  @override
   String get declineInviteConfirmTitle => 'Recusar convite?';
 
   @override

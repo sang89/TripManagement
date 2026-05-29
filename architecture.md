@@ -122,7 +122,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | Provider | Owns | Key methods |
 |---|---|---|
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
-| `TripProvider` | All trips + members + stops | `load()`, `clear()`, `getById(id)`, CRUD for trips/members/stops; Realtime subscription for member updates |
+| `TripProvider` | All trips + members + stops | `load()`, `clear()`, `getById(id)`, CRUD for trips/members/stops; `resendInvite(memberId)` — re-sends FCM push for pending invite; Realtime subscription for member updates |
 | `InvitationsProvider` | Pending invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `SettingsProvider` | Theme mode + language preference | `load()`, `setThemeMode()`, `setLocale()` |
 | `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |

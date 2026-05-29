@@ -537,6 +537,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reinviteBlockedError => '该用户已选择拒绝此行程的未来邀请';
 
   @override
+  String get resendInvite => '重新发送邀请';
+
+  @override
+  String inviteResentTo(String name) {
+    return '已向$name重新发送邀请';
+  }
+
+  @override
   String get declineInviteConfirmTitle => '拒绝邀请？';
 
   @override

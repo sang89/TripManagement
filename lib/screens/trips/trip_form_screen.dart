@@ -424,7 +424,9 @@ class _TripFormScreenState extends State<TripFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
+        child: Column(
+          children: [
+          Expanded(child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             // Title
@@ -639,15 +641,22 @@ class _TripFormScreenState extends State<TripFormScreen> {
               _youOrganizerTile(context),
               ..._pendingMemberTiles(context),
             ],
-            const SizedBox(height: 24),
-            AppButton(
-              label: _isEdit ? l10n.saveChanges : l10n.saveTrip,
-              onPressed: _save,
-              loading: _loading,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
           ],
-        ),
+        )), // Expanded + ListView
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: AppButton(
+                label: _isEdit ? l10n.saveChanges : l10n.saveTrip,
+                onPressed: _save,
+                loading: _loading,
+              ),
+            ),
+          ),
+        ], // Column children
+      ), // Column
       ),
     ), // PopScope
     );

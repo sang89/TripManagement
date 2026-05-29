@@ -259,15 +259,17 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
                       ),
                       maxLines: 3,
                     ),
-                    const SizedBox(height: 20),
-                    AppButton(
-                      label: isEdit ? l10n.saveChanges : l10n.addStopButton,
-                      onPressed: _loading ? () {} : _save,
-                      loading: _loading,
-                    ),
                   ],
                 ),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: AppButton(
+              label: isEdit ? l10n.saveChanges : l10n.addStopButton,
+              onPressed: _loading ? () {} : _save,
+              loading: _loading,
             ),
           ),
         ],

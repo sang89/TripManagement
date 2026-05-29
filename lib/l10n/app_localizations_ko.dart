@@ -539,6 +539,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reinviteBlockedError => '이 사용자는 이 여행에 대한 향후 초대를 거부했습니다';
 
   @override
+  String get resendInvite => '초대 재전송';
+
+  @override
+  String inviteResentTo(String name) {
+    return '$name에게 초대를 다시 보냈습니다';
+  }
+
+  @override
   String get declineInviteConfirmTitle => '초대 거절?';
 
   @override

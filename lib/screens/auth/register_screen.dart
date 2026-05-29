@@ -59,14 +59,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+        bottom: false,
+        child: Column(
+          children: [
+          Expanded(child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                   const Icon(Icons.flight_takeoff_rounded,
                       size: 72, color: AppTheme.primary),
                   const SizedBox(height: 16),
@@ -161,12 +164,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 textAlign: TextAlign.center,
                               ),
                             ],
-                            const SizedBox(height: 24),
-                            AppButton(
-                              label: l10n.createAccount,
-                              onPressed: _register,
-                              loading: _loading,
-                            ),
                           ],
                         ),
                       ),
@@ -187,7 +184,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ),
-        ),
+        )), // Expanded + Center
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: AppButton(
+                  label: l10n.createAccount,
+                  onPressed: _register,
+                  loading: _loading,
+                ),
+              ),
+            ),
+          ),
+        ], // Column children
+        ), // Column
       ),
     );
   }
