@@ -34,8 +34,21 @@ class PushNotificationService {
     if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
     // 2. Get the FCM token and persist it.
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token != null) await _saveToken(token);
+    //    On iOS, getToken() throws if the APNS token hasn't been set yet.
+    //    Check it first; if absent, onTokenRefresh (step 3) will deliver the
+    //    FCM token once iOS sets the APNS token in the background.
+    if (Platform.isIOS) {
+      final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+      if (apnsToken == null) {
+        debugPrint('PushNotificationService: APNS token not ready, relying on onTokenRefresh');
+      } else {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) await _saveToken(token);
+      }
+    } else {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) await _saveToken(token);
+    }
 
     // 3. Listen for token refreshes.
     FirebaseMessaging.instance.onTokenRefresh.listen(_saveToken);
@@ -69,8 +82,14 @@ class PushNotificationService {
     if (kIsWeb || (!Platform.isIOS && !Platform.isAndroid)) return;
     try {
       final uid = _db.auth.currentUser?.id;
+      if (uid == null) return;
+      // Same APNS guard as init() — skip silently if token never arrived.
+      if (Platform.isIOS) {
+        final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        if (apnsToken == null) return;
+      }
       final token = await FirebaseMessaging.instance.getToken();
-      if (uid == null || token == null) return;
+      if (token == null) return;
       await _db
           .from('device_tokens')
           .delete()

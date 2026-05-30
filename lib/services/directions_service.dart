@@ -42,7 +42,7 @@ class DirectionsService {
     final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
 
     try {
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -53,7 +53,7 @@ class DirectionsService {
 
       final encodedPolyline =
           routes[0]['overview_polyline']['points'] as String;
-      return _decodePolyline(encodedPolyline);
+      return await compute(_decodePolyline, encodedPolyline);
     } catch (_) {
       return null;
     }
