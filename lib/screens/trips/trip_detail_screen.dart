@@ -28,6 +28,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   int _tabIndex = 0; // tracked for FAB visibility
+  // Track last prefetched waypoints key so we only fire a new prefetch when
+  // the route actually changes (destination or stop coordinates change).
+  String? _lastPrefetchKey;
 
   static const _tabIcons = [
     Icons.info_outline_rounded,
@@ -196,6 +199,25 @@ class _TripDetailScreenState extends State<TripDetailScreen>
         appBar: AppBar(),
         body: Center(child: Text(l10n.tripNotFound)),
       );
+    }
+
+    // Pre-warm the Directions API route in the background so the Map tab shows
+    // the real road polyline as soon as it opens.  No-op if already cached.
+    final prefetchPins = _buildMapPins(trip);
+    final prefetchWaypoints = prefetchPins.map((p) => p.position).toList();
+    if (prefetchWaypoints.length >= 2) {
+      final wpKey = prefetchWaypoints
+          .map((p) => '${p.latitude},${p.longitude}')
+          .join('|');
+      if (wpKey != _lastPrefetchKey) {
+        _lastPrefetchKey = wpKey;
+        TripMapWidget.prefetchRoute(prefetchWaypoints);
+        // Also pre-render stop-pin icons so they are cached before the Map tab
+        // opens.  Only stop pins (not start/destination) get numbered icons.
+        final stopCount =
+            prefetchPins.where((p) => !p.isStart && !p.isDestination).length;
+        TripMapWidget.prefetchIcons(stopCount);
+      }
     }
 
     final currentUserId = context.read<AuthProvider>().userId;

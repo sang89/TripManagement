@@ -1,5 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_form_field/phone_form_field.dart';
@@ -34,6 +37,23 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await AppLogger.init();
+
+  // Pre-warm the Google Maps SDK on Android so the first map-show doesn't
+  // stall the UI thread.  initializeWithRenderer selects TLHC (Texture Layer
+  // Hybrid Composition), the most performant rendering mode.
+  // On iOS the SDK is already warmed up by GMSServices.provideAPIKey() in
+  // AppDelegate.  On web this block is skipped entirely.
+  if (!kIsWeb) {
+    final mapsImpl = GoogleMapsFlutterPlatform.instance;
+    if (mapsImpl is GoogleMapsFlutterAndroid) {
+      try {
+        await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
+        await mapsImpl.warmup();
+      } catch (e, st) {
+        AppLogger.logError(e, st);
+      }
+    }
+  }
 
   // Inject Google Maps JS API on web. On mobile this is a no-op — the
   // native SDK is used instead. We await here so the script is fully loaded

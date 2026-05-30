@@ -39,98 +39,40 @@ class TripMapWidget extends StatefulWidget {
     this.compact = false,
   });
 
-  @override
-  State<TripMapWidget> createState() => _TripMapWidgetState();
-}
+  // App-level caches — survive widget disposal so work is only done once per
+  // session regardless of how many times the widget is created.
+  static final Map<int, BitmapDescriptor> _iconCache = {};
+  // Key: pipe-separated "lat,lng" of each waypoint in order.
+  static final Map<String, List<LatLng>?> _routeCache = {};
 
-class _TripMapWidgetState extends State<TripMapWidget> {
-  GoogleMapController? _controller;
-  final Map<int, BitmapDescriptor> _stopIcons = {}; // 1-based
-  bool _iconsLoaded = false;
-  // Compact maps defer mounting so the parent form renders without blocking.
-  bool _mapMounted = false;
-  List<TripMapPin> _lastPins = [];
-  // Real road route points from Directions API; null while loading or on error.
-  List<LatLng>? _routePoints;
+  static String _routeKey(List<LatLng> waypoints) =>
+      waypoints.map((p) => '${p.latitude},${p.longitude}').join('|');
 
-  // Only numbered stops — excludes start and destination pins.
-  List<TripMapPin> get _stopPins =>
-      widget.pins.where((p) => !p.isStart && !p.isDestination).toList();
-
-  @override
-  void initState() {
-    super.initState();
-    _lastPins = widget.pins;
-
-    // Start network/compute work immediately — these are async and
-    // don't touch the platform view.
-    _loadIcons();
-    _loadRoute();
-
-    // Always defer the GoogleMap platform-view creation so it doesn't
-    // compete with the tab-switch animation.  The compact card uses a
-    // slightly longer delay because its parent ListView also needs to
-    // finish laying out.
-    Future.delayed(
-      Duration(milliseconds: widget.compact ? 300 : 220),
-      () { if (mounted) setState(() => _mapMounted = true); },
-    );
-  }
-
-  @override
-  void didUpdateWidget(TripMapWidget old) {
-    super.didUpdateWidget(old);
-    if (!_pinsEqual(widget.pins, _lastPins)) {
-      _lastPins = widget.pins;
-      _routePoints = null; // clear stale route while fetching the new one
-      _loadIcons();
-      _loadRoute();
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
-    }
-  }
-
-  static bool _pinsEqual(List<TripMapPin> a, List<TripMapPin> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i].id != b[i].id ||
-          a[i].position.latitude != b[i].position.latitude ||
-          a[i].position.longitude != b[i].position.longitude) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  Future<void> _loadIcons() async {
-    final count = _stopPins.length;
-    final futures = <int, Future<BitmapDescriptor>>{};
-    for (int i = 1; i <= count; i++) {
-      if (!_stopIcons.containsKey(i)) {
-        futures[i] = _makeStopIcon(i);
-      }
-    }
-    if (futures.isEmpty) {
-      if (mounted) setState(() => _iconsLoaded = true);
-      return;
-    }
-    final results = await Future.wait(
-      futures.entries.map((e) async => MapEntry(e.key, await e.value)),
-    );
-    if (!mounted) return;
-    setState(() {
-      for (final r in results) {
-        _stopIcons[r.key] = r.value;
-      }
-      _iconsLoaded = true;
+  /// Pre-warm the route cache for [waypoints] in the background.
+  /// Safe to call repeatedly — no-op if the route is already cached.
+  /// Call this as soon as the trip data is available so the Map tab opens
+  /// with a real road route rather than a straight-line fallback.
+  static void prefetchRoute(List<LatLng> waypoints) {
+    if (waypoints.length < 2) return;
+    final key = _routeKey(waypoints);
+    if (_routeCache.containsKey(key)) return;
+    DirectionsService.getRoute(waypoints).then((points) {
+      if (points != null) _routeCache[key] = points;
+      // Don't cache failures — allow a retry on the next Map tab open.
     });
   }
 
-  Future<void> _loadRoute() async {
-    if (widget.pins.length < 2) return;
-    final waypoints = widget.pins.map((p) => p.position).toList();
-    final points = await DirectionsService.getRoute(waypoints);
-    if (!mounted) return;
-    setState(() => _routePoints = points);
+  /// Pre-render stop-pin icons for numbers 1..[stopCount] in the background.
+  /// Safe to call repeatedly — skips numbers already in the cache.
+  /// Call this alongside [prefetchRoute] so icon rendering is done before
+  /// the user opens the Map tab.
+  static void prefetchIcons(int stopCount) {
+    for (int i = 1; i <= stopCount; i++) {
+      if (!_iconCache.containsKey(i)) {
+        final n = i;
+        _makeStopIcon(n).then((icon) => _iconCache[n] = icon);
+      }
+    }
   }
 
   static Future<BitmapDescriptor> _makeStopIcon(int n) async {
@@ -170,6 +112,181 @@ class _TripMapWidgetState extends State<TripMapWidget> {
     return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
+  /// Test-only: wipe static caches so tests don't bleed into each other.
+  @visibleForTesting
+  static void clearCachesForTest() {
+    _iconCache.clear();
+    _routeCache.clear();
+  }
+
+  /// Test-only: pre-populate the route cache for a given waypoint list.
+  @visibleForTesting
+  static void seedRouteCacheForTest(List<LatLng> waypoints, List<LatLng>? points) {
+    _routeCache[_routeKey(waypoints)] = points;
+  }
+
+  @override
+  State<TripMapWidget> createState() => _TripMapWidgetState();
+}
+
+class _TripMapWidgetState extends State<TripMapWidget>
+    with WidgetsBindingObserver {
+  // NOTE: AutomaticKeepAliveClientMixin is intentionally NOT used.
+  //
+  // With it, the GoogleMap platform view (GMSMapView) stays in the iOS view
+  // hierarchy even when the user is on a different tab.  When the app is then
+  // backgrounded and foregrounded, the Maps SDK re-validates its Metal
+  // resources synchronously on the main thread — blocking Flutter and making
+  // the whole app feel frozen.  Flutter's setState in AppLifecycleState.paused
+  // is queued and only processed on foreground, so a Dart-side teardown
+  // always runs *after* the freeze, not before it.
+  //
+  // Without the mixin the view is disposed the moment the user switches away
+  // from the Map tab.  There is nothing in the iOS hierarchy to re-validate
+  // when the app backgrounds from any other tab.  The route and icon caches
+  // (static fields below) make subsequent tab visits instant.
+  GoogleMapController? _controller;
+
+  bool _iconsLoaded = false;
+
+  // Phase 1: defer platform-view creation past the tab-switch animation.
+  // _mapMountTimerFired: the 300 ms delay has elapsed.
+  // _mapMounted: all three prereqs met — timer fired, icons ready, route done.
+  bool _mapMounted = false;
+  bool _mapMountTimerFired = false;
+  bool _mapMountTimerStarted = false;
+
+  // Phase 2: native SDK onMapCreated has fired and the view is ready.
+  bool _mapReady = false;
+
+  // False while the app is backgrounded.  _checkMount() will not set
+  // _mapMounted = true while inactive, so the GMSMapView is never created
+  // during the foreground-restore transition (the most disruptive moment).
+  bool _appActive = true;
+
+  List<TripMapPin> _lastPins = [];
+  List<LatLng>? _routePoints;
+
+  List<TripMapPin> get _stopPins =>
+      widget.pins.where((p) => !p.isStart && !p.isDestination).toList();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _lastPins = widget.pins;
+    _loadIcons();
+    _loadRoute();
+    _scheduleMountTimer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _appActive = false;
+    } else if (state == AppLifecycleState.resumed) {
+      if (mounted) setState(() { _appActive = true; _checkMount(); });
+    }
+  }
+
+  void _checkMount() {
+    // Route loading is intentionally excluded: the map shows as soon as the
+    // timer fires and icons are ready. The polyline updates from straight-line
+    // to real road when the Directions API responds — no blocking wait.
+    if (!_mapMounted &&
+        _mapMountTimerFired &&
+        _iconsLoaded &&
+        _appActive) {
+      _mapMounted = true;
+    }
+  }
+
+  void _scheduleMountTimer() {
+    if (_mapMountTimerStarted || widget.pins.isEmpty) return;
+    _mapMountTimerStarted = true;
+    // 50 ms lets the tab-switch animation's first frame render before the
+    // platform view is created.  Metal shaders are pre-compiled by the
+    // AppDelegate warmup, so GMSMapView creation is near-instant.
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) setState(() { _mapMountTimerFired = true; _checkMount(); });
+    });
+  }
+
+  @override
+  void didUpdateWidget(TripMapWidget old) {
+    super.didUpdateWidget(old);
+    if (!_pinsEqual(widget.pins, _lastPins)) {
+      _lastPins = widget.pins;
+      _iconsLoaded = false;
+      _routePoints = null;
+      _loadIcons();
+      _loadRoute();
+      if (_mapMounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
+      } else {
+        _scheduleMountTimer();
+      }
+    }
+  }
+
+  static bool _pinsEqual(List<TripMapPin> a, List<TripMapPin> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id ||
+          a[i].position.latitude != b[i].position.latitude ||
+          a[i].position.longitude != b[i].position.longitude) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> _loadIcons() async {
+    final count = _stopPins.length;
+    final futures = <int, Future<BitmapDescriptor>>{};
+    for (int i = 1; i <= count; i++) {
+      if (!TripMapWidget._iconCache.containsKey(i)) {
+        futures[i] = TripMapWidget._makeStopIcon(i);
+      }
+    }
+    if (futures.isEmpty) {
+      if (mounted) setState(() { _iconsLoaded = true; _checkMount(); });
+      return;
+    }
+    final results = await Future.wait(
+      futures.entries.map((e) async => MapEntry(e.key, await e.value)),
+    );
+    if (!mounted) return;
+    setState(() {
+      for (final r in results) {
+        TripMapWidget._iconCache[r.key] = r.value;
+      }
+      _iconsLoaded = true;
+      _checkMount();
+    });
+  }
+
+  Future<void> _loadRoute() async {
+    if (widget.pins.length < 2) return;
+    final waypoints = widget.pins.map((p) => p.position).toList();
+    final key = TripMapWidget._routeKey(waypoints);
+
+    // Return immediately if we already fetched this route this session.
+    if (TripMapWidget._routeCache.containsKey(key)) {
+      if (mounted) {
+        setState(() => _routePoints = TripMapWidget._routeCache[key]);
+      }
+      return;
+    }
+
+    final points = await DirectionsService.getRoute(waypoints);
+    if (points != null) TripMapWidget._routeCache[key] = points;
+    // Don't cache failures — the next Map tab visit will retry automatically.
+    if (!mounted) return;
+    setState(() => _routePoints = points);
+  }
+
   Set<Marker> _buildMarkers() {
     final markers = <Marker>{};
     int stopIdx = 0;
@@ -178,28 +295,25 @@ class _TripMapWidgetState extends State<TripMapWidget> {
         markers.add(Marker(
           markerId: MarkerId(pin.id),
           position: pin.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueGreen),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(title: pin.title, snippet: pin.subtitle),
         ));
       } else if (pin.isDestination) {
         markers.add(Marker(
           markerId: MarkerId(pin.id),
           position: pin.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueAzure),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           infoWindow: InfoWindow(title: pin.title, snippet: pin.subtitle),
         ));
       } else {
         stopIdx++;
-        final icon = _stopIcons[stopIdx];
+        final icon = TripMapWidget._iconCache[stopIdx];
         if (icon != null) {
           markers.add(Marker(
             markerId: MarkerId(pin.id),
             position: pin.position,
             icon: icon,
-            infoWindow:
-                InfoWindow(title: pin.title, snippet: pin.subtitle),
+            infoWindow: InfoWindow(title: pin.title, snippet: pin.subtitle),
           ));
         }
       }
@@ -209,23 +323,18 @@ class _TripMapWidgetState extends State<TripMapWidget> {
 
   Set<Polyline> _buildPolylines() {
     if (widget.pins.length < 2) return {};
-
-    // Use real road-following route points from the Directions API when
-    // available; fall back to straight lines while the request is in flight
-    // or if the API call failed.
     final points = _routePoints ?? widget.pins.map((p) => p.position).toList();
     final isRealRoute = _routePoints != null;
-
     return {
       Polyline(
         polylineId: const PolylineId('route'),
         points: points,
         color: AppTheme.primary,
         width: isRealRoute ? 4 : 3,
-        geodesic: !isRealRoute, // geodesic only needed for straight-line fallback
+        geodesic: !isRealRoute,
         patterns: isRealRoute
-            ? [] // solid line for real route
-            : [PatternItem.dash(20), PatternItem.gap(10)], // dashed for fallback
+            ? []
+            : [PatternItem.dash(20), PatternItem.gap(10)],
       ),
     };
   }
@@ -260,6 +369,7 @@ class _TripMapWidgetState extends State<TripMapWidget> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
   }
@@ -270,8 +380,6 @@ class _TripMapWidgetState extends State<TripMapWidget> {
       return _EmptyPlaceholder(compact: widget.compact);
     }
 
-    // Platform view not yet created — show a neutral placeholder so the
-    // tab transition renders instantly while the map warms up off-frame.
     if (!_mapMounted) {
       return _LoadingPlaceholder(compact: widget.compact);
     }
@@ -279,35 +387,47 @@ class _TripMapWidgetState extends State<TripMapWidget> {
     final map = GoogleMap(
       initialCameraPosition:
           CameraPosition(target: widget.pins.first.position, zoom: 10),
-      markers: _iconsLoaded ? _buildMarkers() : {},
+      markers: _buildMarkers(),
       polylines: _buildPolylines(),
       myLocationButtonEnabled: false,
       zoomControlsEnabled: !widget.compact,
-      // Disable gestures in compact mode so the parent ListView can scroll.
       scrollGesturesEnabled: !widget.compact,
       zoomGesturesEnabled: !widget.compact,
       rotateGesturesEnabled: false,
       tiltGesturesEnabled: false,
       onMapCreated: (c) {
         _controller = c;
+        if (mounted) setState(() => _mapReady = true);
         WidgetsBinding.instance.addPostFrameCallback((_) => _fitBounds());
       },
     );
 
-    if (widget.compact) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(height: 220, child: map),
-      );
-    }
-    return map;
+    final Widget mapWidget = widget.compact
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(height: 220, child: map),
+          )
+        : map;
+
+    return RepaintBoundary(
+      child: Stack(
+        children: [
+          IgnorePointer(ignoring: !_mapReady, child: mapWidget),
+          if (!_mapReady)
+            Positioned.fill(
+              child: _LoadingPlaceholder(compact: widget.compact, opaque: true),
+            ),
+        ],
+      ),
+    );
   }
 }
 
-// Shown for ~220 ms while the GoogleMap platform view warms up off-frame.
 class _LoadingPlaceholder extends StatelessWidget {
   final bool compact;
-  const _LoadingPlaceholder({required this.compact});
+  final bool opaque;
+
+  const _LoadingPlaceholder({required this.compact, this.opaque = false});
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +455,12 @@ class _LoadingPlaceholder extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey[300]!),
         ),
+        child: content,
+      );
+    }
+    if (opaque) {
+      return Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: content,
       );
     }
@@ -382,8 +508,7 @@ class _EmptyPlaceholder extends StatelessWidget {
                 size: 64, color: AppTheme.primaryLight),
             const SizedBox(height: 16),
             const Text('No mapped locations yet',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text(
               'Use the   search button when adding a destination or stop to pin it on the map.',
