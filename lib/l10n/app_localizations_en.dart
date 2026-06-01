@@ -591,4 +591,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usePasswordInstead => 'Use password instead';
+
+  @override
+  String get navFriends => 'Friends';
+
+  @override
+  String get friendsTabFriends => 'Friends';
+
+  @override
+  String get friendsTabRequests => 'Requests';
+
+  @override
+  String get friendsAddFriend => 'Add Friend';
+
+  @override
+  String get friendsSearchHint => 'Search by name, email or phone';
+
+  @override
+  String get friendsNoResults => 'No users found';
+
+  @override
+  String get friendsRequestSent => 'Friend request sent';
+
+  @override
+  String get friendsAccept => 'Accept';
+
+  @override
+  String get friendsDecline => 'Decline';
+
+  @override
+  String get friendsRemove => 'Remove Friend';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return 'Remove $name from your friends?';
+  }
+
+  @override
+  String get friendsNoFriends => 'No friends yet';
+
+  @override
+  String get friendsNoFriendsHint => 'Search for someone to add as a friend.';
+
+  @override
+  String get friendsNoRequests => 'No pending requests';
+
+  @override
+  String get friendsIncomingSection => 'Incoming';
+
+  @override
+  String get friendsOutgoingSection => 'Sent';
+
+  @override
+  String get friendsCancelRequest => 'Cancel Request';
+
+  @override
+  String get chatTabLabel => 'Chat';
+
+  @override
+  String get chatSendHint => 'Message…';
+
+  @override
+  String get chatNoMessages => 'No messages yet. Say hello!';
+
+  @override
+  String get chatSend => 'Send';
 }

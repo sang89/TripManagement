@@ -193,4 +193,40 @@
   "biometricReason": "Xác thực để truy cập tài khoản của bạn",
   "biometricFailed": "Xác thực thất bại. Vui lòng thử lại.",
   "usePasswordInstead": "Dùng mật khẩu thay thế"
+,
+
+  "navFriends": "Bạn bè",
+  "friendsTabFriends": "Bạn bè",
+  "friendsTabRequests": "Lời mời",
+  "friendsAddFriend": "Thêm bạn",
+  "friendsSearchHint": "Tìm theo tên, email hoặc số điện thoại",
+  "friendsNoResults": "Không tìm thấy người dùng",
+  "friendsRequestSent": "Đã gửi lời mời kết bạn",
+  "friendsAccept": "Chấp nhận",
+  "friendsDecline": "Từ chối",
+  "friendsRemove": "Xóa bạn",
+  "friendsRemoveConfirm": "Xóa {name} khỏi danh sách bạn bè?",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "Chưa có bạn bè",
+  "friendsNoFriendsHint": "Tìm kiếm ai đó để kết bạn.",
+  "friendsNoRequests": "Không có yêu cầu đang chờ",
+  "friendsIncomingSection": "Nhận được",
+  "friendsOutgoingSection": "Đã gửi",
+  "friendsCancelRequest": "Hủy yêu cầu",
+  "chatTabLabel": "Trò chuyện",
+  "chatSendHint": "Tin nhắn…",
+  "chatNoMessages": "Chưa có tin nhắn. Hãy chào nhau!",
+  "chatSend": "Gửi"
+,
+
+  "leave": "Rời",
+  "leaveTripTitle": "Rời khỏi chuyến đi?",
+  "leaveTripMessage": "Bạn sẽ bị xóa khỏi {tripTitle} và mất quyền truy cập.",
+  "@leaveTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+  "leaveTripTooltip": "Rời khỏi chuyến đi",
+  "thisTripFallback": "chuyến đi này"
 }

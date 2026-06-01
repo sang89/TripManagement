@@ -1,8 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
-import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phone_form_field/phone_form_field.dart';
@@ -14,6 +11,8 @@ import 'config/api_keys.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
+import 'providers/chat_provider.dart';
+import 'providers/friends_provider.dart';
 import 'providers/invitations_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/trip_provider.dart';
@@ -24,12 +23,12 @@ import 'screens/auth/register_screen.dart';
 import 'services/biometric_service.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/friends/friends_screen.dart';
 import 'screens/shell/shell_scaffold.dart';
 import 'screens/trips/trip_detail_screen.dart';
 import 'screens/trips/trip_form_screen.dart';
 import 'screens/trips/trips_screen.dart';
 import 'services/connectivity_service.dart';
-import 'services/maps_loader.dart';
 import 'services/offline_queue.dart';
 import 'services/push_notification_service.dart';
 
@@ -38,31 +37,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await AppLogger.init();
 
-  // Pre-warm the Google Maps SDK on Android so the first map-show doesn't
-  // stall the UI thread.  initializeWithRenderer selects TLHC (Texture Layer
-  // Hybrid Composition), the most performant rendering mode.
-  // On iOS the SDK is already warmed up by GMSServices.provideAPIKey() in
-  // AppDelegate.  On web this block is skipped entirely.
-  if (!kIsWeb) {
-    final mapsImpl = GoogleMapsFlutterPlatform.instance;
-    if (mapsImpl is GoogleMapsFlutterAndroid) {
-      try {
-        await mapsImpl.initializeWithRenderer(AndroidMapRenderer.latest);
-        await mapsImpl.warmup();
-      } catch (e, st) {
-        AppLogger.logError(e, st);
-      }
-    }
-  }
-
-  // Inject Google Maps JS API on web. On mobile this is a no-op — the
-  // native SDK is used instead. We await here so the script is fully loaded
-  // before any map widget renders.
-  try {
-    await injectGoogleMapsScript();
-  } catch (e, st) {
-    AppLogger.logError(e, st); // Map won't work but app continues.
-  }
   await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonKey);
 
   final connectivity = ConnectivityService();
@@ -83,13 +57,17 @@ void main() async {
     queue: offlineQueue,
   );
   final invitations = InvitationsProvider();
+  final friends = FriendsProvider();
   final biometricService = BiometricService();
 
   if (auth.isLoggedIn) {
     await trips.load();
     await profile.load();
     final uid = auth.userId;
-    if (uid != null) await invitations.init(uid);
+    if (uid != null) {
+      await invitations.init(uid);
+      await friends.init(uid);
+    }
   }
 
   runApp(TripManagementApp(
@@ -98,6 +76,7 @@ void main() async {
     trips: trips,
     profile: profile,
     invitations: invitations,
+    friends: friends,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
     biometricService: biometricService,
@@ -110,6 +89,7 @@ class TripManagementApp extends StatefulWidget {
   final TripProvider trips;
   final UserProfileProvider profile;
   final InvitationsProvider invitations;
+  final FriendsProvider friends;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
   final BiometricService biometricService;
@@ -121,6 +101,7 @@ class TripManagementApp extends StatefulWidget {
     required this.trips,
     required this.profile,
     required this.invitations,
+    required this.friends,
     required this.connectivity,
     required this.offlineQueue,
     required this.biometricService,
@@ -188,8 +169,20 @@ class _TripManagementAppState extends State<TripManagementApp> {
               ),
               GoRoute(
                 path: '/trip/:id',
-                builder: (_, state) =>
-                    TripDetailScreen(tripId: state.pathParameters['id']!),
+                builder: (context, state) {
+                  final tripId = state.pathParameters['id']!;
+                  final userId =
+                      context.read<AuthProvider>().userId ?? '';
+                  return ChangeNotifierProvider(
+                    create: (_) {
+                      final p = ChatProvider(
+                          tripId: tripId, userId: userId);
+                      p.init();
+                      return p;
+                    },
+                    child: TripDetailScreen(tripId: tripId),
+                  );
+                },
               ),
               GoRoute(
                 path: '/trip/:id/edit',
@@ -199,12 +192,8 @@ class _TripManagementAppState extends State<TripManagementApp> {
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
-                path: '/journal',
-                builder: (context, _) => Scaffold(
-                  body: Center(
-                    child: Text(AppLocalizations.of(context).journalComingSoon),
-                  ),
-                ),
+                path: '/friends',
+                builder: (_, _) => const FriendsScreen(),
               ),
             ]),
             StatefulShellBranch(routes: [
@@ -232,11 +221,13 @@ class _TripManagementAppState extends State<TripManagementApp> {
       final uid = widget.auth.userId;
       if (uid != null) {
         widget.invitations.init(uid);
+        widget.friends.init(uid);
         _push.init();
       }
     } else {
       _push.removeToken();
       widget.invitations.clear();
+      widget.friends.clear();
       widget.trips.clear();
       widget.profile.clear();
     }
@@ -257,6 +248,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.trips),
         ChangeNotifierProvider.value(value: widget.profile),
         ChangeNotifierProvider.value(value: widget.invitations),
+        ChangeNotifierProvider.value(value: widget.friends),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
         Provider<BiometricService>.value(value: widget.biometricService),

@@ -297,20 +297,20 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get leave => 'Leave';
+  String get leave => '离开';
 
   @override
-  String get leaveTripTooltip => 'Leave trip';
+  String get leaveTripTooltip => '离开行程';
 
   @override
-  String get thisTripFallback => 'this trip';
+  String get thisTripFallback => '此行程';
 
   @override
-  String get leaveTripTitle => 'Leave trip?';
+  String get leaveTripTitle => '离开行程？';
 
   @override
   String leaveTripMessage(String tripTitle) {
-    return 'You will be removed from $tripTitle and lose access.';
+    return '您将被从 $tripTitle 中移除，并失去访问权限。';
   }
 
   @override
@@ -584,4 +584,69 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get usePasswordInstead => '使用密码登录';
+
+  @override
+  String get navFriends => '好友';
+
+  @override
+  String get friendsTabFriends => '好友';
+
+  @override
+  String get friendsTabRequests => '请求';
+
+  @override
+  String get friendsAddFriend => '添加好友';
+
+  @override
+  String get friendsSearchHint => '按姓名、邮箱或手机号搜索';
+
+  @override
+  String get friendsNoResults => '未找到用户';
+
+  @override
+  String get friendsRequestSent => '已发送好友请求';
+
+  @override
+  String get friendsAccept => '接受';
+
+  @override
+  String get friendsDecline => '拒绍';
+
+  @override
+  String get friendsRemove => '删除好友';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return '将 $name 从好友列表中删除？';
+  }
+
+  @override
+  String get friendsNoFriends => '还没有好友';
+
+  @override
+  String get friendsNoFriendsHint => '搜索要添加为好友的人。';
+
+  @override
+  String get friendsNoRequests => '没有待处理的请求';
+
+  @override
+  String get friendsIncomingSection => '收到的';
+
+  @override
+  String get friendsOutgoingSection => '已发送';
+
+  @override
+  String get friendsCancelRequest => '取消请求';
+
+  @override
+  String get chatTabLabel => '聊天';
+
+  @override
+  String get chatSendHint => '消息…';
+
+  @override
+  String get chatNoMessages => '还没有消息。打个招呼吧！';
+
+  @override
+  String get chatSend => '发送';
 }

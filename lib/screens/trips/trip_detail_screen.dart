@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/chat_message.dart';
 import '../../models/trip.dart';
 import '../../models/trip_member.dart';
 import '../../models/trip_stop.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../providers/trip_provider.dart';
 import '../../widgets/add_member_sheet.dart';
 import '../../widgets/trip_map_widget.dart';
@@ -36,6 +37,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     Icons.info_outline_rounded,
     Icons.route_outlined,
     Icons.map_outlined,
+    Icons.chat_bubble_outline_rounded,
   ];
 
   @override
@@ -192,7 +194,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final tabLabels = [l10n.overview, l10n.itinerary, l10n.mapTab];
+    final tabLabels = [l10n.overview, l10n.itinerary, l10n.mapTab, l10n.chatTabLabel];
     final trip = context.watch<TripProvider>().getById(widget.tripId);
     if (trip == null) {
       return Scaffold(
@@ -229,56 +231,54 @@ class _TripDetailScreenState extends State<TripDetailScreen>
         );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(trip.title),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: List.generate(
-            _tabIcons.length,
-            (i) => Tab(icon: Icon(_tabIcons[i], size: 20), text: tabLabels[i]),
-          ),
-          labelStyle:
-              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          // Only the organizer can edit trip details.
-          if (isOrganizer)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: l10n.editTripTooltip,
-              onPressed: () => context.push('/trip/${trip.id}/edit'),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.exit_to_app_outlined,
-                  color: AppTheme.danger),
-              tooltip: l10n.leaveTripTooltip,
-              onPressed: () => _confirmLeave(trip),
+        appBar: AppBar(
+          title: Text(trip.title),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: List.generate(
+              _tabIcons.length,
+              (i) => Tab(icon: Icon(_tabIcons[i], size: 20), text: tabLabels[i]),
             ),
-        ],
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _OverviewTab(
-              trip: trip, currentUserId: currentUserId, canInvite: canInvite),
-          _ItineraryTab(
-            trip: trip,
-            onDeleteStop: (s) => _confirmDeleteStop(context, s),
+            labelStyle:
+                const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
           ),
-          TripMapWidget(pins: _buildMapPins(trip)),
-        ],
-      ),
-      floatingActionButton: switch (_tabIndex) {
-        // Overview tab — add member (all accepted members can invite).
-        0 when canInvite => AppFab(onPressed: () => _addMember(trip)),
-        // Itinerary tab — add stop.
-        1 => AppFab(
-            onPressed: () => showTripStopFormSheet(context, tripId: trip.id),
-          ),
-        _ => null,
-      },
-    );
+          actions: [
+            if (isOrganizer)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: l10n.editTripTooltip,
+                onPressed: () => context.push('/trip/${trip.id}/edit'),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.exit_to_app_outlined,
+                    color: AppTheme.danger),
+                tooltip: l10n.leaveTripTooltip,
+                onPressed: () => _confirmLeave(trip),
+              ),
+          ],
+        ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _OverviewTab(
+                trip: trip, currentUserId: currentUserId, canInvite: canInvite),
+            _ItineraryTab(
+              trip: trip,
+              onDeleteStop: (s) => _confirmDeleteStop(context, s),
+            ),
+            TripMapWidget(pins: _buildMapPins(trip)),
+            const _ChatTab(),
+          ],
+        ),
+        floatingActionButton: switch (_tabIndex) {
+          0 when canInvite => AppFab(onPressed: () => _addMember(trip)),
+          1 => AppFab(
+              onPressed: () => showTripStopFormSheet(context, tripId: trip.id),
+            ),
+          _ => null,
+        },
+      );
   }
 }
 
@@ -677,6 +677,224 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Chat tab ──────────────────────────────────────────────────────────────────
+
+class _ChatTab extends StatefulWidget {
+  const _ChatTab();
+
+  @override
+  State<_ChatTab> createState() => _ChatTabState();
+}
+
+class _ChatTabState extends State<_ChatTab> {
+  final _messageCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
+    _messageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Load more when the user scrolls to the top (oldest messages).
+    if (_scrollCtrl.position.pixels <= 60) {
+      final chat = context.read<ChatProvider>();
+      if (chat.hasMore && !chat.loading) {
+        chat.loadMore();
+      }
+    }
+  }
+
+  Future<void> _send() async {
+    final text = _messageCtrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    _messageCtrl.clear();
+    try {
+      await context.read<ChatProvider>().sendMessage(text);
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTheme.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final chat = context.watch<ChatProvider>();
+    final myUserId = context.read<AuthProvider>().userId;
+
+    return Column(
+      children: [
+        // Loading indicator while fetching older messages
+        if (chat.loading && chat.messages.isNotEmpty)
+          const LinearProgressIndicator(minHeight: 2),
+
+        // Message list
+        Expanded(
+          child: chat.loading && chat.messages.isEmpty
+              ? const Center(child: CircularProgressIndicator.adaptive())
+              : chat.messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        l10n.chatNoMessages,
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      itemCount: chat.messages.length,
+                      itemBuilder: (_, i) {
+                        final msg = chat.messages[i];
+                        final isMe = msg.userId == myUserId;
+                        return _ChatBubble(message: msg, isMe: isMe);
+                      },
+                    ),
+        ),
+
+        // Input field
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 12,
+              right: 8,
+              bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 4 : 8,
+              top: 6,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageCtrl,
+                    decoration: InputDecoration(
+                      hintText: l10n.chatSendHint,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                    ),
+                    minLines: 1,
+                    maxLines: 4,
+                    textCapitalization: TextCapitalization.sentences,
+                    onSubmitted: (_) => _send(),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                _sending
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator.adaptive(
+                              strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.send_rounded),
+                        color: AppTheme.primary,
+                        tooltip: l10n.chatSend,
+                        onPressed: _send,
+                      ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  final ChatMessage message;
+  final bool isMe;
+
+  const _ChatBubble({required this.message, required this.isMe});
+
+  @override
+  Widget build(BuildContext context) {
+    final timeFmt = DateFormat('h:mm a');
+    final bubbleColor = isMe
+        ? AppTheme.primary.withValues(alpha: 0.12)
+        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Column(
+        crossAxisAlignment: align,
+        children: [
+          if (!isMe && message.senderName != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 2),
+              child: Text(
+                message.senderName!,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primary),
+              ),
+            ),
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.72,
+            ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(18),
+                topRight: const Radius.circular(18),
+                bottomLeft: Radius.circular(isMe ? 18 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 18),
+              ),
+            ),
+            child: Text(message.content, style: const TextStyle(fontSize: 15)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+            child: Text(
+              timeFmt.format(message.createdAt.toLocal()),
+              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

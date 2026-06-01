@@ -192,4 +192,40 @@
   "biometricReason": "Authentifizieren Sie sich für den Kontozugriff",
   "biometricFailed": "Authentifizierung fehlgeschlagen. Bitte erneut versuchen.",
   "usePasswordInstead": "Passwort verwenden"
+,
+
+  "navFriends": "Freunde",
+  "friendsTabFriends": "Freunde",
+  "friendsTabRequests": "Anfragen",
+  "friendsAddFriend": "Freund hinzufügen",
+  "friendsSearchHint": "Nach Name, E-Mail oder Telefon suchen",
+  "friendsNoResults": "Keine Nutzer gefunden",
+  "friendsRequestSent": "Freundschaftsanfrage gesendet",
+  "friendsAccept": "Annehmen",
+  "friendsDecline": "Ablehnen",
+  "friendsRemove": "Freund entfernen",
+  "friendsRemoveConfirm": "{name} aus Ihren Freunden entfernen?",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "Noch keine Freunde",
+  "friendsNoFriendsHint": "Suchen Sie jemanden zum Hinzufügen.",
+  "friendsNoRequests": "Keine ausstehenden Anfragen",
+  "friendsIncomingSection": "Eingehend",
+  "friendsOutgoingSection": "Gesendet",
+  "friendsCancelRequest": "Anfrage abbrechen",
+  "chatTabLabel": "Chat",
+  "chatSendHint": "Nachricht…",
+  "chatNoMessages": "Noch keine Nachrichten. Sagen Sie Hallo!",
+  "chatSend": "Senden"
+,
+
+  "leave": "Verlassen",
+  "leaveTripTitle": "Reise verlassen?",
+  "leaveTripMessage": "Sie werden aus {tripTitle} entfernt und verlieren den Zugang.",
+  "@leaveTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+  "leaveTripTooltip": "Reise verlassen",
+  "thisTripFallback": "diese Reise"
 }

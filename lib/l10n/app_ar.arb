@@ -193,4 +193,40 @@
   "biometricReason": "المصادقة للوصول إلى حسابك",
   "biometricFailed": "فشلت المصادقة. يرجى المحاولة مرة أخرى.",
   "usePasswordInstead": "استخدام كلمة المرور"
+,
+
+  "navFriends": "الأصدقاء",
+  "friendsTabFriends": "الأصدقاء",
+  "friendsTabRequests": "الطلبات",
+  "friendsAddFriend": "إضافة صديق",
+  "friendsSearchHint": "البحث بالاسم أو البريد أو الهاتف",
+  "friendsNoResults": "لم يُعثر على مستخدمين",
+  "friendsRequestSent": "تم إرسال طلب الصداقة",
+  "friendsAccept": "قبول",
+  "friendsDecline": "رفض",
+  "friendsRemove": "إزالة صديق",
+  "friendsRemoveConfirm": "إزالة {name} من قائمة أصدقائك؟",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "لا أصدقاء بعد",
+  "friendsNoFriendsHint": "ابحث عن شخص لإضافته كصديق.",
+  "friendsNoRequests": "لا طلبات معلقة",
+  "friendsIncomingSection": "واردة",
+  "friendsOutgoingSection": "مرسلة",
+  "friendsCancelRequest": "إلغاء الطلب",
+  "chatTabLabel": "محادثة",
+  "chatSendHint": "رسالة…",
+  "chatNoMessages": "لا رسائل بعد. قل مرحباً!",
+  "chatSend": "إرسال"
+,
+
+  "leave": "مغادرة",
+  "leaveTripTitle": "مغادرة الرحلة؟",
+  "leaveTripMessage": "ستتم إزالتك من {tripTitle} وستفقد الوصول.",
+  "@leaveTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+  "leaveTripTooltip": "مغادرة الرحلة",
+  "thisTripFallback": "هذه الرحلة"
 }

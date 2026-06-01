@@ -5,10 +5,25 @@ import 'package:trip_management/l10n/app_localizations.dart';
 import 'package:trip_management/models/trip.dart';
 import 'package:trip_management/models/trip_member.dart';
 import 'package:trip_management/providers/auth_provider.dart';
+import 'package:trip_management/providers/chat_provider.dart';
+import 'package:trip_management/providers/friends_provider.dart';
 import 'package:trip_management/providers/trip_provider.dart';
 import 'package:trip_management/screens/trips/trip_detail_screen.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
+
+class _FakeChatProvider extends ChatProvider {
+  _FakeChatProvider()
+      : super(tripId: 'test-trip', userId: 'test-user');
+
+  @override
+  Future<void> init() async {}
+}
+
+class _FakeFriendsProvider extends FriendsProvider {
+  @override
+  Future<void> init(String userId) async {}
+}
 
 class _FakeAuthProvider extends AuthProvider {
   final String? _uid;
@@ -89,6 +104,10 @@ Widget _buildTestWidget({
       ChangeNotifierProvider<AuthProvider>(
           create: (_) => _FakeAuthProvider(currentUserId)),
       ChangeNotifierProvider<TripProvider>.value(value: tripProvider),
+      ChangeNotifierProvider<ChatProvider>(
+          create: (_) => _FakeChatProvider()),
+      ChangeNotifierProvider<FriendsProvider>(
+          create: (_) => _FakeFriendsProvider()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

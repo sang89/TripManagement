@@ -193,4 +193,40 @@
   "biometricReason": "アカウントにアクセスするために認証してください",
   "biometricFailed": "認証に失敗しました。もう一度お試しください。",
   "usePasswordInstead": "パスワードを使用する"
+,
+
+  "navFriends": "友達",
+  "friendsTabFriends": "友達",
+  "friendsTabRequests": "リクエスト",
+  "friendsAddFriend": "友達を追加",
+  "friendsSearchHint": "名前、メール、電話番号で検索",
+  "friendsNoResults": "ユーザーが見つかりません",
+  "friendsRequestSent": "友達リクエストを送信しました",
+  "friendsAccept": "承認",
+  "friendsDecline": "断る",
+  "friendsRemove": "友達を削除",
+  "friendsRemoveConfirm": "{name} を友達から削除しますか？",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "まだ友達がいません",
+  "friendsNoFriendsHint": "友達として追加する人を検索してください。",
+  "friendsNoRequests": "保留中のリクエストはありません",
+  "friendsIncomingSection": "受信",
+  "friendsOutgoingSection": "送信済み",
+  "friendsCancelRequest": "リクエストをキャンセル",
+  "chatTabLabel": "チャット",
+  "chatSendHint": "メッセージ…",
+  "chatNoMessages": "メッセージはまだありません。挨拶してみよう！",
+  "chatSend": "送信"
+,
+
+  "leave": "退出",
+  "leaveTripTitle": "旅行から退出しますか？",
+  "leaveTripMessage": "{tripTitle} から削除され、アクセスできなくなります。",
+  "@leaveTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+  "leaveTripTooltip": "旅行から退出",
+  "thisTripFallback": "この旅行"
 }

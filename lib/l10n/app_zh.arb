@@ -193,4 +193,40 @@
   "biometricReason": "请验证身份以访问您的账户",
   "biometricFailed": "身份验证失败，请重试。",
   "usePasswordInstead": "使用密码登录"
+,
+
+  "navFriends": "好友",
+  "friendsTabFriends": "好友",
+  "friendsTabRequests": "请求",
+  "friendsAddFriend": "添加好友",
+  "friendsSearchHint": "按姓名、邮箱或手机号搜索",
+  "friendsNoResults": "未找到用户",
+  "friendsRequestSent": "已发送好友请求",
+  "friendsAccept": "接受",
+  "friendsDecline": "拒绍",
+  "friendsRemove": "删除好友",
+  "friendsRemoveConfirm": "将 {name} 从好友列表中删除？",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "还没有好友",
+  "friendsNoFriendsHint": "搜索要添加为好友的人。",
+  "friendsNoRequests": "没有待处理的请求",
+  "friendsIncomingSection": "收到的",
+  "friendsOutgoingSection": "已发送",
+  "friendsCancelRequest": "取消请求",
+  "chatTabLabel": "聊天",
+  "chatSendHint": "消息…",
+  "chatNoMessages": "还没有消息。打个招呼吧！",
+  "chatSend": "发送"
+,
+
+  "leave": "离开",
+  "leaveTripTitle": "离开行程？",
+  "leaveTripMessage": "您将被从 {tripTitle} 中移除，并失去访问权限。",
+  "@leaveTripMessage": {
+    "placeholders": { "tripTitle": { "type": "String" } }
+  },
+  "leaveTripTooltip": "离开行程",
+  "thisTripFallback": "此行程"
 }

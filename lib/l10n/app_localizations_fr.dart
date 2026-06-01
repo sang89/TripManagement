@@ -596,4 +596,70 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get usePasswordInstead => 'Utiliser le mot de passe';
+
+  @override
+  String get navFriends => 'Amis';
+
+  @override
+  String get friendsTabFriends => 'Amis';
+
+  @override
+  String get friendsTabRequests => 'Demandes';
+
+  @override
+  String get friendsAddFriend => 'Ajouter un ami';
+
+  @override
+  String get friendsSearchHint => 'Rechercher par nom, e-mail ou téléphone';
+
+  @override
+  String get friendsNoResults => 'Aucun utilisateur trouvé';
+
+  @override
+  String get friendsRequestSent => 'Demande d\'ami envoyée';
+
+  @override
+  String get friendsAccept => 'Accepter';
+
+  @override
+  String get friendsDecline => 'Refuser';
+
+  @override
+  String get friendsRemove => 'Supprimer l\'ami';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return 'Supprimer $name de vos amis ?';
+  }
+
+  @override
+  String get friendsNoFriends => 'Aucun ami pour l’instant';
+
+  @override
+  String get friendsNoFriendsHint =>
+      'Recherchez quelqu’un à ajouter comme ami.';
+
+  @override
+  String get friendsNoRequests => 'Aucune demande en attente';
+
+  @override
+  String get friendsIncomingSection => 'Reçues';
+
+  @override
+  String get friendsOutgoingSection => 'Envoyées';
+
+  @override
+  String get friendsCancelRequest => 'Annuler la demande';
+
+  @override
+  String get chatTabLabel => 'Chat';
+
+  @override
+  String get chatSendHint => 'Message…';
+
+  @override
+  String get chatNoMessages => 'Aucun message pour l’instant. Dites bonjour !';
+
+  @override
+  String get chatSend => 'Envoyer';
 }

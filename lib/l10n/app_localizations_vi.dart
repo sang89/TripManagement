@@ -300,20 +300,20 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get leave => 'Leave';
+  String get leave => 'Rời';
 
   @override
-  String get leaveTripTooltip => 'Leave trip';
+  String get leaveTripTooltip => 'Rời khỏi chuyến đi';
 
   @override
-  String get thisTripFallback => 'this trip';
+  String get thisTripFallback => 'chuyến đi này';
 
   @override
-  String get leaveTripTitle => 'Leave trip?';
+  String get leaveTripTitle => 'Rời khỏi chuyến đi?';
 
   @override
   String leaveTripMessage(String tripTitle) {
-    return 'You will be removed from $tripTitle and lose access.';
+    return 'Bạn sẽ bị xóa khỏi $tripTitle và mất quyền truy cập.';
   }
 
   @override
@@ -593,4 +593,69 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get usePasswordInstead => 'Dùng mật khẩu thay thế';
+
+  @override
+  String get navFriends => 'Bạn bè';
+
+  @override
+  String get friendsTabFriends => 'Bạn bè';
+
+  @override
+  String get friendsTabRequests => 'Lời mời';
+
+  @override
+  String get friendsAddFriend => 'Thêm bạn';
+
+  @override
+  String get friendsSearchHint => 'Tìm theo tên, email hoặc số điện thoại';
+
+  @override
+  String get friendsNoResults => 'Không tìm thấy người dùng';
+
+  @override
+  String get friendsRequestSent => 'Đã gửi lời mời kết bạn';
+
+  @override
+  String get friendsAccept => 'Chấp nhận';
+
+  @override
+  String get friendsDecline => 'Từ chối';
+
+  @override
+  String get friendsRemove => 'Xóa bạn';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return 'Xóa $name khỏi danh sách bạn bè?';
+  }
+
+  @override
+  String get friendsNoFriends => 'Chưa có bạn bè';
+
+  @override
+  String get friendsNoFriendsHint => 'Tìm kiếm ai đó để kết bạn.';
+
+  @override
+  String get friendsNoRequests => 'Không có yêu cầu đang chờ';
+
+  @override
+  String get friendsIncomingSection => 'Nhận được';
+
+  @override
+  String get friendsOutgoingSection => 'Đã gửi';
+
+  @override
+  String get friendsCancelRequest => 'Hủy yêu cầu';
+
+  @override
+  String get chatTabLabel => 'Trò chuyện';
+
+  @override
+  String get chatSendHint => 'Tin nhắn…';
+
+  @override
+  String get chatNoMessages => 'Chưa có tin nhắn. Hãy chào nhau!';
+
+  @override
+  String get chatSend => 'Gửi';
 }
