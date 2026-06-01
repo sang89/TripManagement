@@ -200,4 +200,30 @@
   "biometricReason": "Authentifiez-vous pour accéder à votre compte",
   "biometricFailed": "Authentification échouée. Veuillez réessayer.",
   "usePasswordInstead": "Utiliser le mot de passe"
+,
+
+  "navFriends": "Amis",
+  "friendsTabFriends": "Amis",
+  "friendsTabRequests": "Demandes",
+  "friendsAddFriend": "Ajouter un ami",
+  "friendsSearchHint": "Rechercher par nom, e-mail ou téléphone",
+  "friendsNoResults": "Aucun utilisateur trouvé",
+  "friendsRequestSent": "Demande d'ami envoyée",
+  "friendsAccept": "Accepter",
+  "friendsDecline": "Refuser",
+  "friendsRemove": "Supprimer l'ami",
+  "friendsRemoveConfirm": "Supprimer {name} de vos amis ?",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "Aucun ami pour l’instant",
+  "friendsNoFriendsHint": "Recherchez quelqu’un à ajouter comme ami.",
+  "friendsNoRequests": "Aucune demande en attente",
+  "friendsIncomingSection": "Reçues",
+  "friendsOutgoingSection": "Envoyées",
+  "friendsCancelRequest": "Annuler la demande",
+  "chatTabLabel": "Chat",
+  "chatSendHint": "Message…",
+  "chatNoMessages": "Aucun message pour l’instant. Dites bonjour !",
+  "chatSend": "Envoyer"
 }

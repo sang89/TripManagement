@@ -234,7 +234,13 @@ class TripProvider extends ChangeNotifier {
       // Save the enriched state so offline sessions also show correct names.
       unawaited(_saveCache());
     } catch (e, st) {
-      _loadError = e.toString();
+      // PGRST303 = "JWT issued at future" — device clock is ahead of the server.
+      if (e is PostgrestException && e.code == 'PGRST303') {
+        _loadError = 'Your device clock appears to be out of sync. '
+            'Go to Settings → Date & Time and enable "Set Automatically", then retry.';
+      } else {
+        _loadError = e.toString();
+      }
       debugPrint('TripProvider.load error: $e\n$st');
       // Fallback: serve stale cache rather than showing nothing.
       if (_trips.isEmpty) {

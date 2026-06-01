@@ -234,5 +234,31 @@
   "biometricSignInWithBiometrics": "Sign in with Biometrics",
   "biometricReason": "Authenticate to access your account",
   "biometricFailed": "Authentication failed. Please try again.",
-  "usePasswordInstead": "Use password instead"
+  "usePasswordInstead": "Use password instead",
+
+  "navFriends": "Friends",
+  "friendsTabFriends": "Friends",
+  "friendsTabRequests": "Requests",
+  "friendsAddFriend": "Add Friend",
+  "friendsSearchHint": "Search by name, email or phone",
+  "friendsNoResults": "No users found",
+  "friendsRequestSent": "Friend request sent",
+  "friendsAccept": "Accept",
+  "friendsDecline": "Decline",
+  "friendsRemove": "Remove Friend",
+  "friendsRemoveConfirm": "Remove {name} from your friends?",
+  "@friendsRemoveConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "friendsNoFriends": "No friends yet",
+  "friendsNoFriendsHint": "Search for someone to add as a friend.",
+  "friendsNoRequests": "No pending requests",
+  "friendsIncomingSection": "Incoming",
+  "friendsOutgoingSection": "Sent",
+  "friendsCancelRequest": "Cancel Request",
+
+  "chatTabLabel": "Chat",
+  "chatSendHint": "Message…",
+  "chatNoMessages": "No messages yet. Say hello!",
+  "chatSend": "Send"
 }

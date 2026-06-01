@@ -300,20 +300,20 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get leave => 'Leave';
+  String get leave => 'Sair';
 
   @override
-  String get leaveTripTooltip => 'Leave trip';
+  String get leaveTripTooltip => 'Sair da viagem';
 
   @override
-  String get thisTripFallback => 'this trip';
+  String get thisTripFallback => 'esta viagem';
 
   @override
-  String get leaveTripTitle => 'Leave trip?';
+  String get leaveTripTitle => 'Sair da viagem?';
 
   @override
   String leaveTripMessage(String tripTitle) {
-    return 'You will be removed from $tripTitle and lose access.';
+    return 'Você será removido de $tripTitle e perderá o acesso.';
   }
 
   @override
@@ -592,4 +592,70 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get usePasswordInstead => 'Usar senha';
+
+  @override
+  String get navFriends => 'Amigos';
+
+  @override
+  String get friendsTabFriends => 'Amigos';
+
+  @override
+  String get friendsTabRequests => 'Solicitações';
+
+  @override
+  String get friendsAddFriend => 'Adicionar amigo';
+
+  @override
+  String get friendsSearchHint => 'Buscar por nome, e-mail ou telefone';
+
+  @override
+  String get friendsNoResults => 'Nenhum usuário encontrado';
+
+  @override
+  String get friendsRequestSent => 'Solicitação de amizade enviada';
+
+  @override
+  String get friendsAccept => 'Aceitar';
+
+  @override
+  String get friendsDecline => 'Recusar';
+
+  @override
+  String get friendsRemove => 'Remover amigo';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return 'Remover $name dos seus amigos?';
+  }
+
+  @override
+  String get friendsNoFriends => 'Sem amigos ainda';
+
+  @override
+  String get friendsNoFriendsHint =>
+      'Pesquise alguém para adicionar como amigo.';
+
+  @override
+  String get friendsNoRequests => 'Sem solicitações pendentes';
+
+  @override
+  String get friendsIncomingSection => 'Recebidas';
+
+  @override
+  String get friendsOutgoingSection => 'Enviadas';
+
+  @override
+  String get friendsCancelRequest => 'Cancelar solicitação';
+
+  @override
+  String get chatTabLabel => 'Chat';
+
+  @override
+  String get chatSendHint => 'Mensagem…';
+
+  @override
+  String get chatNoMessages => 'Sem mensagens ainda. Diga olá!';
+
+  @override
+  String get chatSend => 'Enviar';
 }

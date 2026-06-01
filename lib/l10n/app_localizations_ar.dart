@@ -299,20 +299,20 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get leave => 'Leave';
+  String get leave => 'مغادرة';
 
   @override
-  String get leaveTripTooltip => 'Leave trip';
+  String get leaveTripTooltip => 'مغادرة الرحلة';
 
   @override
-  String get thisTripFallback => 'this trip';
+  String get thisTripFallback => 'هذه الرحلة';
 
   @override
-  String get leaveTripTitle => 'Leave trip?';
+  String get leaveTripTitle => 'مغادرة الرحلة؟';
 
   @override
   String leaveTripMessage(String tripTitle) {
-    return 'You will be removed from $tripTitle and lose access.';
+    return 'ستتم إزالتك من $tripTitle وستفقد الوصول.';
   }
 
   @override
@@ -589,4 +589,69 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get usePasswordInstead => 'استخدام كلمة المرور';
+
+  @override
+  String get navFriends => 'الأصدقاء';
+
+  @override
+  String get friendsTabFriends => 'الأصدقاء';
+
+  @override
+  String get friendsTabRequests => 'الطلبات';
+
+  @override
+  String get friendsAddFriend => 'إضافة صديق';
+
+  @override
+  String get friendsSearchHint => 'البحث بالاسم أو البريد أو الهاتف';
+
+  @override
+  String get friendsNoResults => 'لم يُعثر على مستخدمين';
+
+  @override
+  String get friendsRequestSent => 'تم إرسال طلب الصداقة';
+
+  @override
+  String get friendsAccept => 'قبول';
+
+  @override
+  String get friendsDecline => 'رفض';
+
+  @override
+  String get friendsRemove => 'إزالة صديق';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return 'إزالة $name من قائمة أصدقائك؟';
+  }
+
+  @override
+  String get friendsNoFriends => 'لا أصدقاء بعد';
+
+  @override
+  String get friendsNoFriendsHint => 'ابحث عن شخص لإضافته كصديق.';
+
+  @override
+  String get friendsNoRequests => 'لا طلبات معلقة';
+
+  @override
+  String get friendsIncomingSection => 'واردة';
+
+  @override
+  String get friendsOutgoingSection => 'مرسلة';
+
+  @override
+  String get friendsCancelRequest => 'إلغاء الطلب';
+
+  @override
+  String get chatTabLabel => 'محادثة';
+
+  @override
+  String get chatSendHint => 'رسالة…';
+
+  @override
+  String get chatNoMessages => 'لا رسائل بعد. قل مرحباً!';
+
+  @override
+  String get chatSend => 'إرسال';
 }

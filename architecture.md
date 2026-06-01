@@ -25,7 +25,7 @@
 | Connectivity | Network state monitor | `connectivity_plus ^6.1.0` |
 | Client UUID gen | Offline ID generation | `uuid ^4.5.0` |
 | Address / place search | Google Places API (New) — mobile + web | `http ^1.4.0` |
-| Maps | Google Maps Flutter | `google_maps_flutter ^2.9.0` |
+| Maps | flutter_map + OpenStreetMap tiles (pure Dart, no native SDK) | `flutter_map ^8.1.1`, `latlong2 ^0.9.1` |
 | Real road routes | Google Maps Directions API | `http ^1.4.0` (REST) |
 | AI chat (planned) | Google Gemini 2.5 Flash Lite | `http ^1.4.0` |
 | Date / number formatting | intl | `intl ^0.20.2` |
@@ -44,26 +44,32 @@ lib/
 ├── models/                 # Pure data classes — toJson/fromJson, no Flutter deps
 │   ├── trip.dart           # Trip; embeds List<TripMember> + List<TripStop>
 │   ├── trip_member.dart    # TripMember — see model details below
-│   └── trip_stop.dart      # TripStop (title, address, lat/lng, arrive_at, depart_at, sort_order)
+│   ├── trip_stop.dart      # TripStop (title, address, lat/lng, arrive_at, depart_at, sort_order)
+│   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
+│   └── chat_message.dart   # ChatMessage — id, tripId, userId, content, enriched senderName
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart      # Auth session; login/register/logout
 │   ├── trip_provider.dart      # All trips + nested stops/members; full CRUD + Realtime
 │   ├── invitations_provider.dart  # Pending invitations for the current user; Realtime
+│   ├── friends_provider.dart   # Friend list + requests; two Realtime channels; searchUsers RPC
+│   ├── chat_provider.dart      # Trip-scoped chat messages; paginated load + Realtime INSERT
 │   └── settings_provider.dart  # Theme mode + language persistence
 ├── screens/
 │   ├── auth/
 │   │   ├── login_screen.dart
 │   │   └── register_screen.dart
+│   ├── friends/
+│   │   └── friends_screen.dart  # Friends tab: accepted list + search + Requests tab with badge
 │   ├── profile/
 │   │   └── profile_screen.dart     # Edit display name, avatar; sign-out
 │   ├── settings/
 │   │   └── settings_screen.dart    # Theme, language, account actions
 │   ├── shell/
-│   │   └── shell_scaffold.dart     # StatefulShellRoute wrapper; 2-tab bottom nav; invite badge
+│   │   └── shell_scaffold.dart     # StatefulShellRoute wrapper; 3-tab bottom nav; invite + friend-request badges
 │   └── trips/
 │       ├── trips_screen.dart       # Trip list; invite banner; swipe-to-delete/leave; tap → detail
 │       ├── trip_form_screen.dart   # Create / edit trip (destination, dates, notes, map preview, members)
-│       └── trip_detail_screen.dart # Tabbed: Overview (members, map) + Itinerary + Map
+│       └── trip_detail_screen.dart # Tabbed: Overview + Itinerary + Map + Chat (4 tabs)
 ├── services/
 │   ├── ai_chat_service.dart            # Abstract interface + factory
 │   ├── edge_function_ai_chat_service.dart   # Release — proxies through Supabase Edge Function
@@ -81,9 +87,9 @@ lib/
 │   └── offline_queue.dart              # Persistent write-ahead queue, replayed on reconnect
 ├── widgets/
 │   ├── trip_card.dart                  # Trip summary card (title, destination, date range, member count)
-│   ├── trip_map_widget.dart            # Google Map with numbered stop markers + real road polyline
+│   ├── trip_map_widget.dart            # flutter_map (OpenStreetMap tiles) with numbered stop markers + real road polyline; exports LatLng
 │   ├── trip_stop_form_sheet.dart       # Add / edit stop bottom sheet
-│   ├── add_member_sheet.dart           # Add member bottom sheet — account lookup + debounce
+│   ├── add_member_sheet.dart           # Add member bottom sheet — friends quick-add chips + account lookup
 │   ├── places_autocomplete_field.dart  # Text field with Places suggestions dropdown
 │   └── destination_search_dialog.dart  # Full-screen Places search dialog
 └── theme/
@@ -101,7 +107,9 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | Tab | Icon | Route | Sub-routes |
 |---|---|---|---|
 | Trips | `map_outlined` | `/trips` → TripsScreen | `/trip/new`, `/trip/:id`, `/trip/:id/edit` |
-| Journal | `book_outlined` | `/journal` → *(placeholder)* | — |
+| Friends | `people_outline` | `/friends` → FriendsScreen | — |
+
+`/trip/:id` route builder in `main.dart` creates a scoped `ChatProvider` and wraps `TripDetailScreen` in `ChangeNotifierProvider<ChatProvider>`, enabling test injection without touching widget state.
 
 **Top-level routes (outside shell):**
 ```
@@ -124,11 +132,15 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
 | `TripProvider` | All trips + members + stops | `load()`, `clear()`, `getById(id)`, CRUD for trips/members/stops; `resendInvite(memberId)` — re-sends FCM push for pending invite; Realtime subscription for member updates |
 | `InvitationsProvider` | Pending invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
+| `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
+| `ChatProvider` | Trip-scoped chat messages | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel |
 | `SettingsProvider` | Theme mode + language preference | `load()`, `setThemeMode()`, `setLocale()` |
 | `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |
 | `OfflineQueue` | Pending write operations | `init()`, `enqueue()`, `flush()`, `pendingCount`, `hasPending` |
 
-Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` / `TripProvider.clear()` and `InvitationsProvider.init()` / `InvitationsProvider.clear()`.
+Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` / `TripProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, and `FriendsProvider.init()` / `FriendsProvider.clear()`.
+
+`ChatProvider` is **not global** — it is instantiated in the `/trip/:id` GoRouter route builder (not in `MultiProvider`) so it is scoped to a single trip and disposed when the user navigates away.
 
 ### Offline behaviour
 
@@ -205,6 +217,41 @@ Unlinked guests (user_id IS NULL) are inserted directly as `accepted`.
 | `sort_order` | int | client-side drag-to-reorder |
 | `created_at` | timestamptz | |
 
+#### `friendships`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `requester_id` | uuid FK→auth.users | user who sent the request |
+| `addressee_id` | uuid FK→auth.users | user who received the request |
+| `status` | text | `pending` \| `accepted` \| `declined` \| `removed` — constraint enforced |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
+
+**Constraints:** `friendships_pair_unique UNIQUE (requester_id, addressee_id)`  
+**RLS:** SELECT for either party; INSERT only as requester; UPDATE for either party.  
+**Realtime:** Added to `supabase_realtime` publication; `REPLICA IDENTITY FULL`.
+
+`FriendsProvider` uses **two channels** per user to work around Supabase Realtime's single-column filter limit:
+- `friends_req_<userId>` — filter `requester_id = userId`
+- `friends_addr_<userId>` — filter `addressee_id = userId`
+
+Both callbacks trigger a full `_fetch()` refetch.
+
+#### `trip_messages`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `trip_id` | uuid FK→trips | |
+| `user_id` | uuid FK→auth.users | sender |
+| `content` | text | non-empty constraint |
+| `created_at` | timestamptz | |
+
+**Index:** `trip_messages_trip_created ON trip_messages (trip_id, created_at DESC)`  
+**RLS:** SELECT and INSERT use `auth_user_is_trip_member(trip_id)`; no UPDATE or DELETE (messages are permanent).  
+**Realtime:** Added to `supabase_realtime` publication; `REPLICA IDENTITY FULL`.
+
+`ChatProvider` subscribes to one channel per trip (`chat_<tripId>`, filter `trip_id = tripId`) for INSERT events. Messages are paginated (50 per page, newest-first from DB, reversed in-memory to oldest→newest). Optimistic appends use a `temp_<timestamp>` placeholder ID that is replaced on the Realtime INSERT confirmation.
+
 #### `user_profiles`
 Auto-created on user sign-up (trigger). Stores `full_name`, `avatar_url`, `job_title` (DB only — removed from UI).
 
@@ -254,10 +301,24 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 - `auth_user_is_trip_member(p_trip_id)` — returns true if current user has an `accepted` row for this trip
 - `auth_user_has_pending_invite(p_trip_id)` — returns true if current user has a `pending` row for this trip
 - `find_user_by_contact(p_email, p_phone)` — looks up a user by email/phone (used in `AddMemberSheet`)
-- `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name)` for a list of user IDs, bypassing `user_profiles` RLS so every trip member can read each other's names. Falls back to `auth.users.email` when `full_name` is blank. Called by `TripProvider._enrichMemberNames()` after `load()`. Only callable by `authenticated` role.
+- `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone)` for a list of user IDs, bypassing `user_profiles` RLS so every trip member can read each other's names and contact details. Falls back to `split_part(email, '@', 1)` when `full_name` is blank. Called by `TripProvider._enrichMemberNames()` and `FriendsProvider._enrichNames()` after fetching. Only callable by `authenticated` role.
+- `search_users(p_query text)` — returns `(user_id, full_name, email)` for users matching the query by name, email, or phone (digits-stripped match), excluding the caller and any users already in a `pending`/`accepted` friendship with the caller. Limit 20. Called by `FriendsProvider.searchUsers()`. Only callable by `authenticated` role.
 
 #### `trip_stops`
 All trip members (organizer or accepted linked user) can SELECT/INSERT/UPDATE/DELETE stops for their trips. Uses `auth_user_is_trip_member()` to avoid recursion.
+
+#### `friendships`
+| Policy | Operation | Rule |
+|---|---|---|
+| `friendships_select` | SELECT | `requester_id = auth.uid() OR addressee_id = auth.uid()` |
+| `friendships_insert` | INSERT | `requester_id = auth.uid()` |
+| `friendships_update` | UPDATE | `requester_id = auth.uid() OR addressee_id = auth.uid()` |
+
+#### `trip_messages`
+| Policy | Operation | Rule |
+|---|---|---|
+| `trip_messages_select` | SELECT | `auth_user_is_trip_member(trip_id)` |
+| `trip_messages_insert` | INSERT | `user_id = auth.uid() AND auth_user_is_trip_member(trip_id)` |
 
 ---
 
@@ -341,7 +402,7 @@ If the user had set `block_reinvite = true`:
 | `trip_stops` | UPDATE | `TripStop.fromJson(row)` → replace in-place + re-sort | |
 | `trip_stops` | DELETE | Remove by id | Requires `REPLICA IDENTITY FULL` on `trip_stops` (migration 001700) |
 
-**Realtime publication:** `trips`, `trip_members`, `trip_stops` are all in `supabase_realtime`.
+**Realtime publication:** `trips`, `trip_members`, `trip_stops`, `friendships`, and `trip_messages` are all in `supabase_realtime`.
 
 **`REPLICA IDENTITY FULL`** is set on both `trip_members` (migration 001000) and `trip_stops` (migration 001700) so DELETE payloads include `trip_id`.
 
@@ -365,19 +426,25 @@ If the user has not granted notification permission, the in-app invite banner (d
 
 ## Map & Route Display
 
-`TripMapWidget` renders the trip on a Google Map:
-- **Destination marker** — blue default marker (azure hue).
-- **Stop markers** — numbered circles rendered as custom `BitmapDescriptor` images.
-- **Route polyline** — fetched from `DirectionsService` (Directions API) on mount and whenever pins change. Falls back to a dashed straight-line while the request is in flight or if the API returns an error.
+`TripMapWidget` renders the trip using **flutter_map** (pure Dart, OpenStreetMap tiles — no native Maps SDK required):
+- **Start marker** — green circle with `Icons.trip_origin`.
+- **Destination marker** — primary-colour circle with `Icons.location_on`.
+- **Stop markers** — numbered circles (primary colour, white border), counted from 1.
+- **Route polyline** — fetched from `DirectionsService` (Directions API) on mount and whenever pins change. Solid `4px` line when a real route is loaded; dashed `3px` fallback drawn directly between pins while loading or if the API fails.
+- **Compact mode** (`compact: true`) — fixed 220 px height, gestures disabled so a parent `ListView` can still scroll. Non-compact maps are fully interactive (pan + pinch-zoom; rotation disabled).
+- **Session-level route cache** — keyed by pipe-separated `lat,lng` waypoints; `prefetchRoute()` is called by the trip list screen so routes are warm before the user opens a trip.
+- `TripMapWidget` **exports `LatLng`** from `latlong2` — callers don't need a separate `latlong2` import.
 
 **Pin order** (both detail screen and form preview): start (green) → numbered stops → destination (blue). This order is passed directly to `DirectionsService` as the waypoints list, so the road route follows the same sequence.
 
 `DirectionsService.getRoute(waypoints)`:
 1. Calls `GET https://maps.googleapis.com/maps/api/directions/json` with origin, destination, and intermediate waypoints.
 2. Extracts `routes[0].overview_polyline.points` (Google encoded polyline).
-3. Decodes the encoded string into `List<LatLng>` using the standard algorithm.
+3. Decodes the encoded string into `List<LatLng>` (`latlong2`) using the standard algorithm.
 
-**Required API:** Directions API must be enabled in Google Cloud Console for `kGooglePlacesApiKey`.
+**Required APIs:**
+- `kStadiaMapsApiKey` — Stadia Maps key for tile rendering (sign up at stadiamaps.com; free tier 200k tiles/month). No native setup — key is a URL query parameter only.
+- `kGooglePlacesApiKey` — Directions API must be enabled in Google Cloud Console (same key as Places). The Maps SDK itself is no longer a dependency.
 
 ---
 

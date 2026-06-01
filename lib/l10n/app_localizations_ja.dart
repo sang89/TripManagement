@@ -298,20 +298,20 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get leave => 'Leave';
+  String get leave => '退出';
 
   @override
-  String get leaveTripTooltip => 'Leave trip';
+  String get leaveTripTooltip => '旅行から退出';
 
   @override
-  String get thisTripFallback => 'this trip';
+  String get thisTripFallback => 'この旅行';
 
   @override
-  String get leaveTripTitle => 'Leave trip?';
+  String get leaveTripTitle => '旅行から退出しますか？';
 
   @override
   String leaveTripMessage(String tripTitle) {
-    return 'You will be removed from $tripTitle and lose access.';
+    return '$tripTitle から削除され、アクセスできなくなります。';
   }
 
   @override
@@ -585,4 +585,69 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get usePasswordInstead => 'パスワードを使用する';
+
+  @override
+  String get navFriends => '友達';
+
+  @override
+  String get friendsTabFriends => '友達';
+
+  @override
+  String get friendsTabRequests => 'リクエスト';
+
+  @override
+  String get friendsAddFriend => '友達を追加';
+
+  @override
+  String get friendsSearchHint => '名前、メール、電話番号で検索';
+
+  @override
+  String get friendsNoResults => 'ユーザーが見つかりません';
+
+  @override
+  String get friendsRequestSent => '友達リクエストを送信しました';
+
+  @override
+  String get friendsAccept => '承認';
+
+  @override
+  String get friendsDecline => '断る';
+
+  @override
+  String get friendsRemove => '友達を削除';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return '$name を友達から削除しますか？';
+  }
+
+  @override
+  String get friendsNoFriends => 'まだ友達がいません';
+
+  @override
+  String get friendsNoFriendsHint => '友達として追加する人を検索してください。';
+
+  @override
+  String get friendsNoRequests => '保留中のリクエストはありません';
+
+  @override
+  String get friendsIncomingSection => '受信';
+
+  @override
+  String get friendsOutgoingSection => '送信済み';
+
+  @override
+  String get friendsCancelRequest => 'リクエストをキャンセル';
+
+  @override
+  String get chatTabLabel => 'チャット';
+
+  @override
+  String get chatSendHint => 'メッセージ…';
+
+  @override
+  String get chatNoMessages => 'メッセージはまだありません。挨拶してみよう！';
+
+  @override
+  String get chatSend => '送信';
 }

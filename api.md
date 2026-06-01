@@ -23,8 +23,18 @@ All external API integrations used by TripManagement. **When adding a new extern
 | `trips` | `TripProvider` |
 | `trip_members` | `TripProvider` |
 | `trip_stops` | `TripProvider` |
+| `friendships` | `FriendsProvider` |
+| `trip_messages` | `ChatProvider` |
 
 *(PropertyManagement tables also exist in this project — they are managed by PropertyManagement's `supabase/migrations/` and ignored by TripManagement's Flutter code.)*
+
+### Database RPC functions
+
+| Function | Caller | Notes |
+|----------|--------|-------|
+| `get_profile_names(p_user_ids uuid[])` | `TripProvider`, `FriendsProvider` | SECURITY DEFINER; returns `(user_id, full_name, email, phone)` for a list of IDs; bypasses `user_profiles` RLS; falls back to username portion of email when `full_name` is blank |
+| `find_user_by_contact(p_email, p_phone)` | `TripProvider` (AddMemberSheet) | SECURITY DEFINER; looks up a user by email or phone |
+| `search_users(p_query text)` | `FriendsProvider` | SECURITY DEFINER; returns up to 20 `(user_id, full_name, email)` rows matching the query by name, email, or phone (digits-stripped match), excluding the caller and existing friends/requests |
 
 ### Schema changes
 
@@ -170,20 +180,28 @@ Write tools must be in `kWriteToolNames` — the tool-call loop uses this set to
 
 ---
 
-## Google Maps — Maps SDK
+## Stadia Maps (flutter_map tiles)
 
-**Purpose:** Interactive map in `TripMapWidget` showing the trip destination, ordered stops, and the route between them.  
-**Config key:** `kGooglePlacesApiKey` (same key as Places)  
-**Enabled APIs required:** Maps SDK for Android, Maps SDK for iOS, Maps JavaScript API — already enabled.
+**Purpose:** Map tile rendering in `TripMapWidget`. Pure Dart via `flutter_map` — no native Maps SDK. Tiles served from Stadia Maps CDN (OpenStreetMap data).  
+**Config key:** `kStadiaMapsApiKey` (`lib/config/api_keys.dart`)  
+**Sign-up:** https://stadiamaps.com → Dashboard → API Keys → Create key  
+**Free tier:** 200 000 tile requests / month  
+**Tile styles used:**
+- Light theme: `alidade_smooth`
+- Dark theme: `alidade_smooth_dark`
+
+**Tile URL template:**
+```
+https://tiles.stadiamaps.com/tiles/{style}/{z}/{x}/{y}.png?api_key={key}
+```
+`retinaMode` enabled for HiDPI displays (flutter_map fetches at double zoom and scales). Stadia does not use subdomain sharding.
 
 | File | Role |
 |------|------|
-| `lib/widgets/trip_map_widget.dart` | Map widget — markers, polyline, fit-bounds camera |
-| `android/app/src/main/AndroidManifest.xml` | `com.google.android.geo.API_KEY` meta-data |
-| `ios/Runner/AppDelegate.swift` | `GMSServices.provideAPIKey(...)` |
-| `web/index.html` | Maps JS script `src` with key param |
+| `lib/widgets/trip_map_widget.dart` | TileLayer URL computed in `_tileUrl(context)` — switches style on theme change |
+| `lib/config/api_keys.dart` | `kStadiaMapsApiKey` constant |
 
-**⚠ Key rotation:** If `kGooglePlacesApiKey` is rotated, update all four locations (Dart constant + 3 native files).
+**⚠ No native setup required** — the key is a URL query parameter in Dart code only.
 
 ---
 

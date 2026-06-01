@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../l10n/app_localizations.dart';
+import '../models/friendship.dart';
 import '../models/trip_member.dart';
+import '../providers/auth_provider.dart';
+import '../providers/friends_provider.dart';
 import '../services/connectivity_service.dart';
 import '../services/user_lookup_service.dart';
 import '../utils/avatar_utils.dart';
@@ -152,6 +155,25 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     });
   }
 
+  void _prefillFriend(Friendship f) {
+    final myUserId = context.read<AuthProvider>().userId ?? '';
+    final otherId = f.otherUserId(myUserId);
+    final name = f.otherDisplayName ?? '';
+    if (name.isNotEmpty && _nameCtrl.text.isEmpty) {
+      _nameCtrl.text = name;
+      _nameTouched = true;
+    }
+    setState(() {
+      _lookupState = _LookupFound(LinkedUserInfo(
+        userId: otherId,
+        fullName: name,
+        jobTitle: '',
+        phone: '',
+        avatarUrl: '',
+      ));
+    });
+  }
+
   void _submit() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
@@ -215,6 +237,57 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             ),
           ),
           const Divider(height: 1),
+          // Friends quick-add: horizontal chip row (hidden when no friends)
+          Consumer<FriendsProvider>(
+            builder: (context, friends, _) {
+              final accepted = friends.accepted;
+              if (accepted.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Text(
+                      l10n.friendsTabFriends,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[600]),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 44,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: accepted.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final f = accepted[i];
+                        return ActionChip(
+                          avatar: CircleAvatar(
+                            radius: 12,
+                            backgroundColor:
+                                avatarColors(f.otherDisplayName ?? '').first,
+                            child: Text(
+                              avatarInitials(f.otherDisplayName ?? ''),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          label: Text(f.otherDisplayName ?? ''),
+                          onPressed: () => _prefillFriend(f),
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(height: 16),
+                ],
+              );
+            },
+          ),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),

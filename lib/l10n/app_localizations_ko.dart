@@ -299,20 +299,20 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get leave => 'Leave';
+  String get leave => '나가기';
 
   @override
-  String get leaveTripTooltip => 'Leave trip';
+  String get leaveTripTooltip => '여행 나가기';
 
   @override
-  String get thisTripFallback => 'this trip';
+  String get thisTripFallback => '이 여행';
 
   @override
-  String get leaveTripTitle => 'Leave trip?';
+  String get leaveTripTitle => '여행에서 나가시겠습니까?';
 
   @override
   String leaveTripMessage(String tripTitle) {
-    return 'You will be removed from $tripTitle and lose access.';
+    return '$tripTitle에서 제거되고 접근 권한을 잃게 됩니다.';
   }
 
   @override
@@ -586,4 +586,69 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get usePasswordInstead => '비밀번호 사용';
+
+  @override
+  String get navFriends => '친구';
+
+  @override
+  String get friendsTabFriends => '친구';
+
+  @override
+  String get friendsTabRequests => '요청';
+
+  @override
+  String get friendsAddFriend => '친구 추가';
+
+  @override
+  String get friendsSearchHint => '이름, 이메일 또는 전화번호로 검색';
+
+  @override
+  String get friendsNoResults => '사용자를 찾을 수 없습니다';
+
+  @override
+  String get friendsRequestSent => '친구 요청을 보냈습니다';
+
+  @override
+  String get friendsAccept => '수낙';
+
+  @override
+  String get friendsDecline => '거절';
+
+  @override
+  String get friendsRemove => '친구 삭제';
+
+  @override
+  String friendsRemoveConfirm(String name) {
+    return '$name을(를) 친구 목록에서 삭제하시겠습니까?';
+  }
+
+  @override
+  String get friendsNoFriends => '아직 친구가 없습니다';
+
+  @override
+  String get friendsNoFriendsHint => '친구로 추가할 사람을 검색하세요.';
+
+  @override
+  String get friendsNoRequests => '대기 중인 요청이 없습니다';
+
+  @override
+  String get friendsIncomingSection => '받은 요청';
+
+  @override
+  String get friendsOutgoingSection => '보낸 요청';
+
+  @override
+  String get friendsCancelRequest => '요청 취소';
+
+  @override
+  String get chatTabLabel => '체팅';
+
+  @override
+  String get chatSendHint => '메시지…';
+
+  @override
+  String get chatNoMessages => '아직 메시지가 없습니다. 인사해 보세요!';
+
+  @override
+  String get chatSend => '전송';
 }

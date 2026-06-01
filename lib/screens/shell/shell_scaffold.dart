@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/friends_provider.dart';
 import '../../providers/invitations_provider.dart';
 
 class ShellScaffold extends StatelessWidget {
@@ -43,9 +44,21 @@ class ShellScaffold extends StatelessWidget {
             label: l10n.navTrips,
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.menu_book_outlined),
-            activeIcon: const Icon(Icons.menu_book),
-            label: l10n.navJournal,
+            icon: Consumer<FriendsProvider>(
+              builder: (_, friends, _) => Badge(
+                isLabelVisible: friends.incomingRequests.isNotEmpty,
+                label: Text('${friends.incomingRequests.length}'),
+                child: const Icon(Icons.people_outline),
+              ),
+            ),
+            activeIcon: Consumer<FriendsProvider>(
+              builder: (_, friends, _) => Badge(
+                isLabelVisible: friends.incomingRequests.isNotEmpty,
+                label: Text('${friends.incomingRequests.length}'),
+                child: const Icon(Icons.people),
+              ),
+            ),
+            label: l10n.navFriends,
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),
