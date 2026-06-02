@@ -11,6 +11,7 @@ import 'config/api_keys.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
+import 'providers/blocked_users_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/friends_provider.dart';
 import 'providers/invitations_provider.dart';
@@ -22,6 +23,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'services/biometric_service.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/settings/blocked_users_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/friends/friends_screen.dart';
 import 'screens/shell/shell_scaffold.dart';
@@ -58,11 +60,13 @@ void main() async {
   );
   final invitations = InvitationsProvider();
   final friends = FriendsProvider();
+  final blockedUsers = BlockedUsersProvider();
   final biometricService = BiometricService();
 
   if (auth.isLoggedIn) {
     await trips.load();
     await profile.load();
+    await blockedUsers.load();
     final uid = auth.userId;
     if (uid != null) {
       await invitations.init(uid);
@@ -77,6 +81,7 @@ void main() async {
     profile: profile,
     invitations: invitations,
     friends: friends,
+    blockedUsers: blockedUsers,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
     biometricService: biometricService,
@@ -90,6 +95,7 @@ class TripManagementApp extends StatefulWidget {
   final UserProfileProvider profile;
   final InvitationsProvider invitations;
   final FriendsProvider friends;
+  final BlockedUsersProvider blockedUsers;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
   final BiometricService biometricService;
@@ -102,6 +108,7 @@ class TripManagementApp extends StatefulWidget {
     required this.profile,
     required this.invitations,
     required this.friends,
+    required this.blockedUsers,
     required this.connectivity,
     required this.offlineQueue,
     required this.biometricService,
@@ -121,6 +128,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
 
     _push = PushNotificationService(
       onTripInviteTap: () => _router.go('/trips'),
+      onMentionTap: (tripId) => _router.go('/trip/$tripId'),
     );
 
     widget.auth.addListener(_onAuthChanged);
@@ -204,6 +212,12 @@ class _TripManagementAppState extends State<TripManagementApp> {
                   GoRoute(
                     path: 'settings',
                     builder: (_, _) => const SettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'blocked',
+                        builder: (_, _) => const BlockedUsersScreen(),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -218,6 +232,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
     if (widget.auth.isLoggedIn) {
       widget.trips.load();
       widget.profile.load();
+      widget.blockedUsers.load();
       final uid = widget.auth.userId;
       if (uid != null) {
         widget.invitations.init(uid);
@@ -228,6 +243,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
       _push.removeToken();
       widget.invitations.clear();
       widget.friends.clear();
+      widget.blockedUsers.clear();
       widget.trips.clear();
       widget.profile.clear();
     }
@@ -249,6 +265,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.profile),
         ChangeNotifierProvider.value(value: widget.invitations),
         ChangeNotifierProvider.value(value: widget.friends),
+        ChangeNotifierProvider.value(value: widget.blockedUsers),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
         Provider<BiometricService>.value(value: widget.biometricService),

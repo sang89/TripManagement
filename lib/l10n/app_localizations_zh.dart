@@ -649,4 +649,81 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatSend => '发送';
+
+  @override
+  String get notificationsSectionTitle => '通知';
+
+  @override
+  String get mentionNotifToggleTitle => '提及通知';
+
+  @override
+  String get mentionNotifToggleSubtitle => '当您在旅行聊天中被@提及时收到通知';
+
+  @override
+  String get privacySectionTitle => '隐私';
+
+  @override
+  String get blockedUsersTitle => '已屏蔽用户';
+
+  @override
+  String get blockedUsersEmpty => '您尚未屏蔽任何人';
+
+  @override
+  String get blockUser => '屏蔽';
+
+  @override
+  String get unblockUser => '取消屏蔽';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return '屏蔽 $name？';
+  }
+
+  @override
+  String get blockConfirmBody => '他们将无法将您添加到行程或向您发送好友请求。';
+
+  @override
+  String blockSuccess(String name) {
+    return '已屏蔽 $name';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '已取消屏蔽 $name';
+  }
+
+  @override
+  String get contactsButton => '从通讯录';
+
+  @override
+  String get contactsScreenTitle => '从通讯录查找';
+
+  @override
+  String get contactsPermissionDenied => '需要访问通讯录才能在TripManagement中找到您的朋友。';
+
+  @override
+  String get contactsOpenSettings => '打开设置';
+
+  @override
+  String get contactsOnApp => '已在TripManagement';
+
+  @override
+  String get contactsInviteSection => '邀请加入TripManagement';
+
+  @override
+  String get contactsEmpty => '未找到有电话或电子邮件的联系人。';
+
+  @override
+  String get contactsAddFriend => '添加';
+
+  @override
+  String get contactsPending => '待处理';
+
+  @override
+  String get contactsInvite => '邀请';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return '嗨 $name！我在使用TripManagement一起规划旅行。在这里加入我：[APP_STORE_LINK]';
+  }
 }

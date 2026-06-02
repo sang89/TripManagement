@@ -228,5 +228,40 @@
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "leaveTripTooltip": "离开行程",
-  "thisTripFallback": "此行程"
+  "thisTripFallback": "此行程",
+
+  "notificationsSectionTitle": "通知",
+  "mentionNotifToggleTitle": "提及通知",
+  "mentionNotifToggleSubtitle": "当您在旅行聊天中被@提及时收到通知",
+
+  "privacySectionTitle": "隐私",
+  "blockedUsersTitle": "已屏蔽用户",
+  "blockedUsersEmpty": "您尚未屏蔽任何人",
+  "blockUser": "屏蔽",
+  "unblockUser": "取消屏蔽",
+  "blockConfirmTitle": "屏蔽 {name}？",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "他们将无法将您添加到行程或向您发送好友请求。",
+  "blockSuccess": "已屏蔽 {name}",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "已取消屏蔽 {name}",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "从通讯录",
+"contactsScreenTitle": "从通讯录查找",
+"contactsPermissionDenied": "需要访问通讯录才能在TripManagement中找到您的朋友。",
+"contactsOpenSettings": "打开设置",
+"contactsOnApp": "已在TripManagement",
+"contactsInviteSection": "邀请加入TripManagement",
+"contactsEmpty": "未找到有电话或电子邮件的联系人。",
+"contactsAddFriend": "添加",
+"contactsPending": "待处理",
+"contactsInvite": "邀请",
+"contactsInviteMessage": "嗨 {name}！我在使用TripManagement一起规划旅行。在这里加入我：[APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

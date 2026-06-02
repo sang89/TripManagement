@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/biometric_service.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -22,6 +25,10 @@ class SettingsScreen extends StatelessWidget {
           _AccountCard(),
           SizedBox(height: 12),
           _SecurityCard(),
+          SizedBox(height: 12),
+          _NotificationsCard(),
+          SizedBox(height: 12),
+          _PrivacyCard(),
           SizedBox(height: 12),
           _LanguageCard(),
           SizedBox(height: 12),
@@ -119,10 +126,85 @@ class _SecurityCardState extends State<_SecurityCard> {
             style: TextStyle(fontSize: 12, color: Colors.grey[500]),
           ),
           value: enabled,
-          activeThumbColor: AppTheme.primary,
-          activeTrackColor: AppTheme.primaryLight,
+          activeThumbColor: Colors.white,
+          activeTrackColor: AppTheme.primary,
           onChanged: (v) =>
               context.read<SettingsProvider>().setBiometricLockEnabled(v),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Notifications Card ────────────────────────────────────────────────────────
+
+class _NotificationsCard extends StatelessWidget {
+  const _NotificationsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    // Push notifications are mobile-only; no point showing this on web.
+    if (kIsWeb) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final profile = context.watch<UserProfileProvider>().profile;
+    final enabled = profile?.mentionNotificationsEnabled ?? true;
+    return _SectionCard(
+      title: l10n.notificationsSectionTitle,
+      icon: Icons.notifications_outlined,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.alternate_email),
+          title: Text(l10n.mentionNotifToggleTitle),
+          subtitle: Text(
+            l10n.mentionNotifToggleSubtitle,
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          ),
+          value: enabled,
+          activeThumbColor: Colors.white,
+          activeTrackColor: AppTheme.primary,
+          onChanged: profile == null
+              ? null
+              : (v) async {
+                  try {
+                    await context
+                        .read<UserProfileProvider>()
+                        .setMentionNotificationsEnabled(v);
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.failed('')),
+                          backgroundColor: AppTheme.danger,
+                        ),
+                      );
+                    }
+                  }
+                },
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Privacy Card ─────────────────────────────────────────────────────────────
+
+class _PrivacyCard extends StatelessWidget {
+  const _PrivacyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return _SectionCard(
+      title: l10n.privacySectionTitle,
+      icon: Icons.shield_outlined,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.block_outlined),
+          title: Text(l10n.blockedUsersTitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/profile/settings/blocked'),
         ),
       ],
     );

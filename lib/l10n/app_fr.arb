@@ -225,5 +225,40 @@
   "chatTabLabel": "Chat",
   "chatSendHint": "Message…",
   "chatNoMessages": "Aucun message pour l’instant. Dites bonjour !",
-  "chatSend": "Envoyer"
+  "chatSend": "Envoyer",
+
+  "notificationsSectionTitle": "Notifications",
+  "mentionNotifToggleTitle": "Alertes de mention",
+  "mentionNotifToggleSubtitle": "Soyez notifié quand quelqu’un vous @mentionne dans un chat de voyage",
+
+  "privacySectionTitle": "Confidentialité",
+  "blockedUsersTitle": "Utilisateurs bloqués",
+  "blockedUsersEmpty": "Vous n’avez bloqué personne",
+  "blockUser": "Bloquer",
+  "unblockUser": "Débloquer",
+  "blockConfirmTitle": "Bloquer {name} ?",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "Cette personne ne pourra plus vous ajouter à des voyages ni vous envoyer de demande d’ami.",
+  "blockSuccess": "{name} a été bloqué",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "{name} a été débloqué",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "Depuis les contacts",
+"contactsScreenTitle": "Trouver depuis les contacts",
+"contactsPermissionDenied": "L'accès aux contacts est nécessaire pour trouver vos amis sur TripManagement.",
+"contactsOpenSettings": "Ouvrir les paramètres",
+"contactsOnApp": "Sur TripManagement",
+"contactsInviteSection": "Inviter sur TripManagement",
+"contactsEmpty": "Aucun contact avec un téléphone ou un e-mail n'a été trouvé.",
+"contactsAddFriend": "Ajouter",
+"contactsPending": "En attente",
+"contactsInvite": "Inviter",
+"contactsInviteMessage": "Salut {name} ! J''utilise TripManagement pour planifier des voyages. Rejoins-moi ici : [APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

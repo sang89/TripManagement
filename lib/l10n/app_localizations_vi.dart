@@ -658,4 +658,85 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get chatSend => 'Gửi';
+
+  @override
+  String get notificationsSectionTitle => 'Thông báo';
+
+  @override
+  String get mentionNotifToggleTitle => 'Cảnh báo đề cập';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'Nhận thông báo khi bạn được @đề cập trong cuộc trò chuyện chuyến đi';
+
+  @override
+  String get privacySectionTitle => 'Quyền riêng tư';
+
+  @override
+  String get blockedUsersTitle => 'Người dùng bị chặn';
+
+  @override
+  String get blockedUsersEmpty => 'Bạn chưa chặn ai';
+
+  @override
+  String get blockUser => 'Chặn';
+
+  @override
+  String get unblockUser => 'Bỏ chặn';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return 'Chặn $name?';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'Họ sẽ không thể thêm bạn vào chuyến đi hoặc gửi lời mời kết bạn.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name đã bị chặn';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name đã được bỏ chặn';
+  }
+
+  @override
+  String get contactsButton => 'Từ danh bạ';
+
+  @override
+  String get contactsScreenTitle => 'Tìm từ danh bạ';
+
+  @override
+  String get contactsPermissionDenied =>
+      'Cần quyền truy cập danh bạ để tìm bạn bè của bạn trên TripManagement.';
+
+  @override
+  String get contactsOpenSettings => 'Mở cài đặt';
+
+  @override
+  String get contactsOnApp => 'Đang dùng TripManagement';
+
+  @override
+  String get contactsInviteSection => 'Mời vào TripManagement';
+
+  @override
+  String get contactsEmpty =>
+      'Không tìm thấy liên hệ nào có số điện thoại hoặc email.';
+
+  @override
+  String get contactsAddFriend => 'Thêm';
+
+  @override
+  String get contactsPending => 'Đang chờ';
+
+  @override
+  String get contactsInvite => 'Mời';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return 'Xin chào $name! Tôi dùng TripManagement để lên kế hoạch du lịch cùng nhau. Tham gia tại đây: [APP_STORE_LINK]';
+  }
 }

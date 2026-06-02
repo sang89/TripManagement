@@ -46,12 +46,14 @@ lib/
 │   ├── trip_member.dart    # TripMember — see model details below
 │   ├── trip_stop.dart      # TripStop (title, address, lat/lng, arrive_at, depart_at, sort_order)
 │   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
+│   ├── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 │   └── chat_message.dart   # ChatMessage — id, tripId, userId, content, enriched senderName
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart      # Auth session; login/register/logout
 │   ├── trip_provider.dart      # All trips + nested stops/members; full CRUD + Realtime
 │   ├── invitations_provider.dart  # Pending invitations for the current user; Realtime
 │   ├── friends_provider.dart   # Friend list + requests; two Realtime channels; searchUsers RPC
+│   ├── blocked_users_provider.dart  # Global block list; blockUser RPC + optimistic unblock
 │   ├── chat_provider.dart      # Trip-scoped chat messages; paginated load + Realtime INSERT
 │   └── settings_provider.dart  # Theme mode + language persistence
 ├── screens/
@@ -59,11 +61,13 @@ lib/
 │   │   ├── login_screen.dart
 │   │   └── register_screen.dart
 │   ├── friends/
-│   │   └── friends_screen.dart  # Friends tab: accepted list + search + Requests tab with badge
+│   │   ├── friends_screen.dart  # Friends tab: accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
+│   │   └── contacts_screen.dart # Batch-match device contacts against registered users; share-sheet invite for non-members
 │   ├── profile/
 │   │   └── profile_screen.dart     # Edit display name, avatar; sign-out
 │   ├── settings/
-│   │   └── settings_screen.dart    # Theme, language, account actions
+│   │   ├── settings_screen.dart      # Theme, language, account, notifications, privacy sections
+│   │   └── blocked_users_screen.dart # List of globally blocked users with Unblock action
 │   ├── shell/
 │   │   └── shell_scaffold.dart     # StatefulShellRoute wrapper; 3-tab bottom nav; invite + friend-request badges
 │   └── trips/
@@ -108,6 +112,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 |---|---|---|---|
 | Trips | `map_outlined` | `/trips` → TripsScreen | `/trip/new`, `/trip/:id`, `/trip/:id/edit` |
 | Friends | `people_outline` | `/friends` → FriendsScreen | — |
+| Profile | `person_outline` | `/profile` → ProfileScreen | `/profile/settings` → SettingsScreen, `/profile/settings/blocked` → BlockedUsersScreen |
 
 `/trip/:id` route builder in `main.dart` creates a scoped `ChatProvider` and wraps `TripDetailScreen` in `ChangeNotifierProvider<ChatProvider>`, enabling test injection without touching widget state.
 
@@ -133,12 +138,13 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `TripProvider` | All trips + members + stops | `load()`, `clear()`, `getById(id)`, CRUD for trips/members/stops; `resendInvite(memberId)` — re-sends FCM push for pending invite; Realtime subscription for member updates |
 | `InvitationsProvider` | Pending invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
+| `BlockedUsersProvider` | Global block list | `load()`, `clear()`, `blockUser(userId)`, `unblockUser(userId)`, `isBlocked(userId)`; optimistic unblock with revert on error; loaded on login, cleared on logout |
 | `ChatProvider` | Trip-scoped chat messages | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel |
 | `SettingsProvider` | Theme mode + language preference | `load()`, `setThemeMode()`, `setLocale()` |
 | `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |
 | `OfflineQueue` | Pending write operations | `init()`, `enqueue()`, `flush()`, `pendingCount`, `hasPending` |
 
-Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` / `TripProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, and `FriendsProvider.init()` / `FriendsProvider.clear()`.
+Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` / `TripProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, `FriendsProvider.init()` / `FriendsProvider.clear()`, and `BlockedUsersProvider.load()` / `BlockedUsersProvider.clear()`.
 
 `ChatProvider` is **not global** — it is instantiated in the `/trip/:id` GoRouter route builder (not in `MultiProvider`) so it is scoped to a single trip and disposed when the user navigates away.
 
@@ -276,6 +282,26 @@ Auto-created on user sign-up (trigger). Stores `full_name`, `avatar_url`, `job_t
 
 Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are deleted by the `send-invite-notification` Edge Function.
 
+#### `user_blocks`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `blocker_id` | uuid FK→auth.users | user who initiated the block |
+| `blocked_id` | uuid FK→auth.users | user who was blocked |
+| `created_at` | timestamptz | |
+
+**Constraints:** UNIQUE `(blocker_id, blocked_id)`; CHECK `blocker_id <> blocked_id`  
+**RLS:** SELECT/INSERT/DELETE only where `blocker_id = auth.uid()`
+
+**Associated RPCs (`SECURITY DEFINER`):**
+- `block_user(p_blocked_id uuid)` — atomically DELETEs any friendship row (either direction) then INSERTs into `user_blocks`. Called by `BlockedUsersProvider.blockUser()`.
+- `get_blocked_users()` — returns `(user_id, full_name, avatar_url, blocked_at)` for all users blocked by the caller. Called by `BlockedUsersProvider.load()`.
+
+**Block enforcement:**
+- `find_user_by_contact` excludes callers who are blocked by the target (so the blocked user can't find the blocker when adding trip members).
+- `search_users` excludes both directions (blocker ↔ blocked are invisible to each other in friend search).
+- `friendships_insert` RLS WITH CHECK prevents sending a friend request to someone who has blocked you.
+
 ---
 
 ### Row-Level Security (RLS)
@@ -301,8 +327,9 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 - `auth_user_is_trip_member(p_trip_id)` — returns true if current user has an `accepted` row for this trip
 - `auth_user_has_pending_invite(p_trip_id)` — returns true if current user has a `pending` row for this trip
 - `find_user_by_contact(p_email, p_phone)` — looks up a user by email/phone (used in `AddMemberSheet`)
-- `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone)` for a list of user IDs, bypassing `user_profiles` RLS so every trip member can read each other's names and contact details. Falls back to `split_part(email, '@', 1)` when `full_name` is blank. Called by `TripProvider._enrichMemberNames()` and `FriendsProvider._enrichNames()` after fetching. Only callable by `authenticated` role.
+- `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone, avatar_url)` for a list of user IDs, bypassing `user_profiles` RLS so every trip member can read each other's names and contact details. Falls back to `split_part(email, '@', 1)` when `full_name` is blank. Called by `TripProvider._enrichMemberNames()`, `FriendsProvider._enrichNames()`, and `BlockedUsersProvider.load()`. Only callable by `authenticated` role.
 - `search_users(p_query text)` — returns `(user_id, full_name, email)` for users matching the query by name, email, or phone (digits-stripped match), excluding the caller and any users already in a `pending`/`accepted` friendship with the caller. Limit 20. Called by `FriendsProvider.searchUsers()`. Only callable by `authenticated` role.
+- `find_users_by_contacts(p_phones text[], p_emails text[])` — batch-lookup used by `ContactsScreen`. Takes arrays of phones (normalised, non-digits stripped for matching) and emails from device contacts. Returns `(user_id, full_name, avatar_url, matched_phone, matched_email)` for registered users found. Excludes the caller, blocked users (either direction), and existing friends (pending or accepted). Only callable by `authenticated` role.
 
 #### `trip_stops`
 All trip members (organizer or accepted linked user) can SELECT/INSERT/UPDATE/DELETE stops for their trips. Uses `auth_user_is_trip_member()` to avoid recursion.
@@ -311,8 +338,15 @@ All trip members (organizer or accepted linked user) can SELECT/INSERT/UPDATE/DE
 | Policy | Operation | Rule |
 |---|---|---|
 | `friendships_select` | SELECT | `requester_id = auth.uid() OR addressee_id = auth.uid()` |
-| `friendships_insert` | INSERT | `requester_id = auth.uid()` |
+| `friendships_insert` | INSERT | `requester_id = auth.uid()` AND addressee has not blocked caller (`NOT EXISTS` check in `user_blocks`) |
 | `friendships_update` | UPDATE | `requester_id = auth.uid() OR addressee_id = auth.uid()` |
+
+#### `user_blocks`
+| Policy | Operation | Rule |
+|---|---|---|
+| `user_blocks_select` | SELECT | `blocker_id = auth.uid()` |
+| `user_blocks_insert` | INSERT | `blocker_id = auth.uid()` |
+| `user_blocks_delete` | DELETE | `blocker_id = auth.uid()` |
 
 #### `trip_messages`
 | Policy | Operation | Rule |

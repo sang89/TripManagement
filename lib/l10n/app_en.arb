@@ -260,5 +260,43 @@
   "chatTabLabel": "Chat",
   "chatSendHint": "Message…",
   "chatNoMessages": "No messages yet. Say hello!",
-  "chatSend": "Send"
+  "chatSend": "Send",
+
+  "notificationsSectionTitle": "Notifications",
+  "mentionNotifToggleTitle": "Mention alerts",
+  "mentionNotifToggleSubtitle": "Get notified when you're @mentioned in a trip chat",
+
+  "privacySectionTitle": "Privacy",
+  "blockedUsersTitle": "Blocked Users",
+  "blockedUsersEmpty": "You haven't blocked anyone",
+  "blockUser": "Block",
+  "unblockUser": "Unblock",
+  "blockConfirmTitle": "Block {name}?",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "They won't be able to add you to trips or send you friend requests.",
+  "blockSuccess": "{name} has been blocked",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "{name} has been unblocked",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "contactsButton": "From Contacts",
+  "contactsScreenTitle": "Find from Contacts",
+  "contactsPermissionDenied": "Contacts access is required to find your friends on TripManagement.",
+  "contactsOpenSettings": "Open Settings",
+  "contactsOnApp": "On TripManagement",
+  "contactsInviteSection": "Invite to TripManagement",
+  "contactsEmpty": "No contacts with a phone or email were found.",
+  "contactsAddFriend": "Add",
+  "contactsPending": "Pending",
+  "contactsInvite": "Invite",
+  "contactsInviteMessage": "Hey {name}! I''m using TripManagement to plan trips together. Join me here: [APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": { "name": { "type": "String" } }
+  }
 }

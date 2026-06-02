@@ -228,5 +228,40 @@
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "leaveTripTooltip": "여행 나가기",
-  "thisTripFallback": "이 여행"
+  "thisTripFallback": "이 여행",
+
+  "notificationsSectionTitle": "알림",
+  "mentionNotifToggleTitle": "멘션 알림",
+  "mentionNotifToggleSubtitle": "여행 채팅에서 @멘션될 때 알림 받기",
+
+  "privacySectionTitle": "개인 정보",
+  "blockedUsersTitle": "차단된 사용자",
+  "blockedUsersEmpty": "차단한 사용자가 없습니다",
+  "blockUser": "차단",
+  "unblockUser": "차단 해제",
+  "blockConfirmTitle": "{name}을(를) 차단할까요?",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "이 사람은 더 이상 당신을 여행에 추가하거나 친구 요청을 보낼 수 없습니다.",
+  "blockSuccess": "{name}이(가) 차단되었습니다",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "{name}의 차단이 해제되었습니다",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "연락처에서",
+"contactsScreenTitle": "연락처에서 찾기",
+"contactsPermissionDenied": "TripManagement에서 친구를 찾으려면 연락처 접근이 필요합니다.",
+"contactsOpenSettings": "설정 열기",
+"contactsOnApp": "TripManagement 사용 중",
+"contactsInviteSection": "TripManagement에 초대",
+"contactsEmpty": "전화번호나 이메일이 있는 연락처를 찾을 수 없습니다.",
+"contactsAddFriend": "추가",
+"contactsPending": "대기 중",
+"contactsInvite": "초대",
+"contactsInviteMessage": "안녕 {name}! TripManagement로 함께 여행을 계획해요. 여기서 참여하세요: [APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

@@ -228,5 +228,40 @@
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "leaveTripTooltip": "旅行から退出",
-  "thisTripFallback": "この旅行"
+  "thisTripFallback": "この旅行",
+
+  "notificationsSectionTitle": "通知",
+  "mentionNotifToggleTitle": "メンション通知",
+  "mentionNotifToggleSubtitle": "旅行チャットで@メンションされたときに通知を受け取る",
+
+  "privacySectionTitle": "プライバシー",
+  "blockedUsersTitle": "ブロック中のユーザー",
+  "blockedUsersEmpty": "ブロックしているユーザーはいません",
+  "blockUser": "ブロック",
+  "unblockUser": "ブロック解除",
+  "blockConfirmTitle": "{name}をブロックしますか？",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "この人はあなたを旅行に追加したり、フレンド申請を送ることができなくなります。",
+  "blockSuccess": "{name}をブロックしました",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "{name}のブロックを解除しました",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "連絡先から",
+"contactsScreenTitle": "連絡先から探す",
+"contactsPermissionDenied": "TripManagementで友達を見つけるには連絡先へのアクセスが必要です。",
+"contactsOpenSettings": "設定を開く",
+"contactsOnApp": "TripManagement登録済み",
+"contactsInviteSection": "TripManagementに招待",
+"contactsEmpty": "電話番号またはメールアドレスのある連絡先が見つかりませんでした。",
+"contactsAddFriend": "追加",
+"contactsPending": "保留中",
+"contactsInvite": "招待",
+"contactsInviteMessage": "{name}さん、TripManagementで一緒に旅行を計画しましょう！こちらから参加：[APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

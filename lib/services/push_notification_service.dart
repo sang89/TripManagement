@@ -12,8 +12,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// trip_invite notification (foreground or cold-start).
 class PushNotificationService {
   final void Function()? onTripInviteTap;
+  final void Function(String tripId)? onMentionTap;
 
-  PushNotificationService({this.onTripInviteTap});
+  PushNotificationService({this.onTripInviteTap, this.onMentionTap});
 
   SupabaseClient get _db => Supabase.instance.client;
 
@@ -105,6 +106,9 @@ class PushNotificationService {
     final type = message.data['type'] as String?;
     if (type == 'trip_invite') {
       onTripInviteTap?.call();
+    } else if (type == 'chat_mention') {
+      final tripId = message.data['trip_id'] as String?;
+      if (tripId != null) onMentionTap?.call(tripId);
     }
   }
 }

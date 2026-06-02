@@ -651,4 +651,82 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatSend => '전송';
+
+  @override
+  String get notificationsSectionTitle => '알림';
+
+  @override
+  String get mentionNotifToggleTitle => '멘션 알림';
+
+  @override
+  String get mentionNotifToggleSubtitle => '여행 채팅에서 @멘션될 때 알림 받기';
+
+  @override
+  String get privacySectionTitle => '개인 정보';
+
+  @override
+  String get blockedUsersTitle => '차단된 사용자';
+
+  @override
+  String get blockedUsersEmpty => '차단한 사용자가 없습니다';
+
+  @override
+  String get blockUser => '차단';
+
+  @override
+  String get unblockUser => '차단 해제';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return '$name을(를) 차단할까요?';
+  }
+
+  @override
+  String get blockConfirmBody => '이 사람은 더 이상 당신을 여행에 추가하거나 친구 요청을 보낼 수 없습니다.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name이(가) 차단되었습니다';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name의 차단이 해제되었습니다';
+  }
+
+  @override
+  String get contactsButton => '연락처에서';
+
+  @override
+  String get contactsScreenTitle => '연락처에서 찾기';
+
+  @override
+  String get contactsPermissionDenied =>
+      'TripManagement에서 친구를 찾으려면 연락처 접근이 필요합니다.';
+
+  @override
+  String get contactsOpenSettings => '설정 열기';
+
+  @override
+  String get contactsOnApp => 'TripManagement 사용 중';
+
+  @override
+  String get contactsInviteSection => 'TripManagement에 초대';
+
+  @override
+  String get contactsEmpty => '전화번호나 이메일이 있는 연락처를 찾을 수 없습니다.';
+
+  @override
+  String get contactsAddFriend => '추가';
+
+  @override
+  String get contactsPending => '대기 중';
+
+  @override
+  String get contactsInvite => '초대';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return '안녕 $name! TripManagement로 함께 여행을 계획해요. 여기서 참여하세요: [APP_STORE_LINK]';
+  }
 }

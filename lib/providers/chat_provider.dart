@@ -97,12 +97,17 @@ class ChatProvider extends ChangeNotifier {
       ) as List<dynamic>;
 
       final nameMap = <String, String>{};
+      final avatarMap = <String, String?>{};
       for (final p in profiles) {
         final m = p as Map<String, dynamic>;
         nameMap[m['user_id'] as String] = m['full_name'] as String? ?? '';
+        avatarMap[m['user_id'] as String] = m['avatar_url'] as String?;
       }
       return msgs
-          .map((m) => m.copyWith(senderName: nameMap[m.userId] ?? ''))
+          .map((m) => m.copyWith(
+                senderName: nameMap[m.userId] ?? '',
+                senderAvatarUrl: avatarMap[m.userId],
+              ))
           .toList();
     } catch (_) {
       return msgs;

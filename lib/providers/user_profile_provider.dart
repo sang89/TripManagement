@@ -177,6 +177,28 @@ class UserProfileProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> setMentionNotificationsEnabled(bool enabled) async {
+    if (_profile == null) return;
+    _profile = _profile!.copyWith(mentionNotificationsEnabled: enabled);
+    notifyListeners();
+    try {
+      final row = await _db
+          .from('user_profiles')
+          .update({'mention_notifications_enabled': enabled})
+          .eq('user_id', _uid)
+          .select()
+          .single();
+      _profile = UserProfile.fromJson(row);
+      unawaited(LocalCache.saveObject('${_cacheKey}_$_uid', row));
+      notifyListeners();
+    } catch (e) {
+      // Revert optimistic update on failure.
+      _profile = _profile!.copyWith(mentionNotificationsEnabled: !enabled);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   void clear() {
     _profile = null;
     _error = null;

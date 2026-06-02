@@ -659,4 +659,85 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get chatSend => 'Enviar';
+
+  @override
+  String get notificationsSectionTitle => 'Notificaciones';
+
+  @override
+  String get mentionNotifToggleTitle => 'Alertas de mención';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'Recibe notificaciones cuando te @mencionen en un chat de viaje';
+
+  @override
+  String get privacySectionTitle => 'Privacidad';
+
+  @override
+  String get blockedUsersTitle => 'Usuarios bloqueados';
+
+  @override
+  String get blockedUsersEmpty => 'No has bloqueado a nadie';
+
+  @override
+  String get blockUser => 'Bloquear';
+
+  @override
+  String get unblockUser => 'Desbloquear';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return '¿Bloquear a $name?';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'No podrán añadirte a viajes ni enviarte solicitudes de amistad.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name ha sido bloqueado';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name ha sido desbloqueado';
+  }
+
+  @override
+  String get contactsButton => 'Desde contactos';
+
+  @override
+  String get contactsScreenTitle => 'Buscar desde contactos';
+
+  @override
+  String get contactsPermissionDenied =>
+      'Se necesita acceso a los contactos para encontrar tus amigos en TripManagement.';
+
+  @override
+  String get contactsOpenSettings => 'Abrir configuración';
+
+  @override
+  String get contactsOnApp => 'En TripManagement';
+
+  @override
+  String get contactsInviteSection => 'Invitar a TripManagement';
+
+  @override
+  String get contactsEmpty =>
+      'No se encontraron contactos con teléfono o correo electrónico.';
+
+  @override
+  String get contactsAddFriend => 'Agregar';
+
+  @override
+  String get contactsPending => 'Pendiente';
+
+  @override
+  String get contactsInvite => 'Invitar';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return '¡Hola $name! Estoy usando TripManagement para planificar viajes. Únete aquí: [APP_STORE_LINK]';
+  }
 }

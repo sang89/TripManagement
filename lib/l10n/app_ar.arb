@@ -228,5 +228,40 @@
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "leaveTripTooltip": "مغادرة الرحلة",
-  "thisTripFallback": "هذه الرحلة"
+  "thisTripFallback": "هذه الرحلة",
+
+  "notificationsSectionTitle": "الإشعارات",
+  "mentionNotifToggleTitle": "تنبيهات الإشارة",
+  "mentionNotifToggleSubtitle": "احصل على إشعار عند الإشارة إليك بـ @ في دردشة الرحلة",
+
+  "privacySectionTitle": "الخصوصية",
+  "blockedUsersTitle": "المستخدمون المحظورون",
+  "blockedUsersEmpty": "لم تحظر أي شخص",
+  "blockUser": "حظر",
+  "unblockUser": "إلغاء الحظر",
+  "blockConfirmTitle": "حظر {name}؟",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "لن يتمكنوا من إضافتك إلى الرحلات أو إرسال طلبات الصداقة إليك.",
+  "blockSuccess": "تم حظر {name}",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "تم إلغاء حظر {name}",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "من جهات الاتصال",
+"contactsScreenTitle": "البحث من جهات الاتصال",
+"contactsPermissionDenied": "يلزم الوصول إلى جهات الاتصال للعثور على أصدقائك في TripManagement.",
+"contactsOpenSettings": "فتح الإعدادات",
+"contactsOnApp": "على TripManagement",
+"contactsInviteSection": "دعوة إلى TripManagement",
+"contactsEmpty": "لم يتم العثور على جهات اتصال برقم هاتف أو بريد إلكتروني.",
+"contactsAddFriend": "إضافة",
+"contactsPending": "قيد الانتظار",
+"contactsInvite": "دعوة",
+"contactsInviteMessage": "مرحباً {name}! أستخدم TripManagement لتخطيط الرحلات معًا. انضم إليّ هنا: [APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

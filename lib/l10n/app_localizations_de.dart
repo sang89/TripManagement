@@ -661,4 +661,85 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get chatSend => 'Senden';
+
+  @override
+  String get notificationsSectionTitle => 'Benachrichtigungen';
+
+  @override
+  String get mentionNotifToggleTitle => 'Erwähnungs-Benachrichtigungen';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'Benachrichtigt werden, wenn du in einem Reise-Chat @erwähnt wirst';
+
+  @override
+  String get privacySectionTitle => 'Datenschutz';
+
+  @override
+  String get blockedUsersTitle => 'Blockierte Nutzer';
+
+  @override
+  String get blockedUsersEmpty => 'Du hast niemanden blockiert';
+
+  @override
+  String get blockUser => 'Blockieren';
+
+  @override
+  String get unblockUser => 'Entsperren';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return '$name blockieren?';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'Diese Person kann dich nicht mehr zu Reisen hinzufügen oder dir Freundschaftsanfragen senden.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name wurde blockiert';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name wurde entsperrt';
+  }
+
+  @override
+  String get contactsButton => 'Aus Kontakten';
+
+  @override
+  String get contactsScreenTitle => 'Aus Kontakten suchen';
+
+  @override
+  String get contactsPermissionDenied =>
+      'Kontaktzugriff ist erforderlich, um deine Freunde auf TripManagement zu finden.';
+
+  @override
+  String get contactsOpenSettings => 'Einstellungen öffnen';
+
+  @override
+  String get contactsOnApp => 'Auf TripManagement';
+
+  @override
+  String get contactsInviteSection => 'Zu TripManagement einladen';
+
+  @override
+  String get contactsEmpty =>
+      'Keine Kontakte mit Telefon oder E-Mail gefunden.';
+
+  @override
+  String get contactsAddFriend => 'Hinzufügen';
+
+  @override
+  String get contactsPending => 'Ausstehend';
+
+  @override
+  String get contactsInvite => 'Einladen';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return 'Hey $name! Ich nutze TripManagement, um Reisen zu planen. Komm dazu: [APP_STORE_LINK]';
+  }
 }
