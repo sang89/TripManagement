@@ -658,4 +658,85 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get chatSend => 'Enviar';
+
+  @override
+  String get notificationsSectionTitle => 'Notificações';
+
+  @override
+  String get mentionNotifToggleTitle => 'Alertas de menção';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'Receba notificações quando for @mencionado em um chat de viagem';
+
+  @override
+  String get privacySectionTitle => 'Privacidade';
+
+  @override
+  String get blockedUsersTitle => 'Usuários bloqueados';
+
+  @override
+  String get blockedUsersEmpty => 'Você não bloqueou ninguém';
+
+  @override
+  String get blockUser => 'Bloquear';
+
+  @override
+  String get unblockUser => 'Desbloquear';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return 'Bloquear $name?';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'Eles não poderão adicionar você a viagens ou enviar solicitações de amizade.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name foi bloqueado';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name foi desbloqueado';
+  }
+
+  @override
+  String get contactsButton => 'De contatos';
+
+  @override
+  String get contactsScreenTitle => 'Encontrar nos contatos';
+
+  @override
+  String get contactsPermissionDenied =>
+      'O acesso aos contatos é necessário para encontrar seus amigos no TripManagement.';
+
+  @override
+  String get contactsOpenSettings => 'Abrir configurações';
+
+  @override
+  String get contactsOnApp => 'No TripManagement';
+
+  @override
+  String get contactsInviteSection => 'Convidar para o TripManagement';
+
+  @override
+  String get contactsEmpty =>
+      'Nenhum contato com telefone ou e-mail foi encontrado.';
+
+  @override
+  String get contactsAddFriend => 'Adicionar';
+
+  @override
+  String get contactsPending => 'Pendente';
+
+  @override
+  String get contactsInvite => 'Convidar';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return 'Olá $name! Estou usando o TripManagement para planejar viagens. Junte-se a mim aqui: [APP_STORE_LINK]';
+  }
 }

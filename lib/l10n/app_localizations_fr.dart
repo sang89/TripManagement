@@ -662,4 +662,85 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatSend => 'Envoyer';
+
+  @override
+  String get notificationsSectionTitle => 'Notifications';
+
+  @override
+  String get mentionNotifToggleTitle => 'Alertes de mention';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'Soyez notifié quand quelqu’un vous @mentionne dans un chat de voyage';
+
+  @override
+  String get privacySectionTitle => 'Confidentialité';
+
+  @override
+  String get blockedUsersTitle => 'Utilisateurs bloqués';
+
+  @override
+  String get blockedUsersEmpty => 'Vous n’avez bloqué personne';
+
+  @override
+  String get blockUser => 'Bloquer';
+
+  @override
+  String get unblockUser => 'Débloquer';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return 'Bloquer $name ?';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'Cette personne ne pourra plus vous ajouter à des voyages ni vous envoyer de demande d’ami.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name a été bloqué';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name a été débloqué';
+  }
+
+  @override
+  String get contactsButton => 'Depuis les contacts';
+
+  @override
+  String get contactsScreenTitle => 'Trouver depuis les contacts';
+
+  @override
+  String get contactsPermissionDenied =>
+      'L\'accès aux contacts est nécessaire pour trouver vos amis sur TripManagement.';
+
+  @override
+  String get contactsOpenSettings => 'Ouvrir les paramètres';
+
+  @override
+  String get contactsOnApp => 'Sur TripManagement';
+
+  @override
+  String get contactsInviteSection => 'Inviter sur TripManagement';
+
+  @override
+  String get contactsEmpty =>
+      'Aucun contact avec un téléphone ou un e-mail n\'a été trouvé.';
+
+  @override
+  String get contactsAddFriend => 'Ajouter';
+
+  @override
+  String get contactsPending => 'En attente';
+
+  @override
+  String get contactsInvite => 'Inviter';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return 'Salut $name ! J\'\'utilise TripManagement pour planifier des voyages. Rejoins-moi ici : [APP_STORE_LINK]';
+  }
 }

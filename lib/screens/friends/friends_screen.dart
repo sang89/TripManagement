@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
@@ -7,8 +8,11 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/friendship.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/blocked_users_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../utils/avatar_utils.dart';
+import 'contacts_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -35,15 +39,6 @@ class _FriendsScreenState extends State<FriendsScreen>
     super.dispose();
   }
 
-  void _openSearch() {
-    if (_tabController.index != 0) {
-      _tabController.animateTo(0);
-    }
-    // Give the tab animation time to complete before requesting focus.
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) _searchFocusNode.requestFocus();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,11 +65,6 @@ class _FriendsScreenState extends State<FriendsScreen>
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openSearch,
-        tooltip: l10n.friendsAddFriend,
-        child: const Icon(Icons.person_add_outlined),
       ),
       body: TabBarView(
         controller: _tabController,
@@ -159,6 +149,8 @@ class _FriendsTabState extends State<_FriendsTab> {
 
   void _showFriendSheet(Friendship f) {
     final name = f.otherDisplayName ?? '';
+    final myId = context.read<AuthProvider>().userId ?? '';
+    final otherId = f.otherUserId(myId);
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -210,6 +202,22 @@ class _FriendsTabState extends State<_FriendsTab> {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _confirmBlock(otherId, name);
+                  },
+                  icon: const Icon(Icons.block_outlined),
+                  label: Text(l10n.blockUser),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.danger,
+                    side: const BorderSide(color: AppTheme.danger),
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -241,6 +249,47 @@ class _FriendsTabState extends State<_FriendsTab> {
     );
     if (confirmed == true && mounted) {
       await context.read<FriendsProvider>().remove(f.id);
+    }
+  }
+
+  Future<void> _confirmBlock(String userId, String name) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.blockConfirmTitle(name)),
+        content: Text(l10n.blockConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.blockUser,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      try {
+        await context.read<BlockedUsersProvider>().blockUser(userId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.blockSuccess(name))),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTheme.danger,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -276,6 +325,20 @@ class _FriendsTabState extends State<_FriendsTab> {
             onChanged: _onSearchChanged,
           ),
         ),
+
+        // Find from Contacts entry (non-web only)
+        if (!kIsWeb) ...[
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _ContactsEntryCard(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ContactsScreen()),
+              ),
+            ),
+          ),
+        ],
 
         // Search results
         if (_searching)
@@ -480,6 +543,48 @@ class _IncomingRequestCardState extends State<_IncomingRequestCard> {
     }
   }
 
+  Future<void> _confirmBlock(String userId, String name) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.blockConfirmTitle(name)),
+        content: Text(l10n.blockConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.blockUser,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await context.read<BlockedUsersProvider>().blockUser(userId);
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.blockSuccess(name))),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTheme.danger,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -552,6 +657,30 @@ class _IncomingRequestCardState extends State<_IncomingRequestCard> {
                           borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Text(l10n.friendsAccept, style: const TextStyle(fontSize: 13)),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'block') {
+                        _confirmBlock(f.requesterId, name);
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        value: 'block',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.block_outlined,
+                                color: AppTheme.danger, size: 20),
+                            const SizedBox(width: 8),
+                            Text(l10n.blockUser,
+                                style: const TextStyle(color: AppTheme.danger)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    icon: Icon(Icons.more_vert_rounded, color: Colors.grey[500]),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
@@ -708,6 +837,65 @@ class _ContactRow extends StatelessWidget {
           Text(label,
               style: TextStyle(fontSize: 13, color: Colors.grey[600])),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Contacts entry card ───────────────────────────────────────────────────────
+
+class _ContactsEntryCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ContactsEntryCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.25)),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.contacts_outlined,
+                    color: AppTheme.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Find from Contacts',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 2),
+                    Text('See which of your contacts are on TripManagement',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded,
+                  color: AppTheme.primary.withValues(alpha: 0.6)),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -228,5 +228,40 @@
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "leaveTripTooltip": "Salir del viaje",
-  "thisTripFallback": "este viaje"
+  "thisTripFallback": "este viaje",
+
+  "notificationsSectionTitle": "Notificaciones",
+  "mentionNotifToggleTitle": "Alertas de mención",
+  "mentionNotifToggleSubtitle": "Recibe notificaciones cuando te @mencionen en un chat de viaje",
+
+  "privacySectionTitle": "Privacidad",
+  "blockedUsersTitle": "Usuarios bloqueados",
+  "blockedUsersEmpty": "No has bloqueado a nadie",
+  "blockUser": "Bloquear",
+  "unblockUser": "Desbloquear",
+  "blockConfirmTitle": "¿Bloquear a {name}?",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "No podrán añadirte a viajes ni enviarte solicitudes de amistad.",
+  "blockSuccess": "{name} ha sido bloqueado",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "{name} ha sido desbloqueado",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "Desde contactos",
+"contactsScreenTitle": "Buscar desde contactos",
+"contactsPermissionDenied": "Se necesita acceso a los contactos para encontrar tus amigos en TripManagement.",
+"contactsOpenSettings": "Abrir configuración",
+"contactsOnApp": "En TripManagement",
+"contactsInviteSection": "Invitar a TripManagement",
+"contactsEmpty": "No se encontraron contactos con teléfono o correo electrónico.",
+"contactsAddFriend": "Agregar",
+"contactsPending": "Pendiente",
+"contactsInvite": "Invitar",
+"contactsInviteMessage": "¡Hola {name}! Estoy usando TripManagement para planificar viajes. Únete aquí: [APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

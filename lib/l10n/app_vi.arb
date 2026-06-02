@@ -228,5 +228,40 @@
     "placeholders": { "tripTitle": { "type": "String" } }
   },
   "leaveTripTooltip": "Rời khỏi chuyến đi",
-  "thisTripFallback": "chuyến đi này"
+  "thisTripFallback": "chuyến đi này",
+
+  "notificationsSectionTitle": "Thông báo",
+  "mentionNotifToggleTitle": "Cảnh báo đề cập",
+  "mentionNotifToggleSubtitle": "Nhận thông báo khi bạn được @đề cập trong cuộc trò chuyện chuyến đi",
+
+  "privacySectionTitle": "Quyền riêng tư",
+  "blockedUsersTitle": "Người dùng bị chặn",
+  "blockedUsersEmpty": "Bạn chưa chặn ai",
+  "blockUser": "Chặn",
+  "unblockUser": "Bỏ chặn",
+  "blockConfirmTitle": "Chặn {name}?",
+  "@blockConfirmTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockConfirmBody": "Họ sẽ không thể thêm bạn vào chuyến đi hoặc gửi lời mời kết bạn.",
+  "blockSuccess": "{name} đã bị chặn",
+  "@blockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "unblockSuccess": "{name} đã được bỏ chặn",
+  "@unblockSuccess": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+"contactsButton": "Từ danh bạ",
+"contactsScreenTitle": "Tìm từ danh bạ",
+"contactsPermissionDenied": "Cần quyền truy cập danh bạ để tìm bạn bè của bạn trên TripManagement.",
+"contactsOpenSettings": "Mở cài đặt",
+"contactsOnApp": "Đang dùng TripManagement",
+"contactsInviteSection": "Mời vào TripManagement",
+"contactsEmpty": "Không tìm thấy liên hệ nào có số điện thoại hoặc email.",
+"contactsAddFriend": "Thêm",
+"contactsPending": "Đang chờ",
+"contactsInvite": "Mời",
+"contactsInviteMessage": "Xin chào {name}! Tôi dùng TripManagement để lên kế hoạch du lịch cùng nhau. Tham gia tại đây: [APP_STORE_LINK]",
+"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
 }

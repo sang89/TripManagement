@@ -1331,6 +1331,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send'**
   String get chatSend;
+
+  /// No description provided for @notificationsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsSectionTitle;
+
+  /// No description provided for @mentionNotifToggleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention alerts'**
+  String get mentionNotifToggleTitle;
+
+  /// No description provided for @mentionNotifToggleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when you\'re @mentioned in a trip chat'**
+  String get mentionNotifToggleSubtitle;
+
+  /// No description provided for @privacySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get privacySectionTitle;
+
+  /// No description provided for @blockedUsersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked Users'**
+  String get blockedUsersTitle;
+
+  /// No description provided for @blockedUsersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t blocked anyone'**
+  String get blockedUsersEmpty;
+
+  /// No description provided for @blockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get blockUser;
+
+  /// No description provided for @unblockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get unblockUser;
+
+  /// No description provided for @blockConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Block {name}?'**
+  String blockConfirmTitle(String name);
+
+  /// No description provided for @blockConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'They won\'t be able to add you to trips or send you friend requests.'**
+  String get blockConfirmBody;
+
+  /// No description provided for @blockSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been blocked'**
+  String blockSuccess(String name);
+
+  /// No description provided for @unblockSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has been unblocked'**
+  String unblockSuccess(String name);
+
+  /// No description provided for @contactsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'From Contacts'**
+  String get contactsButton;
+
+  /// No description provided for @contactsScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find from Contacts'**
+  String get contactsScreenTitle;
+
+  /// No description provided for @contactsPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Contacts access is required to find your friends on TripManagement.'**
+  String get contactsPermissionDenied;
+
+  /// No description provided for @contactsOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get contactsOpenSettings;
+
+  /// No description provided for @contactsOnApp.
+  ///
+  /// In en, this message translates to:
+  /// **'On TripManagement'**
+  String get contactsOnApp;
+
+  /// No description provided for @contactsInviteSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite to TripManagement'**
+  String get contactsInviteSection;
+
+  /// No description provided for @contactsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No contacts with a phone or email were found.'**
+  String get contactsEmpty;
+
+  /// No description provided for @contactsAddFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get contactsAddFriend;
+
+  /// No description provided for @contactsPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get contactsPending;
+
+  /// No description provided for @contactsInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite'**
+  String get contactsInvite;
+
+  /// No description provided for @contactsInviteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Hey {name}! I\'\'m using TripManagement to plan trips together. Join me here: [APP_STORE_LINK]'**
+  String contactsInviteMessage(String name);
 }
 
 class _AppLocalizationsDelegate

@@ -6,6 +6,8 @@
 	     Never hardcode the real key here. -->
 	<key>MapsApiKey</key>
 	<string>$(MAPS_API_KEY)</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Find friends who are already on TripManagement</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

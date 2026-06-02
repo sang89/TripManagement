@@ -650,4 +650,82 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get chatSend => '送信';
+
+  @override
+  String get notificationsSectionTitle => '通知';
+
+  @override
+  String get mentionNotifToggleTitle => 'メンション通知';
+
+  @override
+  String get mentionNotifToggleSubtitle => '旅行チャットで@メンションされたときに通知を受け取る';
+
+  @override
+  String get privacySectionTitle => 'プライバシー';
+
+  @override
+  String get blockedUsersTitle => 'ブロック中のユーザー';
+
+  @override
+  String get blockedUsersEmpty => 'ブロックしているユーザーはいません';
+
+  @override
+  String get blockUser => 'ブロック';
+
+  @override
+  String get unblockUser => 'ブロック解除';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return '$nameをブロックしますか？';
+  }
+
+  @override
+  String get blockConfirmBody => 'この人はあなたを旅行に追加したり、フレンド申請を送ることができなくなります。';
+
+  @override
+  String blockSuccess(String name) {
+    return '$nameをブロックしました';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$nameのブロックを解除しました';
+  }
+
+  @override
+  String get contactsButton => '連絡先から';
+
+  @override
+  String get contactsScreenTitle => '連絡先から探す';
+
+  @override
+  String get contactsPermissionDenied =>
+      'TripManagementで友達を見つけるには連絡先へのアクセスが必要です。';
+
+  @override
+  String get contactsOpenSettings => '設定を開く';
+
+  @override
+  String get contactsOnApp => 'TripManagement登録済み';
+
+  @override
+  String get contactsInviteSection => 'TripManagementに招待';
+
+  @override
+  String get contactsEmpty => '電話番号またはメールアドレスのある連絡先が見つかりませんでした。';
+
+  @override
+  String get contactsAddFriend => '追加';
+
+  @override
+  String get contactsPending => '保留中';
+
+  @override
+  String get contactsInvite => '招待';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return '$nameさん、TripManagementで一緒に旅行を計画しましょう！こちらから参加：[APP_STORE_LINK]';
+  }
 }

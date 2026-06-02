@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chat_message.dart';
 import '../../models/trip.dart';
@@ -695,18 +696,106 @@ class _ChatTabState extends State<_ChatTab> {
   final _scrollCtrl = ScrollController();
   bool _sending = false;
 
+  // null = not in mention mode; '' = "@" typed but no query yet
+  String? _mentionQuery;
+
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
+    _messageCtrl.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
     _scrollCtrl.removeListener(_onScroll);
+    _messageCtrl.removeListener(_onTextChanged);
     _scrollCtrl.dispose();
     _messageCtrl.dispose();
     super.dispose();
+  }
+
+  void _onTextChanged() {
+    final text = _messageCtrl.text;
+    final cursor = _messageCtrl.selection.baseOffset;
+    if (cursor < 0) {
+      if (_mentionQuery != null) setState(() => _mentionQuery = null);
+      return;
+    }
+    final beforeCursor = text.substring(0, cursor);
+    final atIdx = beforeCursor.lastIndexOf('@');
+    if (atIdx >= 0) {
+      final afterAt = beforeCursor.substring(atIdx + 1);
+      if (!afterAt.contains(' ')) {
+        final q = afterAt.toLowerCase();
+        if (_mentionQuery != q) setState(() => _mentionQuery = q);
+        return;
+      }
+    }
+    if (_mentionQuery != null) setState(() => _mentionQuery = null);
+  }
+
+  void _insertMention(TripMember member) {
+    final text = _messageCtrl.text;
+    final cursor = _messageCtrl.selection.baseOffset;
+    final beforeCursor = text.substring(0, cursor);
+    final atIdx = beforeCursor.lastIndexOf('@');
+    if (atIdx < 0) return;
+    final before = text.substring(0, atIdx);
+    final after = text.substring(cursor);
+    final insertion = '@${member.displayName} ';
+    final newText = '$before$insertion$after';
+    _messageCtrl.value = TextEditingValue(
+      text: newText,
+      selection:
+          TextSelection.collapsed(offset: before.length + insertion.length),
+    );
+    setState(() => _mentionQuery = null);
+  }
+
+  List<TripMember> _suggestions(String tripId, String myUserId) {
+    final trip = context.read<TripProvider>().getById(tripId);
+    if (trip == null || _mentionQuery == null) return [];
+    return trip.members
+        .where((m) =>
+            m.status == 'accepted' &&
+            m.userId != myUserId &&
+            (_mentionQuery!.isEmpty ||
+                m.displayName.toLowerCase().contains(_mentionQuery!)))
+        .toList();
+  }
+
+  void _notifyMentions(String text, String tripId, String myUserId) {
+    final mentionRegex = RegExp(r'@(\S+)');
+    final names = mentionRegex
+        .allMatches(text)
+        .map((m) => m.group(1)!.toLowerCase())
+        .toSet();
+    if (names.isEmpty) return;
+
+    final trip = context.read<TripProvider>().getById(tripId);
+    if (trip == null) return;
+
+    final mentionedIds = trip.members
+        .where((m) =>
+            m.userId != null &&
+            m.userId != myUserId &&
+            m.status == 'accepted' &&
+            names.contains(m.displayName.toLowerCase()))
+        .map((m) => m.userId!)
+        .toList();
+    if (mentionedIds.isEmpty) return;
+
+    final preview = text.length > 80 ? '${text.substring(0, 80)}…' : text;
+    Supabase.instance.client.functions
+        .invoke('send-mention-notification', body: {
+          'trip_id': tripId,
+          'mentioned_user_ids': mentionedIds,
+          'message_preview': preview,
+        })
+        // ignore: unawaited_futures
+        .then((_) {}, onError: (Object e) =>
+            debugPrint('send-mention-notification error: $e'));
   }
 
   void _onScroll() {
@@ -724,8 +813,11 @@ class _ChatTabState extends State<_ChatTab> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     _messageCtrl.clear();
+    final tripId = context.read<ChatProvider>().tripId;
+    final myUserId = context.read<AuthProvider>().userId ?? '';
     try {
       await context.read<ChatProvider>().sendMessage(text);
+      _notifyMentions(text, tripId, myUserId);
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
@@ -750,7 +842,9 @@ class _ChatTabState extends State<_ChatTab> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final chat = context.watch<ChatProvider>();
-    final myUserId = context.read<AuthProvider>().userId;
+    final myUserId = context.read<AuthProvider>().userId ?? '';
+    final tripId = chat.tripId;
+    final suggestions = _suggestions(tripId, myUserId);
 
     return Column(
       children: [
@@ -782,6 +876,60 @@ class _ChatTabState extends State<_ChatTab> {
                     ),
         ),
 
+        // @mention suggestions
+        if (suggestions.isNotEmpty)
+          Material(
+            elevation: 4,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(12)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shrinkWrap: true,
+                itemCount: suggestions.length,
+                itemBuilder: (_, i) {
+                  final m = suggestions[i];
+                  final url = (m.avatarUrl?.isNotEmpty == true)
+                      ? m.avatarUrl
+                      : null;
+                  final initials = m.displayName.isNotEmpty
+                      ? m.displayName[0].toUpperCase()
+                      : '?';
+                  return AppTappable(
+                    onTap: () => _insertMention(m),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor:
+                                AppTheme.primary.withValues(alpha: 0.18),
+                            foregroundImage:
+                                url != null ? NetworkImage(url) : null,
+                            child: url == null
+                                ? Text(initials,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primary))
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(m.displayName,
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
         // Input field
         SafeArea(
           top: false,
@@ -805,7 +953,18 @@ class _ChatTabState extends State<_ChatTab> {
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300, width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide:
+                            BorderSide(color: AppTheme.primary, width: 1.5),
+                      ),
                       filled: true,
+                      fillColor: Colors.white,
                     ),
                     minLines: 1,
                     maxLines: 4,
@@ -848,53 +1007,133 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeFmt = DateFormat('h:mm a');
-    final bubbleColor = isMe
-        ? AppTheme.primary.withValues(alpha: 0.12)
-        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final bubbleColor =
+        isMe ? AppTheme.primary : const Color(0xFFE9E9EB);
+    final textColor = isMe ? Colors.white : Colors.black87;
     final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.65;
+
+    Widget bubble = Container(
+      constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(isMe ? 18 : 4),
+          bottomRight: Radius.circular(isMe ? 4 : 18),
+        ),
+      ),
+      child: _MentionText(
+        text: message.content,
+        style: TextStyle(fontSize: 15, color: textColor),
+        isMe: isMe,
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Column(
-        crossAxisAlignment: align,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!isMe && message.senderName != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 2),
-              child: Text(
-                message.senderName!,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primary),
+          if (!isMe) ...[
+            _Avatar(
+              avatarUrl: message.senderAvatarUrl,
+              name: message.senderName ?? '',
+            ),
+            const SizedBox(width: 6),
+          ],
+          Column(
+            crossAxisAlignment: align,
+            children: [
+              if (!isMe && message.senderName != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 2),
+                  child: Text(
+                    message.senderName!,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primary),
+                  ),
+                ),
+              bubble,
+              Padding(
+                padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                child: Text(
+                  timeFmt.format(message.createdAt.toLocal()),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                ),
               ),
-            ),
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.72,
-            ),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(isMe ? 18 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 18),
-              ),
-            ),
-            child: Text(message.content, style: const TextStyle(fontSize: 15)),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
-            child: Text(
-              timeFmt.format(message.createdAt.toLocal()),
-              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-            ),
-          ),
+          if (isMe) const SizedBox(width: 4),
         ],
       ),
+    );
+  }
+}
+
+class _MentionText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  final bool isMe;
+
+  const _MentionText(
+      {required this.text, required this.style, this.isMe = false});
+
+  static final _mentionRegex = RegExp(r'@\S+');
+
+  @override
+  Widget build(BuildContext context) {
+    final mentionColor =
+        isMe ? Colors.white.withValues(alpha: 0.8) : AppTheme.primary;
+    final spans = <InlineSpan>[];
+    int last = 0;
+    for (final match in _mentionRegex.allMatches(text)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: text.substring(last, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: TextStyle(color: mentionColor, fontWeight: FontWeight.w600),
+      ));
+      last = match.end;
+    }
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last)));
+    }
+    return RichText(
+      text: TextSpan(style: style, children: spans),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final String? avatarUrl;
+  final String name;
+
+  const _Avatar({required this.avatarUrl, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final url = (avatarUrl?.isNotEmpty == true) ? avatarUrl : null;
+
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: AppTheme.primary.withValues(alpha: 0.18),
+      foregroundImage: url != null ? NetworkImage(url) : null,
+      child: url == null
+          ? Text(initials,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary))
+          : null,
     );
   }
 }

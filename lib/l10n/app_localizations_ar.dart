@@ -654,4 +654,85 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get chatSend => 'إرسال';
+
+  @override
+  String get notificationsSectionTitle => 'الإشعارات';
+
+  @override
+  String get mentionNotifToggleTitle => 'تنبيهات الإشارة';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'احصل على إشعار عند الإشارة إليك بـ @ في دردشة الرحلة';
+
+  @override
+  String get privacySectionTitle => 'الخصوصية';
+
+  @override
+  String get blockedUsersTitle => 'المستخدمون المحظورون';
+
+  @override
+  String get blockedUsersEmpty => 'لم تحظر أي شخص';
+
+  @override
+  String get blockUser => 'حظر';
+
+  @override
+  String get unblockUser => 'إلغاء الحظر';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return 'حظر $name؟';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'لن يتمكنوا من إضافتك إلى الرحلات أو إرسال طلبات الصداقة إليك.';
+
+  @override
+  String blockSuccess(String name) {
+    return 'تم حظر $name';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return 'تم إلغاء حظر $name';
+  }
+
+  @override
+  String get contactsButton => 'من جهات الاتصال';
+
+  @override
+  String get contactsScreenTitle => 'البحث من جهات الاتصال';
+
+  @override
+  String get contactsPermissionDenied =>
+      'يلزم الوصول إلى جهات الاتصال للعثور على أصدقائك في TripManagement.';
+
+  @override
+  String get contactsOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get contactsOnApp => 'على TripManagement';
+
+  @override
+  String get contactsInviteSection => 'دعوة إلى TripManagement';
+
+  @override
+  String get contactsEmpty =>
+      'لم يتم العثور على جهات اتصال برقم هاتف أو بريد إلكتروني.';
+
+  @override
+  String get contactsAddFriend => 'إضافة';
+
+  @override
+  String get contactsPending => 'قيد الانتظار';
+
+  @override
+  String get contactsInvite => 'دعوة';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return 'مرحباً $name! أستخدم TripManagement لتخطيط الرحلات معًا. انضم إليّ هنا: [APP_STORE_LINK]';
+  }
 }

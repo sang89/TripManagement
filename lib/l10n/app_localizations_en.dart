@@ -656,4 +656,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatSend => 'Send';
+
+  @override
+  String get notificationsSectionTitle => 'Notifications';
+
+  @override
+  String get mentionNotifToggleTitle => 'Mention alerts';
+
+  @override
+  String get mentionNotifToggleSubtitle =>
+      'Get notified when you\'re @mentioned in a trip chat';
+
+  @override
+  String get privacySectionTitle => 'Privacy';
+
+  @override
+  String get blockedUsersTitle => 'Blocked Users';
+
+  @override
+  String get blockedUsersEmpty => 'You haven\'t blocked anyone';
+
+  @override
+  String get blockUser => 'Block';
+
+  @override
+  String get unblockUser => 'Unblock';
+
+  @override
+  String blockConfirmTitle(String name) {
+    return 'Block $name?';
+  }
+
+  @override
+  String get blockConfirmBody =>
+      'They won\'t be able to add you to trips or send you friend requests.';
+
+  @override
+  String blockSuccess(String name) {
+    return '$name has been blocked';
+  }
+
+  @override
+  String unblockSuccess(String name) {
+    return '$name has been unblocked';
+  }
+
+  @override
+  String get contactsButton => 'From Contacts';
+
+  @override
+  String get contactsScreenTitle => 'Find from Contacts';
+
+  @override
+  String get contactsPermissionDenied =>
+      'Contacts access is required to find your friends on TripManagement.';
+
+  @override
+  String get contactsOpenSettings => 'Open Settings';
+
+  @override
+  String get contactsOnApp => 'On TripManagement';
+
+  @override
+  String get contactsInviteSection => 'Invite to TripManagement';
+
+  @override
+  String get contactsEmpty => 'No contacts with a phone or email were found.';
+
+  @override
+  String get contactsAddFriend => 'Add';
+
+  @override
+  String get contactsPending => 'Pending';
+
+  @override
+  String get contactsInvite => 'Invite';
+
+  @override
+  String contactsInviteMessage(String name) {
+    return 'Hey $name! I\'\'m using TripManagement to plan trips together. Join me here: [APP_STORE_LINK]';
+  }
 }
