@@ -351,10 +351,22 @@
   "deletePhotoConfirm": "Delete this photo?",
   "noExpensesYet": "暂无支出",
   "addExpense": "Add expense",
+  "editExpense": "Edit expense",
+  "deleteExpenseTitle": "Delete expense",
+  "deleteExpenseMessage": "Delete \"{description}\"? This cannot be undone.",
+  "@deleteExpenseMessage": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
   "expenseDescription": "What was paid for?",
   "expenseAmount": "Amount",
   "splitAmong": "Split among guests",
-  "markSettled": "Mark settled",
+  "paidBy": "由...支付",
+  "selectAll": "全选",
+  "deselectAll": "取消全选",
   "totalOwed": "You owe: {amount}",
   "@totalOwed": {
     "placeholders": {
@@ -363,6 +375,19 @@
       }
     }
   },
+  "youAreOwed": "应收金额：{amount}",
+  "@youAreOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settleUp": "结算",
+  "totalSpent": "总支出",
+  "theScore": "得分",
+  "settlementPlan": "结算方案",
+  "allSquare": "大家都平了！🎉",
   "eventFull": "This event is at capacity.",
   "publicRsvpTitle": "You're invited!",
   "publicRsvpName": "Your name",
@@ -382,6 +407,21 @@
   "@deleteEventMessage": {
     "placeholders": {
       "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeTrip": "旅行",
+  "eventTypeBirthday": "生日",
+  "eventTypeWedding": "婚礼",
+  "eventTypeSocial": "社交",
+  "eventTypePicker": "活动类型",
+  "routeTab": "路线",
+  "leaveEventTitle": "离开活动？",
+  "leaveEventMessage": "您将从 {eventTitle} 中被移除并失去访问权限。",
+  "@leaveEventMessage": {
+    "placeholders": {
+      "eventTitle": {
         "type": "String"
       }
     }

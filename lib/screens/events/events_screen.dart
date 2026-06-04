@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/event_provider.dart';
 
 class EventsScreen extends StatelessWidget {
@@ -14,74 +12,31 @@ class EventsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final authUid = context.read<AuthProvider>().userId;
-
-    void goNew() => context.push('/event/new');
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navEvents),
-      ),
-      floatingActionButton: AppFab(
-        onPressed: goNew,
-      ),
+      appBar: AppBar(title: Text(l10n.navEvents)),
+      floatingActionButton: AppFab(onPressed: () => context.push('/event/new')),
       body: Consumer<EventProvider>(
         builder: (_, provider, _) {
-          if (!provider.loaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (provider.loadError != null && provider.events.isEmpty) {
-            return Center(
-              child: Text(
-                provider.loadError!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.danger),
-              ),
-            );
-          }
-          if (provider.events.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.celebration_outlined,
-                      size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.noEventsYet,
-                    style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: 180,
-                    child: AppButton(
-                      onPressed: goNew,
-                      label: l10n.newEvent,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final myEvents = provider.myEvents;
-          final invited = provider.invitedEvents;
-
-          return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              if (myEvents.isNotEmpty) ...[
-                _SectionHeader(l10n.myEvents),
-                ...myEvents.map((e) => _EventCard(event: e, authUid: authUid)),
-              ],
-              if (invited.isNotEmpty) ...[
-                _SectionHeader(l10n.invitedEvents),
-                ...invited.map((e) => _EventCard(event: e, authUid: authUid)),
-              ],
-            ],
+          final all = [...provider.myEvents, ...provider.invitedEvents];
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              children: EventType.values.map((type) {
+                final count =
+                    all.where((e) => e.eventType == type).length;
+                return _TypeTile(
+                  type: type,
+                  count: count,
+                  l10n: l10n,
+                  onTap: () =>
+                      context.push('/events/${type.dbValue}'),
+                );
+              }).toList(),
+            ),
           );
         },
       ),
@@ -89,162 +44,90 @@ class EventsScreen extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader(this.title);
+// ─── Type tile ──────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-      );
-}
+class _TypeTile extends StatelessWidget {
+  final EventType type;
+  final int count;
+  final AppLocalizations l10n;
+  final VoidCallback onTap;
 
-class _EventCard extends StatelessWidget {
-  final Event event;
-  final String? authUid;
-
-  const _EventCard({required this.event, required this.authUid});
+  const _TypeTile({
+    required this.type,
+    required this.count,
+    required this.l10n,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final fmt = DateFormat('EEE, MMM d · h:mm a');
-    final myGuest = event.guests.where((g) => g.userId == authUid).firstOrNull;
-    final isOrganizer = event.createdBy == authUid;
+    final (icon, colors, label) = switch (type) {
+      EventType.trip => (
+          Icons.luggage_outlined,
+          [const Color(0xFF1565C0), const Color(0xFF42A5F5)],
+          l10n.eventTypeTrip,
+        ),
+      EventType.birthday => (
+          Icons.cake_outlined,
+          [const Color(0xFFAD1457), const Color(0xFFF06292)],
+          l10n.eventTypeBirthday,
+        ),
+      EventType.wedding => (
+          Icons.favorite_outline,
+          [const Color(0xFF6A1B9A), const Color(0xFFBA68C8)],
+          l10n.eventTypeWedding,
+        ),
+      EventType.social => (
+          Icons.celebration_outlined,
+          [const Color(0xFFE65100), const Color(0xFFFF8A65)],
+          l10n.eventTypeSocial,
+        ),
+    };
 
     return AppTappable(
-      onTap: () => context.push('/event/${event.id}'),
+      onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      event.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (isOrganizer)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        l10n.organizer,
-                        style: const TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    )
-                  else if (myGuest != null)
-                    _RsvpChip(status: myGuest.rsvpStatus, l10n: l10n),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.schedule_outlined,
-                      size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      fmt.format(event.startAt.toLocal()),
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              if (event.location.isNotEmpty) ...[
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.people_outline, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    l10n.goingCount(event.goingCount),
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
-                  if (event.maybeCount > 0) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.maybeCount(event.maybeCount),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
-                  ],
-                ],
-              ),
-            ],
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: colors.first.withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _RsvpChip extends StatelessWidget {
-  final String status;
-  final AppLocalizations l10n;
-
-  const _RsvpChip({required this.status, required this.l10n});
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      'going' => (l10n.rsvpGoing, Colors.green),
-      'maybe' => (l10n.rsvpMaybe, Colors.orange),
-      _ => (l10n.rsvpDeclined, AppTheme.danger),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 0.8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            fontSize: 11, color: color, fontWeight: FontWeight.w600),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 56, color: Colors.white),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              count == 0
+                  ? '–'
+                  : '$count ${count == 1 ? 'event' : 'events'}',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

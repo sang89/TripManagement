@@ -351,10 +351,22 @@
   "deletePhotoConfirm": "Delete this photo?",
   "noExpensesYet": "لا توجد نفقات حتى الآن",
   "addExpense": "Add expense",
+  "editExpense": "Edit expense",
+  "deleteExpenseTitle": "Delete expense",
+  "deleteExpenseMessage": "Delete \"{description}\"? This cannot be undone.",
+  "@deleteExpenseMessage": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
   "expenseDescription": "What was paid for?",
   "expenseAmount": "Amount",
   "splitAmong": "Split among guests",
-  "markSettled": "Mark settled",
+  "paidBy": "مدفوع من قبل",
+  "selectAll": "تحديد الكل",
+  "deselectAll": "إلغاء تحديد الكل",
   "totalOwed": "You owe: {amount}",
   "@totalOwed": {
     "placeholders": {
@@ -363,6 +375,19 @@
       }
     }
   },
+  "youAreOwed": "أنت مدين لك: {amount}",
+  "@youAreOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settleUp": "تسوية الحسابات",
+  "totalSpent": "المجموع المنفق",
+  "theScore": "النتيجة",
+  "settlementPlan": "خطة التسوية",
+  "allSquare": "الجميع متساوٍ! لا ديون 🎉",
   "eventFull": "This event is at capacity.",
   "publicRsvpTitle": "You're invited!",
   "publicRsvpName": "Your name",
@@ -382,6 +407,21 @@
   "@deleteEventMessage": {
     "placeholders": {
       "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeTrip": "رحلة",
+  "eventTypeBirthday": "عيد ميلاد",
+  "eventTypeWedding": "زفاف",
+  "eventTypeSocial": "اجتماعي",
+  "eventTypePicker": "نوع الحدث",
+  "routeTab": "المسار",
+  "leaveEventTitle": "مغادرة الحدث؟",
+  "leaveEventMessage": "ستتم إزالتك من {eventTitle} وستفقد الوصول.",
+  "@leaveEventMessage": {
+    "placeholders": {
+      "eventTitle": {
         "type": "String"
       }
     }

@@ -843,6 +843,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpenseTitle => 'Delete expense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Delete \"$description\"? This cannot be undone.';
+  }
+
+  @override
   String get noExpensesYet => 'No expenses yet';
 
   @override
@@ -855,12 +866,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => 'Paid by';
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get deselectAll => 'Deselect all';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'You are owed: $amount';
+  }
+
+  @override
+  String get settleUp => 'Settle Up';
+
+  @override
+  String get totalSpent => 'Total spent';
+
+  @override
+  String get theScore => 'The Score';
+
+  @override
+  String get settlementPlan => 'Settlement plan';
+
+  @override
+  String get allSquare => 'All square! Everyone\'s even 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -891,5 +928,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => 'Trip';
+
+  @override
+  String get eventTypeBirthday => 'Birthday';
+
+  @override
+  String get eventTypeWedding => 'Wedding';
+
+  @override
+  String get eventTypeSocial => 'Social';
+
+  @override
+  String get eventTypePicker => 'Event type';
+
+  @override
+  String get routeTab => 'Route';
+
+  @override
+  String get leaveEventTitle => 'Leave event?';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return 'You will be removed from $eventTitle and lose access.';
   }
 }

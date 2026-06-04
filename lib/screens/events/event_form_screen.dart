@@ -12,8 +12,9 @@ import '../../widgets/places_autocomplete_field.dart';
 
 class EventFormScreen extends StatefulWidget {
   final String? eventId;
+  final EventType? defaultEventType;
 
-  const EventFormScreen({super.key, this.eventId});
+  const EventFormScreen({super.key, this.eventId, this.defaultEventType});
 
   @override
   State<EventFormScreen> createState() => _EventFormScreenState();
@@ -24,12 +25,16 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _titleCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
+  final _startLocationCtrl = TextEditingController();
   final _capacityCtrl = TextEditingController();
 
   DateTime? _startAt;
   DateTime? _endAt;
   double? _locationLat;
   double? _locationLng;
+  double? _startLat;
+  double? _startLng;
+  late EventType _eventType;
 
   bool _loading = false;
   String? _error;
@@ -37,10 +42,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Event? _existing;
   final _places = TripPlacesService(kGooglePlacesApiKey);
   bool get _isEdit => widget.eventId != null;
+  bool get _isTrip => _eventType == EventType.trip;
 
   @override
   void initState() {
     super.initState();
+    _eventType = widget.defaultEventType ?? EventType.social;
     if (_isEdit) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadExisting());
     }
@@ -53,12 +60,16 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _titleCtrl.text = event.title;
     _descriptionCtrl.text = event.description;
     _locationCtrl.text = event.location;
+    _startLocationCtrl.text = event.startLocation ?? '';
     _capacityCtrl.text = event.capacity?.toString() ?? '';
     setState(() {
       _startAt = event.startAt;
       _endAt = event.endAt;
       _locationLat = event.locationLat;
       _locationLng = event.locationLng;
+      _startLat = event.startLat;
+      _startLng = event.startLng;
+      _eventType = event.eventType;
     });
   }
 
@@ -67,6 +78,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _titleCtrl.dispose();
     _descriptionCtrl.dispose();
     _locationCtrl.dispose();
+    _startLocationCtrl.dispose();
     _capacityCtrl.dispose();
     super.dispose();
   }
@@ -74,7 +86,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Future<void> _pickDateTime(bool isStart) async {
     final now = DateTime.now();
     final initial = (isStart ? _startAt : _endAt) ?? _startAt ?? now;
-    final firstDate = isStart ? DateTime(2020) : (_startAt ?? DateTime(2020));
+    final firstDate =
+        isStart ? DateTime(2020) : (_startAt ?? DateTime(2020));
     final lastDate = isStart ? (_endAt ?? DateTime(2100)) : DateTime(2100);
 
     final date = await showDatePicker(
@@ -122,6 +135,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
       final capacity = _capacityCtrl.text.trim().isEmpty
           ? null
           : int.tryParse(_capacityCtrl.text.trim());
+      final startLocation =
+          _isTrip && _startLocationCtrl.text.trim().isNotEmpty
+              ? _startLocationCtrl.text.trim()
+              : null;
 
       if (_isEdit && _existing != null) {
         final updated = _existing!.copyWith(
@@ -137,6 +154,13 @@ class _EventFormScreenState extends State<EventFormScreen> {
           clearEndAt: _endAt == null,
           capacity: capacity,
           clearCapacity: capacity == null,
+          eventType: _eventType,
+          startLocation: startLocation,
+          clearStartLocation: startLocation == null,
+          startLat: _isTrip ? _startLat : null,
+          clearStartLat: !_isTrip || _startLat == null,
+          startLng: _isTrip ? _startLng : null,
+          clearStartLng: !_isTrip || _startLng == null,
         );
         await provider.updateEvent(updated);
         if (mounted) context.pop();
@@ -150,6 +174,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
           startAt: _startAt!,
           endAt: _endAt,
           capacity: capacity,
+          eventType: _eventType,
+          startLocation: startLocation,
+          startLat: _isTrip ? _startLat : null,
+          startLng: _isTrip ? _startLng : null,
         );
         if (mounted) context.go('/event/${event.id}');
       }
@@ -161,6 +189,21 @@ class _EventFormScreenState extends State<EventFormScreen> {
       });
     }
   }
+
+  String _eventTypeLabel(EventType type, AppLocalizations l10n) =>
+      switch (type) {
+        EventType.trip => l10n.eventTypeTrip,
+        EventType.birthday => l10n.eventTypeBirthday,
+        EventType.wedding => l10n.eventTypeWedding,
+        EventType.social => l10n.eventTypeSocial,
+      };
+
+  IconData _eventTypeIcon(EventType type) => switch (type) {
+        EventType.trip => Icons.luggage_outlined,
+        EventType.birthday => Icons.cake_outlined,
+        EventType.wedding => Icons.favorite_outline,
+        EventType.social => Icons.celebration_outlined,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +235,16 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Event type picker
+                  AppPickerField<EventType>(
+                    label: l10n.eventTypePicker,
+                    value: _eventType,
+                    items: EventType.values,
+                    labelOf: (t) => _eventTypeLabel(t, l10n),
+                    onChanged: (t) => setState(() => _eventType = t),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Title *
                   TextFormField(
                     controller: _titleCtrl,
@@ -204,7 +257,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               style: TextStyle(color: Colors.red)),
                         ],
                       ),
-                      prefixIcon: const Icon(Icons.celebration_outlined),
+                      prefixIcon: Icon(_eventTypeIcon(_eventType)),
                     ),
                     validator: (v) =>
                         v == null || v.trim().isEmpty ? l10n.required : null,
@@ -222,10 +275,27 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Location *
+                  // Start location (trip only)
+                  if (_isTrip) ...[
+                    PlacesAutocompleteField(
+                      controller: _startLocationCtrl,
+                      label: l10n.startingFromLabel,
+                      prefixIcon: Icons.trip_origin_outlined,
+                      placesService: _places,
+                      onCoordinatesChanged: (lat, lng) => setState(() {
+                        _startLat = lat;
+                        _startLng = lng;
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Location / Destination *
                   PlacesAutocompleteField(
                     controller: _locationCtrl,
-                    label: '${l10n.eventLocation} *',
+                    label: _isTrip
+                        ? '${l10n.destinationLabel} *'
+                        : '${l10n.eventLocation} *',
                     prefixIcon: Icons.location_on_outlined,
                     placesService: _places,
                     onCoordinatesChanged: (lat, lng) => setState(() {
@@ -325,7 +395,8 @@ class _DateTimeTile extends StatelessWidget {
           ),
           child: Text(
             display,
-            style: TextStyle(color: value != null ? null : Colors.grey[500]),
+            style:
+                TextStyle(color: value != null ? null : Colors.grey[500]),
           ),
         ),
       );

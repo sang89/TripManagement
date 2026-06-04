@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' show min;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +17,7 @@ import '../../models/event_expense.dart';
 import '../../models/event_guest.dart';
 import '../../models/event_message.dart';
 import '../../models/event_photo.dart';
+import '../../models/event_stop.dart';
 import '../../models/friendship.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/event_chat_provider.dart';
@@ -23,7 +26,9 @@ import '../../providers/friends_provider.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/user_lookup_service.dart';
 import '../../utils/avatar_utils.dart';
-import '../../widgets/trip_map_widget.dart';
+import '../../widgets/add_member_sheet.dart';
+import '../../widgets/event_map_widget.dart';
+import '../../widgets/event_stop_form_sheet.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -35,22 +40,29 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+    with TickerProviderStateMixin {
+  late TabController _tabController;
 
-  static const _tabIcons = [
-    Icons.info_outline_rounded,
-    Icons.people_outline,
-    Icons.chat_bubble_outline_rounded,
-    Icons.photo_library_outlined,
-    Icons.receipt_outlined,
-  ];
+  void _rebuildTabController(bool isTrip) {
+    final needed = isTrip ? 6 : 5;
+    if (_tabController.length == needed) return;
+    final prevIdx = _tabController.index;
+    _tabController.dispose();
+    _tabController = TabController(
+      length: needed,
+      vsync: this,
+      initialIndex: prevIdx.clamp(0, needed - 1),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabIcons.length, vsync: this);
+    final event = context.read<EventProvider>().getById(widget.eventId);
+    _tabController = TabController(
+        length: event?.isTrip == true ? 6 : 5, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final eventId = widget.eventId;
       context.read<EventProvider>()
         ..fetchPhotos(eventId)
@@ -59,9 +71,57 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    // Hot reload may preserve stale tab controller — recreate if count changed.
+    final event = context.read<EventProvider>().getById(widget.eventId);
+    final needed = event?.isTrip == true ? 6 : 5;
+    if (_tabController.length != needed) {
+      final prevIdx = _tabController.index;
+      _tabController.dispose();
+      _tabController = TabController(
+        length: needed,
+        vsync: this,
+        initialIndex: prevIdx.clamp(0, needed - 1),
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  List<EventMapPin> _buildMapPins(Event event) {
+    final pins = <EventMapPin>[];
+    if (event.startLat != null && event.startLng != null) {
+      pins.add(EventMapPin(
+        id: 'start',
+        position: LatLng(event.startLat!, event.startLng!),
+        title: event.startLocation ?? 'Start',
+        isStart: true,
+      ));
+    }
+    for (final stop in event.stops) {
+      if (stop.addressLat != null && stop.addressLng != null) {
+        pins.add(EventMapPin(
+          id: stop.id,
+          position: LatLng(stop.addressLat!, stop.addressLng!),
+          title: stop.title,
+          subtitle: stop.address.isNotEmpty ? stop.address : null,
+        ));
+      }
+    }
+    if (event.locationLat != null && event.locationLng != null) {
+      pins.add(EventMapPin(
+        id: 'destination',
+        position: LatLng(event.locationLat!, event.locationLng!),
+        title: event.location,
+        isDestination: true,
+      ));
+    }
+    return pins;
   }
 
   @override
@@ -78,28 +138,79 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           );
         }
 
+        // If the controller length doesn't match the tab count, fix it next frame
+        // and show a placeholder this frame to avoid a TabBar range crash.
+        if (_tabController.length != (event.isTrip ? 6 : 5)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() => _rebuildTabController(event.isTrip));
+          });
+          return Scaffold(
+            appBar: AppBar(
+                title: Text(event.title, overflow: TextOverflow.ellipsis)),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final authUid = context.read<AuthProvider>().userId;
         final isOrganizer = event.createdBy == authUid;
+        final canInvite = event.isTrip &&
+            (isOrganizer ||
+                event.guests.any(
+                    (g) => g.userId == authUid && g.status == 'accepted'));
+
+        final tabs = event.isTrip
+            ? [
+                Tab(
+                    icon: const Icon(Icons.info_outline_rounded, size: 20),
+                    text: l10n.infoTab),
+                Tab(
+                    icon: const Icon(Icons.route_outlined, size: 20),
+                    text: l10n.routeTab),
+                Tab(
+                    icon: const Icon(Icons.people_outline, size: 20),
+                    text: l10n.guestsTab),
+                Tab(
+                    icon:
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                    text: l10n.chatTabLabel),
+                Tab(
+                    icon: const Icon(Icons.photo_library_outlined, size: 20),
+                    text: l10n.photosTab),
+                Tab(
+                    icon: const Icon(Icons.receipt_outlined, size: 20),
+                    text: l10n.expensesTab),
+              ]
+            : [
+                Tab(
+                    icon: const Icon(Icons.info_outline_rounded, size: 20),
+                    text: l10n.infoTab),
+                Tab(
+                    icon: const Icon(Icons.people_outline, size: 20),
+                    text: l10n.guestsTab),
+                Tab(
+                    icon:
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                    text: l10n.chatTabLabel),
+                Tab(
+                    icon: const Icon(Icons.photo_library_outlined, size: 20),
+                    text: l10n.photosTab),
+                Tab(
+                    icon: const Icon(Icons.receipt_outlined, size: 20),
+                    text: l10n.expensesTab),
+              ];
 
         return Scaffold(
           appBar: AppBar(
             title: Text(event.title, overflow: TextOverflow.ellipsis),
             bottom: TabBar(
               controller: _tabController,
+              isScrollable: event.isTrip,
+              tabAlignment:
+                  event.isTrip ? TabAlignment.start : TabAlignment.fill,
               labelStyle: const TextStyle(
                   fontSize: 11, fontWeight: FontWeight.w600),
-              tabs: [
-                Tab(icon: const Icon(Icons.info_outline_rounded, size: 20),
-                    text: l10n.infoTab),
-                Tab(icon: const Icon(Icons.people_outline, size: 20),
-                    text: l10n.guestsTab),
-                Tab(icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-                    text: l10n.chatTabLabel),
-                Tab(icon: const Icon(Icons.photo_library_outlined, size: 20),
-                    text: l10n.photosTab),
-                Tab(icon: const Icon(Icons.receipt_outlined, size: 20),
-                    text: l10n.expensesTab),
-              ],
+              tabs: tabs,
             ),
             actions: [
               IconButton(
@@ -132,31 +243,68 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                             size: 18, color: AppTheme.danger),
                         const SizedBox(width: 10),
                         Text(l10n.deleteEventTitle,
-                            style: const TextStyle(color: AppTheme.danger)),
+                            style:
+                                const TextStyle(color: AppTheme.danger)),
                       ]),
                     ),
                   ],
+                )
+              else if (event.isTrip)
+                IconButton(
+                  icon: const Icon(Icons.exit_to_app_outlined,
+                      color: AppTheme.danger),
+                  tooltip: l10n.leaveTripTooltip,
+                  onPressed: () => _confirmLeave(context, event, provider),
                 ),
             ],
           ),
           body: TabBarView(
             controller: _tabController,
-            children: [
-              _InfoTab(event: event, authUid: authUid),
-              _GuestsTab(event: event, isOrganizer: isOrganizer),
-              _ChatTab(eventId: event.id),
-              _PhotosTab(
-                event: event,
-                photos: provider.photosFor(event.id),
-                authUid: authUid,
-                isOrganizer: isOrganizer,
-              ),
-              _ExpensesTab(
-                event: event,
-                expenses: provider.expensesFor(event.id),
-                authUid: authUid,
-              ),
-            ],
+            children: event.isTrip
+                ? [
+                    _InfoTab(event: event, authUid: authUid),
+                    _RouteTab(
+                        event: event, pins: _buildMapPins(event)),
+                    _GuestsTab(
+                        event: event,
+                        isOrganizer: isOrganizer,
+                        canInvite: canInvite,
+                        authUid: authUid),
+                    _ChatTab(eventId: event.id),
+                    _PhotosTab(
+                      event: event,
+                      photos: provider.photosFor(event.id),
+                      authUid: authUid,
+                      isOrganizer: isOrganizer,
+                    ),
+                    _ExpensesTab(
+                      event: event,
+                      expenses: provider.expensesFor(event.id),
+                      authUid: authUid,
+                      isOrganizer: isOrganizer,
+                    ),
+                  ]
+                : [
+                    _InfoTab(event: event, authUid: authUid),
+                    _GuestsTab(
+                        event: event,
+                        isOrganizer: isOrganizer,
+                        canInvite: false,
+                        authUid: authUid),
+                    _ChatTab(eventId: event.id),
+                    _PhotosTab(
+                      event: event,
+                      photos: provider.photosFor(event.id),
+                      authUid: authUid,
+                      isOrganizer: isOrganizer,
+                    ),
+                    _ExpensesTab(
+                      event: event,
+                      expenses: provider.expensesFor(event.id),
+                      authUid: authUid,
+                      isOrganizer: isOrganizer,
+                    ),
+                  ],
           ),
         );
       },
@@ -198,6 +346,52 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       if (context.mounted) context.go('/events');
     }
   }
+
+  Future<void> _confirmLeave(
+      BuildContext context, Event event, EventProvider provider) async {
+    final l10n = AppLocalizations.of(context);
+    bool blockReinvite = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(l10n.leaveEventTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.leaveEventMessage(
+                  event.title.isNotEmpty ? event.title : 'this event')),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                value: blockReinvite,
+                onChanged: (v) => setS(() => blockReinvite = v),
+                title: Text(l10n.blockReinviteLabel,
+                    style: const TextStyle(fontSize: 13)),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel)),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.leave,
+                  style: const TextStyle(color: AppTheme.danger)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await provider.leaveEvent(event.id, blockReinvite: blockReinvite);
+      if (context.mounted) context.go('/events');
+    }
+  }
 }
 
 enum _EventAction { edit, delete }
@@ -219,16 +413,35 @@ class _InfoTab extends StatelessWidget {
         event.guests.where((g) => g.userId == authUid).firstOrNull;
     final isOrganizer = event.createdBy == authUid;
 
-    final pins = event.locationLat != null && event.locationLng != null
-        ? [
-            TripMapPin(
-              id: 'event',
-              position: LatLng(event.locationLat!, event.locationLng!),
-              title: event.location,
-              isDestination: true,
-            )
-          ]
-        : <TripMapPin>[];
+    // For trip-type: show start→stops→destination map; for others: single location pin
+    final pins = <EventMapPin>[];
+    if (event.isTrip) {
+      if (event.startLat != null && event.startLng != null) {
+        pins.add(EventMapPin(
+          id: 'start',
+          position: LatLng(event.startLat!, event.startLng!),
+          title: event.startLocation ?? 'Start',
+          isStart: true,
+        ));
+      }
+      for (final stop in event.stops) {
+        if (stop.addressLat != null && stop.addressLng != null) {
+          pins.add(EventMapPin(
+            id: stop.id,
+            position: LatLng(stop.addressLat!, stop.addressLng!),
+            title: stop.title,
+          ));
+        }
+      }
+    }
+    if (event.locationLat != null && event.locationLng != null) {
+      pins.add(EventMapPin(
+        id: 'destination',
+        position: LatLng(event.locationLat!, event.locationLng!),
+        title: event.location,
+        isDestination: !event.isTrip,
+      ));
+    }
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -251,6 +464,13 @@ class _InfoTab extends StatelessWidget {
           ),
         ),
 
+        if (event.isTrip && event.startLocation != null &&
+            event.startLocation!.isNotEmpty)
+          _DetailRow(
+            icon: Icons.trip_origin_outlined,
+            child: Text(event.startLocation!),
+          ),
+
         if (event.location.isNotEmpty)
           _DetailRow(
             icon: Icons.location_on_outlined,
@@ -262,21 +482,40 @@ class _InfoTab extends StatelessWidget {
           Text(event.description),
         ],
 
-        // RSVP counts
+        // RSVP counts (non-trip) or member counts (trip)
         const Divider(height: 24),
-        Row(
-          children: [
-            _CountChip(
-                label: l10n.goingCount(event.goingCount), color: Colors.green),
-            const SizedBox(width: 8),
-            _CountChip(
-                label: l10n.maybeCount(event.maybeCount), color: Colors.orange),
-            const SizedBox(width: 8),
-            _CountChip(
-                label: l10n.declinedCount(event.declinedCount),
-                color: AppTheme.danger),
-          ],
-        ),
+        if (event.isTrip)
+          Row(
+            children: [
+              _CountChip(
+                  label: '${event.goingCount} accepted',
+                  color: Colors.green),
+              const SizedBox(width: 8),
+              _CountChip(
+                  label: '${event.pendingCount} pending',
+                  color: Colors.orange),
+              const SizedBox(width: 8),
+              _CountChip(
+                  label: '${event.declinedCount} declined',
+                  color: AppTheme.danger),
+            ],
+          )
+        else
+          Row(
+            children: [
+              _CountChip(
+                  label: l10n.goingCount(event.goingCount),
+                  color: Colors.green),
+              const SizedBox(width: 8),
+              _CountChip(
+                  label: l10n.maybeCount(event.maybeCount),
+                  color: Colors.orange),
+              const SizedBox(width: 8),
+              _CountChip(
+                  label: l10n.declinedCount(event.declinedCount),
+                  color: AppTheme.danger),
+            ],
+          ),
 
         if (event.capacity != null) ...[
           const SizedBox(height: 4),
@@ -286,8 +525,8 @@ class _InfoTab extends StatelessWidget {
           ),
         ],
 
-        // My RSVP
-        if (!isOrganizer) ...[
+        // My RSVP (non-trip only)
+        if (!isOrganizer && !event.isTrip) ...[
           const Divider(height: 24),
           Text(l10n.changeRsvp,
               style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -304,10 +543,10 @@ class _InfoTab extends StatelessWidget {
           ),
         ],
 
-        // Map
+        // Map preview
         if (pins.isNotEmpty) ...[
           const SizedBox(height: 16),
-          TripMapWidget(pins: pins, compact: true),
+          EventMapWidget(pins: pins, compact: true),
         ],
 
         const SizedBox(height: 24),
@@ -384,7 +623,7 @@ class _RsvpButtonsState extends State<_RsvpButtons> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final current = widget.myGuest?.rsvpStatus;
+    final current = widget.myGuest?.status;
 
     if (_loading) {
       return const Center(
@@ -443,7 +682,8 @@ class _RsvpButton extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: selected
                 ? color.withValues(alpha: 0.15)
@@ -463,7 +703,8 @@ class _RsvpButton extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight:
+                      selected ? FontWeight.w600 : FontWeight.normal,
                   color: selected ? color : Colors.grey[700],
                 ),
               ),
@@ -473,34 +714,313 @@ class _RsvpButton extends StatelessWidget {
       );
 }
 
+// ── Route tab (trip-type only) ────────────────────────────────────────────────
+
+enum _RouteView { list, map }
+
+class _RouteTab extends StatefulWidget {
+  final Event event;
+  final List<EventMapPin> pins;
+
+  const _RouteTab({required this.event, required this.pins});
+
+  @override
+  State<_RouteTab> createState() => _RouteTabState();
+}
+
+class _RouteTabState extends State<_RouteTab> {
+  _RouteView _view = _RouteView.list;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Column(
+      children: [
+        // ── List / Map toggle ──────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: SegmentedButton<_RouteView>(
+            segments: [
+              ButtonSegment(
+                value: _RouteView.list,
+                icon: const Icon(Icons.list_outlined, size: 18),
+                label: Text(l10n.routeTab),
+              ),
+              ButtonSegment(
+                value: _RouteView.map,
+                icon: const Icon(Icons.map_outlined, size: 18),
+                label: Text(l10n.mapTab),
+              ),
+            ],
+            selected: {_view},
+            onSelectionChanged: (s) =>
+                setState(() => _view = s.first),
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ),
+
+        // ── Content ───────────────────────────────────────────────────
+        Expanded(
+          child: _view == _RouteView.map
+              ? widget.pins.isEmpty
+                  ? Center(
+                      child: Text(l10n.noStopsInItinerary,
+                          style:
+                              TextStyle(color: Colors.grey[500])))
+                  : EventMapWidget(pins: widget.pins)
+              : _buildList(context, l10n),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildList(BuildContext context, AppLocalizations l10n) {
+    final event = widget.event;
+
+    if (event.stops.isEmpty) {
+      return Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.route_outlined,
+                    size: 64, color: AppTheme.primaryLight),
+                const SizedBox(height: 16),
+                Text(l10n.noStopsInItinerary),
+                const SizedBox(height: 8),
+                Text(l10n.addFirstStop,
+                    style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          ),
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: AppFab(
+              onPressed: () =>
+                  showEventStopFormSheet(context, eventId: event.id),
+              icon: Icons.add_location_alt_outlined,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView.builder(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
+          itemCount: event.stops.length,
+          itemBuilder: (context, index) {
+            final stop = event.stops[index];
+            return Slidable(
+              key: ValueKey(stop.id),
+              endActionPane: ActionPane(
+                motion: const DrawerMotion(),
+                children: [
+                  SlidableAction(
+                    onPressed: (_) =>
+                        _confirmDeleteStop(context, stop),
+                    backgroundColor: AppTheme.danger,
+                    foregroundColor: Colors.white,
+                    icon: Icons.delete_outline,
+                    label: l10n.delete,
+                  ),
+                ],
+              ),
+              child: _StopCard(stop: stop, eventId: event.id),
+            );
+          },
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: AppFab(
+            onPressed: () =>
+                showEventStopFormSheet(context, eventId: event.id),
+            icon: Icons.add_location_alt_outlined,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDeleteStop(
+      BuildContext context, EventStop stop) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.removeStopTitle),
+        content: Text(l10n.removeStopMessage(stop.title)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context
+          .read<EventProvider>()
+          .deleteStop(stop.id, stop.eventId);
+    }
+  }
+}
+
+class _StopCard extends StatelessWidget {
+  final EventStop stop;
+  final String eventId;
+
+  const _StopCard({required this.stop, required this.eventId});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final timeFmt = DateFormat('MMM d  h:mm a');
+    return AppTappable(
+      onTap: () => showEventStopFormSheet(context,
+          eventId: eventId, existing: stop),
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(stop.title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15)),
+              if (stop.address.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined,
+                        size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(stop.address,
+                          style: TextStyle(
+                              color: Colors.grey[700], fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ],
+              if (stop.arriveAt != null || stop.departAt != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time_outlined,
+                        size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      [
+                        if (stop.arriveAt != null)
+                          '${l10n.arrive} ${timeFmt.format(stop.arriveAt!)}',
+                        if (stop.departAt != null)
+                          '${l10n.depart} ${timeFmt.format(stop.departAt!)}',
+                      ].join('  ·  '),
+                      style:
+                          TextStyle(color: Colors.grey[700], fontSize: 13),
+                    ),
+                  ],
+                ),
+              ],
+              if (stop.notes.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(stop.notes,
+                    style:
+                        TextStyle(color: Colors.grey[600], fontSize: 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Guests tab ────────────────────────────────────────────────────────────────
 
 class _GuestsTab extends StatefulWidget {
   final Event event;
   final bool isOrganizer;
+  final bool canInvite;
+  final String? authUid;
 
-  const _GuestsTab({required this.event, required this.isOrganizer});
+  const _GuestsTab({
+    required this.event,
+    required this.isOrganizer,
+    required this.canInvite,
+    required this.authUid,
+  });
 
   @override
   State<_GuestsTab> createState() => _GuestsTabState();
 }
 
 class _GuestsTabState extends State<_GuestsTab> {
+  final Set<String> _resendingIds = {};
+
+  Future<void> _resend(EventGuest guest) async {
+    setState(() => _resendingIds.add(guest.id));
+    final l10n = AppLocalizations.of(context);
+    try {
+      await context.read<EventProvider>().resendInvite(guest.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(l10n.inviteResentTo(guest.displayName))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: AppTheme.danger),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _resendingIds.remove(guest.id));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final event = widget.event;
+
+    if (event.isTrip) {
+      return _buildTripMembersList(context, l10n);
+    }
+
+    // Non-trip: RSVP groups
     final groups = <String, List<EventGuest>>{
       'going': [],
       'maybe': [],
       'declined': [],
     };
-    for (final g in widget.event.guests) {
-      groups[g.rsvpStatus]?.add(g);
+    for (final g in event.guests) {
+      groups[g.status]?.add(g);
     }
 
     return Stack(
       children: [
-        widget.event.guests.isEmpty
+        event.guests.isEmpty
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -522,21 +1042,28 @@ class _GuestsTabState extends State<_GuestsTab> {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
                 children: [
-                  for (final status in ['going', 'maybe', 'declined']) ...[
+                  for (final status in [
+                    'going',
+                    'maybe',
+                    'declined'
+                  ]) ...[
                     if (groups[status]!.isNotEmpty) ...[
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 12, 16, 4),
                         child: Text(
                           switch (status) {
                             'going' => l10n.rsvpGoing,
                             'maybe' => l10n.rsvpMaybe,
                             _ => l10n.rsvpDeclined,
                           },
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: AppTheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                       ),
                       ...groups[status]!.map((g) => _GuestTile(
@@ -551,10 +1078,158 @@ class _GuestsTabState extends State<_GuestsTab> {
           Positioned(
             bottom: 16,
             right: 16,
-            child: FloatingActionButton(
+            child: AppFab(
               onPressed: _showAddGuest,
-              backgroundColor: AppTheme.primary,
-              child: const Icon(Icons.person_add_outlined, color: Colors.white),
+              icon: Icons.person_add_outlined,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTripMembersList(
+      BuildContext context, AppLocalizations l10n) {
+    final event = widget.event;
+    return Stack(
+      children: [
+        event.guests.isEmpty
+            ? Center(
+                child: Text(l10n.noGuestsYet,
+                    style: TextStyle(color: Colors.grey[500])))
+            : ListView.builder(
+                padding:
+                    const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                itemCount: event.guests.length,
+                itemBuilder: (_, i) {
+                  final g = event.guests[i];
+                  final isMe = g.userId != null &&
+                      g.userId == widget.authUid;
+                  final canResend = g.status == 'pending' &&
+                      widget.canInvite &&
+                      g.userId != null &&
+                      g.userId != widget.authUid;
+
+                  String? inviterLabel;
+                  if (g.invitedBy != null) {
+                    if (g.invitedBy == widget.authUid) {
+                      inviterLabel = l10n.invitedBy(l10n.you);
+                    } else {
+                      final inviter = event.guests
+                          .where((x) => x.userId == g.invitedBy)
+                          .firstOrNull;
+                      if (inviter != null) {
+                        inviterLabel =
+                            l10n.invitedBy(inviter.displayName);
+                      }
+                    }
+                  }
+
+                  final hasEmail = g.email != null &&
+                      g.email!.isNotEmpty &&
+                      !isMe;
+                  final hasAvatar =
+                      g.avatarUrl != null && g.avatarUrl!.isNotEmpty;
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: g.role == 'organizer'
+                          ? AppTheme.primary
+                          : Colors.grey[200],
+                      backgroundImage: hasAvatar
+                          ? NetworkImage(g.avatarUrl!)
+                          : null,
+                      child: hasAvatar
+                          ? null
+                          : Text(
+                              g.displayName.isNotEmpty
+                                  ? g.displayName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                  color: g.role == 'organizer'
+                                      ? Colors.white
+                                      : AppTheme.primary),
+                            ),
+                    ),
+                    title: Text(isMe ? l10n.you : g.displayName),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(g.role == 'organizer'
+                                ? l10n.organizer
+                                : l10n.member),
+                            if (g.userId != null) ...[
+                              const SizedBox(width: 6),
+                              _StatusChip(
+                                label: switch (g.status) {
+                                  'pending' => l10n.invitePending,
+                                  'declined' => l10n.inviteDeclined,
+                                  'left' => l10n.memberLeft,
+                                  _ => l10n.inviteAccepted,
+                                },
+                                color: switch (g.status) {
+                                  'pending' => Colors.orange,
+                                  'declined' => AppTheme.danger,
+                                  'left' => Colors.grey,
+                                  _ => Colors.green,
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (hasEmail)
+                          Text(
+                            g.email!,
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        if (inviterLabel != null)
+                          Text(
+                            inviterLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                      ],
+                    ),
+                    trailing: canResend
+                        ? _resendingIds.contains(g.id)
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator.adaptive(
+                                    strokeWidth: 2),
+                              )
+                            : Tooltip(
+                                message: l10n.resendInvite,
+                                waitDuration: Duration.zero,
+                                preferBelow: false,
+                                child: IconButton(
+                                  icon:
+                                      const Icon(Icons.send_outlined),
+                                  iconSize: 20,
+                                  onPressed: () => _resend(g),
+                                ),
+                              )
+                        : null,
+                    dense: true,
+                    isThreeLine: hasEmail || inviterLabel != null,
+                  );
+                },
+              ),
+        if (widget.canInvite)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: AppFab(
+              onPressed: () => showAddMemberSheet(context, eventId: event.id),
+              icon: Icons.person_add_outlined,
             ),
           ),
       ],
@@ -571,6 +1246,34 @@ class _GuestsTabState extends State<_GuestsTab> {
   }
 }
 
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: color.withValues(alpha: 0.4), width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 class _GuestTile extends StatelessWidget {
   final EventGuest guest;
   final bool isOrganizer;
@@ -579,7 +1282,8 @@ class _GuestTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAvatar = guest.avatarUrl != null && guest.avatarUrl!.isNotEmpty;
+    final hasAvatar =
+        guest.avatarUrl != null && guest.avatarUrl!.isNotEmpty;
     final contact = [
       if (guest.email != null) guest.email!,
       if (guest.phone != null) guest.phone!,
@@ -588,7 +1292,8 @@ class _GuestTile extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: Colors.grey[200],
-        backgroundImage: hasAvatar ? NetworkImage(guest.avatarUrl!) : null,
+        backgroundImage:
+            hasAvatar ? NetworkImage(guest.avatarUrl!) : null,
         child: hasAvatar
             ? null
             : Text(
@@ -599,7 +1304,10 @@ class _GuestTile extends StatelessWidget {
               ),
       ),
       title: Text(guest.displayName),
-      subtitle: contact.isNotEmpty ? Text(contact, maxLines: 1, overflow: TextOverflow.ellipsis) : null,
+      subtitle: contact.isNotEmpty
+          ? Text(contact,
+              maxLines: 1, overflow: TextOverflow.ellipsis)
+          : null,
       trailing: isOrganizer
           ? IconButton(
               icon: const Icon(Icons.remove_circle_outline,
@@ -682,7 +1390,8 @@ class _ChatTabState extends State<_ChatTab> {
           child: Consumer<EventChatProvider>(
             builder: (_, chat, _) {
               if (chat.loading && chat.messages.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                    child: CircularProgressIndicator());
               }
               if (chat.messages.isEmpty) {
                 return Center(
@@ -750,12 +1459,14 @@ class _MessageBubble extends StatelessWidget {
           ],
           Flexible(
             child: Column(
-              crossAxisAlignment:
-                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: isMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 if (!isMe && msg.senderName != null)
                   Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 2),
+                    padding:
+                        const EdgeInsets.only(left: 4, bottom: 2),
                     child: Text(msg.senderName!,
                         style: TextStyle(
                             fontSize: 11, color: Colors.grey[500])),
@@ -780,7 +1491,8 @@ class _MessageBubble extends StatelessWidget {
                   child: Text(
                     msg.content,
                     style: TextStyle(
-                        color: isMe ? Colors.white : null, fontSize: 14),
+                        color: isMe ? Colors.white : null,
+                        fontSize: 14),
                   ),
                 ),
               ],
@@ -798,7 +1510,9 @@ class _ChatInput extends StatelessWidget {
   final VoidCallback onSend;
 
   const _ChatInput(
-      {required this.ctrl, required this.sending, required this.onSend});
+      {required this.ctrl,
+      required this.sending,
+      required this.onSend});
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -807,8 +1521,8 @@ class _ChatInput extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            border:
-                Border(top: BorderSide(color: Colors.grey.shade200)),
+            border: Border(
+                top: BorderSide(color: Colors.grey.shade200)),
           ),
           child: Row(
             children: [
@@ -816,11 +1530,13 @@ class _ChatInput extends StatelessWidget {
                 child: TextField(
                   controller: ctrl,
                   decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context).chatSendHint,
+                    hintText:
+                        AppLocalizations.of(context).chatSendHint,
                     border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(24))),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        borderRadius:
+                            BorderRadius.all(Radius.circular(24))),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     isDense: true,
                   ),
                   textInputAction: TextInputAction.send,
@@ -834,8 +1550,8 @@ class _ChatInput extends StatelessWidget {
                       width: 40,
                       height: 40,
                       child: Center(
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2)))
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2)))
                   : IconButton(
                       onPressed: onSend,
                       icon: const Icon(Icons.send_rounded,
@@ -881,14 +1597,14 @@ class _PhotosTabState extends State<_PhotosTab> {
       final ext = image.name.split('.').last;
       final db = Supabase.instance.client;
       final eventId = widget.event.id;
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
       final storagePath = '$eventId/$fileName';
 
       await db.storage.from('event-photos').uploadBinary(
         storagePath,
         bytes,
-        fileOptions: FileOptions(contentType: 'image/$ext', upsert: false),
+        fileOptions:
+            FileOptions(contentType: 'image/$ext', upsert: false),
       );
 
       if (mounted) {
@@ -946,16 +1662,16 @@ class _PhotosTabState extends State<_PhotosTab> {
         Positioned(
           bottom: 16,
           right: 16,
-          child: FloatingActionButton(
+          child: AppFab(
             onPressed: _uploading ? null : _pickAndUpload,
-            backgroundColor: AppTheme.primary,
+            icon: Icons.add_a_photo,
             child: _uploading
                 ? const SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.add_a_photo, color: Colors.white),
+                : null,
           ),
         ),
       ],
@@ -977,9 +1693,12 @@ class _PhotosTabState extends State<_PhotosTab> {
                 child: Image.network(photo.publicUrl!),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+            AppTappable(
+              onTap: () => Navigator.pop(context),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Icon(Icons.close, color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -987,7 +1706,8 @@ class _PhotosTabState extends State<_PhotosTab> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, EventPhoto photo) async {
+  Future<void> _confirmDelete(
+      BuildContext context, EventPhoto photo) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1018,11 +1738,13 @@ class _ExpensesTab extends StatefulWidget {
   final Event event;
   final List<EventExpense> expenses;
   final String? authUid;
+  final bool isOrganizer;
 
   const _ExpensesTab({
     required this.event,
     required this.expenses,
     required this.authUid,
+    required this.isOrganizer,
   });
 
   @override
@@ -1030,14 +1752,53 @@ class _ExpensesTab extends StatefulWidget {
 }
 
 class _ExpensesTabState extends State<_ExpensesTab> {
-  void _showAddExpense() {
+  void _showSettlement() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => _AddExpenseSheet(
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SettlementSheet(
         event: widget.event,
+        expenses: widget.expenses,
       ),
     );
+  }
+
+  void _showAddExpense([EventExpense? existing]) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) =>
+          _AddExpenseSheet(event: widget.event, existing: existing),
+    );
+  }
+
+  Future<void> _confirmDelete(EventExpense expense) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteExpenseTitle),
+        content: Text(l10n.deleteExpenseMessage(expense.description)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await context
+          .read<EventProvider>()
+          .deleteExpense(expense.id, expense.eventId);
+    }
   }
 
   @override
@@ -1071,16 +1832,28 @@ class _ExpensesTabState extends State<_ExpensesTab> {
                   expense: widget.expenses[i],
                   event: widget.event,
                   authUid: widget.authUid,
+                  canEdit: widget.isOrganizer,
+                  onEdit: () => _showAddExpense(widget.expenses[i]),
+                  onDelete: () => _confirmDelete(widget.expenses[i]),
                 ),
               ),
+        if (widget.expenses.isNotEmpty)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            child: FloatingActionButton.extended(
+              heroTag: 'settle_up',
+              onPressed: _showSettlement,
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.balance_rounded),
+              label: Text(AppLocalizations.of(context).settleUp),
+            ),
+          ),
         Positioned(
           bottom: 16,
           right: 16,
-          child: FloatingActionButton(
-            onPressed: _showAddExpense,
-            backgroundColor: AppTheme.primary,
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
+          child: AppFab(onPressed: _showAddExpense),
         ),
       ],
     );
@@ -1091,9 +1864,18 @@ class _ExpenseCard extends StatelessWidget {
   final EventExpense expense;
   final Event event;
   final String? authUid;
+  final bool canEdit;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _ExpenseCard(
-      {required this.expense, required this.event, required this.authUid});
+  const _ExpenseCard({
+    required this.expense,
+    required this.event,
+    required this.authUid,
+    required this.canEdit,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1107,71 +1889,96 @@ class _ExpenseCard extends StatelessWidget {
             .firstOrNull
         : null;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(expense.description,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                ),
-                Text(fmt.format(expense.amount),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primary,
-                        fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Paid by ${expense.paidByName}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-            ),
-            if (mySplit != null) ...[
-              const Divider(height: 16),
+    // Determine how much the current user paid.
+    final payerNames = expense.paidByName.split(', ');
+    final iAmPayer = expense.paidByUserId == authUid ||
+        (myGuest != null && payerNames.contains(myGuest.displayName));
+    final amountIPaid = iAmPayer ? expense.amount / payerNames.length : 0.0;
+
+    // Net owed = my share of the expense minus what I already paid.
+    final myShare = mySplit?.amount ?? 0.0;
+    final netOwed = myShare - amountIPaid;
+    // Only show a balance line if there's something meaningful to show.
+    final showBalance = (mySplit != null || iAmPayer) && netOwed.abs() > 0.005;
+
+    final card = AppTappable(
+      onTap: canEdit ? onEdit : null,
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey.shade200),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      l10n.totalOwed(fmt.format(mySplit.amount)),
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: mySplit.settled
-                              ? Colors.green
-                              : AppTheme.danger),
-                    ),
+                    child: Text(expense.description,
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w600)),
                   ),
-                  if (!mySplit.settled)
-                    TextButton(
-                      onPressed: () => context
-                          .read<EventProvider>()
-                          .settleSplit(mySplit.id, expense.eventId),
-                      child: Text(l10n.markSettled),
-                    ),
+                  Text(fmt.format(expense.amount),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                          fontSize: 16)),
                 ],
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Paid by ${expense.paidByName}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              ),
+              if (showBalance) ...[
+                const Divider(height: 16),
+                Text(
+                  netOwed > 0
+                      ? l10n.totalOwed(fmt.format(netOwed))
+                      : l10n.youAreOwed(fmt.format(-netOwed)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: netOwed > 0 ? AppTheme.danger : AppTheme.accent,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+    );
+
+    if (!canEdit) return card;
+
+    return Slidable(
+      key: ValueKey(expense.id),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.22,
+        children: [
+          SlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: AppTheme.danger,
+            foregroundColor: Colors.white,
+            icon: Icons.delete_outline,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ],
+      ),
+      child: card,
     );
   }
 }
 
 class _AddExpenseSheet extends StatefulWidget {
   final Event event;
+  final EventExpense? existing;
 
-  const _AddExpenseSheet({required this.event});
+  const _AddExpenseSheet({required this.event, this.existing});
 
   @override
   State<_AddExpenseSheet> createState() => _AddExpenseSheetState();
@@ -1180,8 +1987,58 @@ class _AddExpenseSheet extends StatefulWidget {
 class _AddExpenseSheetState extends State<_AddExpenseSheet> {
   final _descCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
-  final Set<String> _selectedGuestIds = {};
+  // paidBy — multi selection
+  final Set<String> _paidByGuestIds = {};
+  // split — multi selection; always equal share
+  final Set<String> _splitGuestIds = {};
   bool _loading = false;
+  String? _validationError;
+
+  List<EventGuest> get _guests =>
+      widget.event.guests.where((g) => g.isAccepted).toList();
+
+  bool get _isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    if (existing != null) {
+      _descCtrl.text = existing.description;
+      _amountCtrl.text = existing.amount.toStringAsFixed(2);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final guests = _guests;
+      if (guests.isEmpty) return;
+      if (existing != null) {
+        // Pre-select payers and splits from the existing expense.
+        setState(() {
+          for (final g in guests) {
+            if (g.userId == existing.paidByUserId ||
+                existing.paidByName
+                    .split(', ')
+                    .contains(g.displayName)) {
+              _paidByGuestIds.add(g.id);
+            }
+          }
+          for (final split in existing.splits) {
+            _splitGuestIds.add(split.guestId);
+          }
+          if (_paidByGuestIds.isEmpty) {
+            _paidByGuestIds.add(guests.first.id);
+          }
+        });
+      } else {
+        final myUid = context.read<AuthProvider>().userId;
+        final me = guests.firstWhere(
+          (g) => g.userId == myUid,
+          orElse: () => guests.first,
+        );
+        setState(() => _paidByGuestIds.add(me.id));
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -1190,18 +2047,56 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  String? _validate() {
+    if (_descCtrl.text.trim().isEmpty) return 'Description is required.';
     final amount = double.tryParse(_amountCtrl.text.trim());
-    if (_descCtrl.text.trim().isEmpty || amount == null || amount <= 0) return;
-    setState(() => _loading = true);
+    if (amount == null || amount <= 0) {
+      return 'Enter a valid amount greater than 0.';
+    }
+    if (_paidByGuestIds.isEmpty) return 'Select who paid.';
+    return null;
+  }
+
+  Future<void> _submit() async {
+    final error = _validate();
+    if (error != null) {
+      setState(() => _validationError = error);
+      return;
+    }
+    setState(() { _loading = true; _validationError = null; });
+    final amount = double.parse(_amountCtrl.text.trim());
+    final payers = _guests.where((g) => _paidByGuestIds.contains(g.id)).toList();
+    final paidByName = payers.map((g) => g.displayName).join(', ');
+    final paidByUserId = payers.length == 1 ? payers.first.userId : null;
+
     try {
-      await context.read<EventProvider>().addExpense(
-            eventId: widget.event.id,
-            amount: amount,
-            description: _descCtrl.text.trim(),
-            splitGuestIds: _selectedGuestIds.toList(),
-          );
-      if (mounted) Navigator.pop(context);
+      final provider = context.read<EventProvider>();
+      if (_isEdit) {
+        await provider.updateExpense(
+          expenseId: widget.existing!.id,
+          eventId: widget.event.id,
+          amount: amount,
+          description: _descCtrl.text.trim(),
+          splitGuestIds: _splitGuestIds.toList(),
+          customSplitAmounts: null,
+          paidByUserId: paidByUserId,
+          paidByName: paidByName,
+        );
+      } else {
+        await provider.addExpense(
+          eventId: widget.event.id,
+          amount: amount,
+          description: _descCtrl.text.trim(),
+          splitGuestIds: _splitGuestIds.toList(),
+          customSplitAmounts: null,
+          paidByUserId: paidByUserId,
+          paidByName: paidByName,
+        );
+      }
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1211,81 +2106,338 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
     if (mounted) setState(() => _loading = false);
   }
 
+  void _toggleSplit(String guestId) {
+    setState(() {
+      if (_splitGuestIds.contains(guestId)) {
+        _splitGuestIds.remove(guestId);
+      } else {
+        _splitGuestIds.add(guestId);
+      }
+      _validationError = null;
+    });
+  }
+
+  void _selectAllSplit() {
+    setState(() {
+      for (final g in _guests) {
+        _splitGuestIds.add(g.id);
+      }
+      _validationError = null;
+    });
+  }
+
+  void _deselectAllSplit() {
+    setState(() {
+      _splitGuestIds.clear();
+      _validationError = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final goingGuests =
-        widget.event.guests.where((g) => g.rsvpStatus == 'going').toList();
+    final guests = _guests;
+    final allPaidBySelected = guests.isNotEmpty &&
+        guests.every((g) => _paidByGuestIds.contains(g.id));
+    final allSelected = guests.isNotEmpty &&
+        guests.every((g) => _splitGuestIds.contains(g.id));
 
     return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-            child: Text(l10n.addExpense,
-                style: Theme.of(context).textTheme.titleMedium),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _descCtrl,
-                  decoration: InputDecoration(
-                      labelText: l10n.expenseDescription),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _amountCtrl,
-                  decoration:
-                      InputDecoration(labelText: l10n.expenseAmount, prefixText: '\$'),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(l10n.splitAmong,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                children: goingGuests
-                    .map((g) => CheckboxListTile(
-                          title: Text(g.displayName),
-                          value: _selectedGuestIds.contains(g.id),
-                          onChanged: (v) => setState(() {
-                            if (v == true) {
-                              _selectedGuestIds.add(g.id);
-                            } else {
-                              _selectedGuestIds.remove(g.id);
-                            }
-                          }),
-                          dense: true,
-                          activeColor: AppTheme.primary,
-                        ))
-                    .toList(),
+          // ── Header ────────────────────────────────────────────────────
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                      _isEdit ? l10n.editExpense : l10n.addExpense,
+                      style: Theme.of(context).textTheme.titleMedium),
+                ),
+                AppTappable(
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.pop(context);
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.close),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Fields ──────────────────────────────────────────
+                  TextField(
+                    controller: _descCtrl,
+                    textCapitalization: TextCapitalization.sentences,
+                    onChanged: (_) =>
+                        setState(() => _validationError = null),
+                    decoration: InputDecoration(
+                      labelText: '${l10n.expenseDescription} *',
+                      prefixIcon:
+                          const Icon(Icons.receipt_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _amountCtrl,
+                    onChanged: (_) =>
+                        setState(() => _validationError = null),
+                    decoration: InputDecoration(
+                      labelText: '${l10n.expenseAmount} *',
+                      prefixIcon:
+                          const Icon(Icons.attach_money_outlined),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Paid by ─────────────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(l10n.paidBy,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
+                      if (guests.isNotEmpty)
+                        AppTappable(
+                          onTap: () => setState(() {
+                            if (allPaidBySelected) {
+                              _paidByGuestIds.clear();
+                            } else {
+                              _paidByGuestIds
+                                  .addAll(guests.map((g) => g.id));
+                            }
+                            _validationError = null;
+                          }),
+                          child: Text(
+                            allPaidBySelected
+                                ? l10n.deselectAll
+                                : l10n.selectAll,
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.primary),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (guests.isEmpty)
+                    Text(l10n.noGuestsYet,
+                        style: TextStyle(color: Colors.grey[500]))
+                  else
+                    ...guests.map((g) => _GuestSelectRow(
+                          guest: g,
+                          selected: _paidByGuestIds.contains(g.id),
+                          onTap: () => setState(() {
+                            if (_paidByGuestIds.contains(g.id)) {
+                              _paidByGuestIds.remove(g.id);
+                            } else {
+                              _paidByGuestIds.add(g.id);
+                            }
+                            _validationError = null;
+                          }),
+                        )),
+
+                  const SizedBox(height: 20),
+
+                  // ── Split among ─────────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(l10n.splitAmong,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
+                      if (guests.isNotEmpty)
+                        AppTappable(
+                          onTap: allSelected
+                              ? _deselectAllSplit
+                              : _selectAllSplit,
+                          child: Text(
+                            allSelected ? l10n.deselectAll : l10n.selectAll,
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.primary),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (guests.isEmpty)
+                    Text(l10n.noGuestsYet,
+                        style: TextStyle(color: Colors.grey[500]))
+                  else
+                    ...guests.map((g) => _GuestSelectRow(
+                          guest: g,
+                          selected: _splitGuestIds.contains(g.id),
+                          onTap: () => _toggleSplit(g.id),
+                        )),
+
+                  // ── Validation error ────────────────────────────────
+                  if (_validationError != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 16, color: AppTheme.danger),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _validationError!,
+                            style: const TextStyle(
+                                color: AppTheme.danger,
+                                fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Submit ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
             child: AppButton(
-              label: l10n.addExpense,
+              label: _isEdit ? l10n.saveChanges : l10n.addExpense,
               onPressed: _submit,
               loading: _loading,
             ),
           ),
-          const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+}
+
+// ── Guest selector row ────────────────────────────────────────────────────────
+
+class _GuestSelectRow extends StatelessWidget {
+  final EventGuest guest;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _GuestSelectRow({
+    required this.guest,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AppTappable(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppTheme.primary.withValues(alpha: 0.08)
+                : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primary.withValues(alpha: 0.5)
+                  : Colors.grey.shade200,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: selected
+                    ? AppTheme.primary
+                    : Colors.grey[200],
+                backgroundImage: guest.avatarUrl != null &&
+                        guest.avatarUrl!.isNotEmpty
+                    ? NetworkImage(guest.avatarUrl!)
+                    : null,
+                child: (guest.avatarUrl == null ||
+                        guest.avatarUrl!.isEmpty)
+                    ? Text(
+                        guest.displayName.isNotEmpty
+                            ? guest.displayName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: selected
+                              ? Colors.white
+                              : AppTheme.primary,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  guest.displayName,
+                  style: TextStyle(
+                    fontWeight: selected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected ? AppTheme.primary : Colors.transparent,
+                  border: Border.all(
+                    color:
+                        selected ? AppTheme.primary : Colors.grey.shade400,
+                    width: 2,
+                  ),
+                ),
+                child: selected
+                    ? const Icon(Icons.check,
+                        size: 14, color: Colors.white)
+                    : null,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1306,7 +2458,7 @@ class _LookupFound extends _LookupState {
 
 class _LookupNotFound extends _LookupState {}
 
-// ── Add Guest sheet ────────────────────────────────────────────────────────────
+// ── Add Guest sheet (non-trip events) ─────────────────────────────────────────
 
 class _AddGuestSheet extends StatefulWidget {
   final String eventId;
@@ -1359,7 +2511,8 @@ class _AddGuestSheetState extends State<_AddGuestSheet> {
 
     if (hasEmail || hasPhone) {
       _debounce?.cancel();
-      _debounce = Timer(const Duration(milliseconds: 400), _performLookup);
+      _debounce =
+          Timer(const Duration(milliseconds: 400), _performLookup);
     } else {
       _debounce?.cancel();
       if (_lookupState is! _LookupIdle) {
@@ -1437,11 +2590,16 @@ class _AddGuestSheetState extends State<_AddGuestSheet> {
       await context.read<EventProvider>().addGuest(
             eventId: widget.eventId,
             displayName: name,
-            email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+            email: _emailCtrl.text.trim().isEmpty
+                ? null
+                : _emailCtrl.text.trim(),
             phone: _phone.isEmpty ? null : _phone,
             userId: userId,
           );
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1473,15 +2631,22 @@ class _AddGuestSheetState extends State<_AddGuestSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Text(l10n.addGuest,
                     style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
+                AppTappable(
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    Navigator.pop(context);
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.close),
+                  ),
                 ),
               ],
             ),
@@ -1507,7 +2672,8 @@ class _AddGuestSheetState extends State<_AddGuestSheet> {
                     ),
                   ),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
+                    constraints:
+                        const BoxConstraints(maxHeight: 220),
                     child: ListView.builder(
                       shrinkWrap: true,
                       itemCount: accepted.length,
@@ -1521,8 +2687,9 @@ class _AddGuestSheetState extends State<_AddGuestSheet> {
                         return ListTile(
                           leading: CircleAvatar(
                             radius: 18,
-                            backgroundColor:
-                                avatarColors(f.otherDisplayName ?? '').first,
+                            backgroundColor: avatarColors(
+                                    f.otherDisplayName ?? '')
+                                .first,
                             child: Text(
                               avatarInitials(f.otherDisplayName ?? ''),
                               style: const TextStyle(
@@ -1618,7 +2785,8 @@ class _GuestLookupStatus extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(l10n.memberSearching,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                  style:
+                      TextStyle(color: Colors.grey[600], fontSize: 13)),
             ],
           ),
         ),
@@ -1651,7 +2819,8 @@ class _GuestLinkedUserCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
+        border:
+            Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -1690,7 +2859,8 @@ class _GuestLinkedUserCard extends StatelessWidget {
                 if (user.jobTitle.isNotEmpty)
                   Text(
                     user.jobTitle,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    style: TextStyle(
+                        color: Colors.grey[600], fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
               ],
@@ -1698,7 +2868,8 @@ class _GuestLinkedUserCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: AppTheme.accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
@@ -1717,6 +2888,538 @@ class _GuestLinkedUserCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Settlement data models ─────────────────────────────────────────────────
+
+class _PersonBalance {
+  final String guestId;
+  final String name;
+  final String? avatarUrl;
+  final double paid;
+  final double owes;
+
+  const _PersonBalance({
+    required this.guestId,
+    required this.name,
+    this.avatarUrl,
+    required this.paid,
+    required this.owes,
+  });
+
+  double get net => paid - owes;
+}
+
+class _Settlement {
+  final String fromName;
+  final String? fromAvatar;
+  final String toName;
+  final String? toAvatar;
+  final double amount;
+
+  const _Settlement({
+    required this.fromName,
+    this.fromAvatar,
+    required this.toName,
+    this.toAvatar,
+    required this.amount,
+  });
+}
+
+// ── Settlement sheet ───────────────────────────────────────────────────────
+
+class _SettlementSheet extends StatelessWidget {
+  final Event event;
+  final List<EventExpense> expenses;
+
+  const _SettlementSheet({required this.event, required this.expenses});
+
+  List<_PersonBalance> _computeBalances() {
+    final guests = event.guests.where((g) => g.isAccepted).toList();
+    final paid = <String, double>{for (final g in guests) g.id: 0.0};
+    final owes = <String, double>{for (final g in guests) g.id: 0.0};
+
+    for (final expense in expenses) {
+      final payerNames = expense.paidByName.split(', ');
+      final amountPerPayer = expense.amount / payerNames.length;
+      for (final g in guests) {
+        final isPayer = expense.paidByUserId.isNotEmpty
+            ? g.userId == expense.paidByUserId
+            : payerNames.contains(g.displayName);
+        if (isPayer) paid[g.id] = (paid[g.id] ?? 0) + amountPerPayer;
+      }
+      for (final split in expense.splits) {
+        if (owes.containsKey(split.guestId)) {
+          owes[split.guestId] = (owes[split.guestId] ?? 0) + split.amount;
+        }
+      }
+    }
+
+    return guests
+        .map((g) => _PersonBalance(
+              guestId: g.id,
+              name: g.displayName,
+              avatarUrl: g.avatarUrl,
+              paid: paid[g.id] ?? 0,
+              owes: owes[g.id] ?? 0,
+            ))
+        .toList()
+      ..sort((a, b) => b.net.compareTo(a.net));
+  }
+
+  List<_Settlement> _computeSettlements(List<_PersonBalance> balances) {
+    final creditors = balances.where((b) => b.net > 0.005).toList();
+    final debtors = balances.where((b) => b.net < -0.005).toList();
+    final credAmounts = creditors.map((c) => c.net).toList();
+    final debtAmounts = debtors.map((d) => -d.net).toList();
+
+    final settlements = <_Settlement>[];
+    int ci = 0, di = 0;
+    while (ci < creditors.length && di < debtors.length) {
+      final amount = min(credAmounts[ci], debtAmounts[di]);
+      if (amount > 0.005) {
+        settlements.add(_Settlement(
+          fromName: debtors[di].name,
+          fromAvatar: debtors[di].avatarUrl,
+          toName: creditors[ci].name,
+          toAvatar: creditors[ci].avatarUrl,
+          amount: amount,
+        ));
+      }
+      credAmounts[ci] -= amount;
+      debtAmounts[di] -= amount;
+      if (credAmounts[ci] < 0.005) ci++;
+      if (debtAmounts[di] < 0.005) di++;
+    }
+    return settlements;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final fmt = NumberFormat.currency(symbol: '\$');
+    final balances = _computeBalances();
+    final settlements = _computeSettlements(balances);
+    final totalSpent = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    final participantCount =
+        event.guests.where((g) => g.isAccepted).length;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Gradient header ──────────────────────────────────────────────
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primary, AppTheme.primaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 12, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '💸 ${l10n.settleUp}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            event.title,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    AppTappable(
+                      onTap: () => Navigator.pop(context),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(Icons.close,
+                            color: Colors.white.withValues(alpha: 0.8)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _HeaderStat(
+                      label: l10n.totalSpent,
+                      value: fmt.format(totalSpent),
+                      large: true,
+                    ),
+                    const Spacer(),
+                    _HeaderStat(
+                      label: 'Expenses',
+                      value: '${expenses.length}',
+                      align: CrossAxisAlignment.center,
+                    ),
+                    const SizedBox(width: 20),
+                    _HeaderStat(
+                      label: 'People',
+                      value: '$participantCount',
+                      align: CrossAxisAlignment.center,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Scrollable body ──────────────────────────────────────────────
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SheetSectionHeader(icon: '🏆', title: l10n.theScore),
+                  const SizedBox(height: 10),
+                  ...balances.map((b) => _BalanceRow(balance: b, fmt: fmt)),
+                  const SizedBox(height: 24),
+                  _SheetSectionHeader(
+                      icon: '💳', title: l10n.settlementPlan),
+                  const SizedBox(height: 10),
+                  if (settlements.isEmpty)
+                    _AllSquareCard(message: l10n.allSquare)
+                  else
+                    ...settlements.map(
+                        (s) => _SettlementRow(settlement: s, fmt: fmt)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool large;
+  final CrossAxisAlignment align;
+
+  const _HeaderStat({
+    required this.label,
+    required this.value,
+    this.large = false,
+    this.align = CrossAxisAlignment.start,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: align,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: large ? 30 : 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: large ? -1.0 : -0.3,
+            height: 1,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 11,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SheetSectionHeader extends StatelessWidget {
+  final String icon;
+  final String title;
+
+  const _SheetSectionHeader({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 15)),
+        const SizedBox(width: 6),
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+            color: Colors.grey[500],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BalanceRow extends StatelessWidget {
+  final _PersonBalance balance;
+  final NumberFormat fmt;
+
+  const _BalanceRow({required this.balance, required this.fmt});
+
+  @override
+  Widget build(BuildContext context) {
+    final net = balance.net;
+    final isPositive = net > 0.005;
+    final isNegative = net < -0.005;
+    final netColor = isPositive
+        ? AppTheme.accent
+        : isNegative
+            ? AppTheme.danger
+            : Colors.grey[500]!;
+    final netBg = isPositive
+        ? AppTheme.accent.withValues(alpha: 0.1)
+        : isNegative
+            ? AppTheme.danger.withValues(alpha: 0.1)
+            : Colors.grey.withValues(alpha: 0.08);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+            backgroundImage: balance.avatarUrl != null &&
+                    balance.avatarUrl!.isNotEmpty
+                ? NetworkImage(balance.avatarUrl!)
+                : null,
+            child: (balance.avatarUrl == null || balance.avatarUrl!.isEmpty)
+                ? Text(
+                    balance.name.isNotEmpty
+                        ? balance.name[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  balance.name,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Paid ${fmt.format(balance.paid)}  ·  Split ${fmt.format(balance.owes)}',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: netBg,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              isPositive
+                  ? '+${fmt.format(net)}'
+                  : isNegative
+                      ? fmt.format(net)
+                      : '✓ even',
+              style: TextStyle(
+                color: netColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettlementRow extends StatelessWidget {
+  final _Settlement settlement;
+  final NumberFormat fmt;
+
+  const _SettlementRow({required this.settlement, required this.fmt});
+
+  Widget _avatar(String name, String? url) {
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+      backgroundImage:
+          url != null && url.isNotEmpty ? NetworkImage(url) : null,
+      child: (url == null || url.isEmpty)
+          ? Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primary,
+              ),
+            )
+          : null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          _avatar(settlement.fromName, settlement.fromAvatar),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              settlement.fromName,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Column(
+            children: [
+              Text(
+                fmt.format(settlement.amount),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppTheme.danger,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 28, height: 2, color: Colors.grey[300]),
+                  Icon(Icons.arrow_forward_rounded,
+                      size: 14, color: Colors.grey[400]),
+                ],
+              ),
+            ],
+          ),
+          Expanded(
+            child: Text(
+              settlement.toName,
+              textAlign: TextAlign.right,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          _avatar(settlement.toName, settlement.toAvatar),
+        ],
+      ),
+    );
+  }
+}
+
+class _AllSquareCard extends StatelessWidget {
+  final String message;
+
+  const _AllSquareCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.accent.withValues(alpha: 0.1),
+            AppTheme.primaryLight.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        children: [
+          const Text('🎉', style: TextStyle(fontSize: 40)),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppTheme.accent,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
             ),
           ),
         ],

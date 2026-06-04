@@ -836,6 +836,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpenseTitle => 'Delete expense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Delete \"$description\"? This cannot be undone.';
+  }
+
+  @override
   String get noExpensesYet => '아직 지출이 없습니다';
 
   @override
@@ -848,12 +859,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => '지불자';
+
+  @override
+  String get selectAll => '모두 선택';
+
+  @override
+  String get deselectAll => '모두 해제';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return '받을 금액: $amount';
+  }
+
+  @override
+  String get settleUp => '정산하기';
+
+  @override
+  String get totalSpent => '총 지출';
+
+  @override
+  String get theScore => '스코어';
+
+  @override
+  String get settlementPlan => '정산 계획';
+
+  @override
+  String get allSquare => '모두 정산됐어요! 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -884,5 +921,31 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => '여행';
+
+  @override
+  String get eventTypeBirthday => '생일';
+
+  @override
+  String get eventTypeWedding => '결혼식';
+
+  @override
+  String get eventTypeSocial => '소셜';
+
+  @override
+  String get eventTypePicker => '이벤트 유형';
+
+  @override
+  String get routeTab => '경로';
+
+  @override
+  String get leaveEventTitle => '이벤트를 떠나시겠습니까?';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return '$eventTitle에서 제거되고 접근 권한을 잃게 됩니다.';
   }
 }

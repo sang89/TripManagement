@@ -4,25 +4,23 @@ import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../models/friendship.dart';
-import '../models/trip_member.dart';
 import '../providers/auth_provider.dart';
+import '../providers/event_provider.dart';
 import '../providers/friends_provider.dart';
 import '../services/connectivity_service.dart';
 import '../services/user_lookup_service.dart';
 import '../utils/avatar_utils.dart';
 
-/// Opens the add-member bottom sheet.
-/// [onAdd] receives the new [TripMember] (with a non-null [userId] when a
-/// linked account was found, or null for an unlinked guest).
+/// Opens the add-member bottom sheet for a trip-type event.
 Future<void> showAddMemberSheet(
   BuildContext context, {
-  required void Function(TripMember member) onAdd,
+  required String eventId,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => AddMemberSheet(onAdd: onAdd),
+    builder: (_) => AddMemberSheet(eventId: eventId),
   );
 }
 
@@ -44,9 +42,9 @@ class _LookupNotFound extends _LookupState {}
 // ─── Sheet widget ──────────────────────────────────────────────────────────────
 
 class AddMemberSheet extends StatefulWidget {
-  final void Function(TripMember member) onAdd;
+  final String eventId;
 
-  const AddMemberSheet({super.key, required this.onAdd});
+  const AddMemberSheet({super.key, required this.eventId});
 
   @override
   State<AddMemberSheet> createState() => _AddMemberSheetState();
@@ -59,9 +57,8 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
   _LookupState _lookupState = _LookupIdle();
   Timer? _debounce;
   bool _nameTouched = false;
-  // Incremented before every lookup; responses from earlier lookups are
-  // discarded when this value has moved on (stale-result guard).
   int _lookupGeneration = 0;
+  bool _loading = false;
 
   final _lookupService = UserLookupService();
 
@@ -73,8 +70,6 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     super.dispose();
   }
 
-  // Returns true only when the string looks like a complete email address:
-  // at least one character before @, a domain segment, and a TLD ≥ 2 chars.
   bool _isValidEmail(String value) {
     final atIndex = value.indexOf('@');
     if (atIndex < 1) return false;
@@ -84,9 +79,6 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     return domain.length - dotIndex - 1 >= 2;
   }
 
-  // Both field-change handlers funnel into one place so the debounce always
-  // fires with the latest values of *both* fields. This prevents the phone
-  // field's debounce from cancelling an in-flight email lookup and vice-versa.
   void _onEmailChanged(String _) => _scheduleOrClear();
 
   void _onPhoneChanged(String value) {
@@ -113,7 +105,6 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
   Future<void> _performLookup() async {
     if (!mounted) return;
 
-    // Snapshot current field values at the moment the debounce fires.
     final email = _emailCtrl.text.trim();
     final phone = _phone;
     final hasEmail = _isValidEmail(email);
@@ -121,10 +112,8 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     if (!hasEmail && !hasPhone) return;
 
     final connectivity = context.read<ConnectivityService>();
-    if (!connectivity.isOnline) return; // silent skip when offline
+    if (!connectivity.isOnline) return;
 
-    // Tag this request so we can discard any response that arrives after
-    // a newer lookup has already been started.
     final generation = ++_lookupGeneration;
     setState(() => _lookupState = _LookupSearching());
 
@@ -133,16 +122,11 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
       phone: hasPhone ? phone : null,
     );
 
-    // Drop stale responses (user kept typing while this request was in-flight).
     if (!mounted || _lookupGeneration != generation) return;
 
     setState(() {
       if (result != null) {
         _lookupState = _LookupFound(result);
-        // Auto-fill name only when the user hasn't typed anything yet.
-        // If the found user has no profile name yet, fall back to the
-        // email prefix (e.g. "jane" from "jane@example.com") so the
-        // Add button is never blocked waiting for a name.
         if (!_nameTouched && _nameCtrl.text.isEmpty) {
           final autoName = result.fullName.isNotEmpty
               ? result.fullName
@@ -174,29 +158,39 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
 
+    setState(() => _loading = true);
     final userId = switch (_lookupState) {
       _LookupFound(user: final u) => u.userId,
       _ => null,
     };
 
-    widget.onAdd(TripMember(
-      id: '',
-      tripId: '',
-      displayName: name,
-      role: 'member',
-      // Linked users start as pending (await acceptance); unlinked guests are
-      // immediately accepted.  Mirrors the logic in TripProvider.addMember().
-      status: userId != null ? 'pending' : 'accepted',
-      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      phone: _phone.isEmpty ? null : _phone,
-      userId: userId,
-      createdAt: DateTime.now(),
-    ));
-    Navigator.pop(context);
+    try {
+      await context.read<EventProvider>().addMember(
+            widget.eventId,
+            displayName: name,
+            email: _emailCtrl.text.trim().isEmpty
+                ? null
+                : _emailCtrl.text.trim(),
+            phone: _phone.isEmpty ? null : _phone,
+            userId: userId,
+          );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      final msg = e is ReinviteBlockedException
+          ? l10n.reinviteBlockedError
+          : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AppTheme.danger),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -208,7 +202,6 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 4),
@@ -220,10 +213,8 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
               ),
             ),
           ),
-          // Title + close
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Text(l10n.addMember,
@@ -237,7 +228,6 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             ),
           ),
           const Divider(height: 1),
-          // Friends quick-add: horizontal chip row (hidden when no friends)
           Consumer<FriendsProvider>(
             builder: (context, friends, _) {
               final accepted = friends.accepted;
@@ -294,7 +284,6 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Email field — triggers lookup when it looks like an address
                   TextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
@@ -305,15 +294,12 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
                     onChanged: _onEmailChanged,
                   ),
                   const SizedBox(height: 12),
-                  // Phone field — triggers lookup when ≥ 7 digits entered
                   AppPhoneField(
                     label: l10n.phoneOptional,
                     onChanged: _onPhoneChanged,
                   ),
                   const SizedBox(height: 12),
-                  // Lookup status (hidden in idle state)
                   _LookupStatusWidget(state: _lookupState),
-                  // Name — required; auto-filled from lookup result
                   TextField(
                     controller: _nameCtrl,
                     autofocus: true,
@@ -333,6 +319,7 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             child: AppButton(
               label: l10n.addMember,
               onPressed: _submit,
+              loading: _loading,
             ),
           ),
         ],
@@ -407,7 +394,6 @@ class _LinkedUserCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 40,
             height: 40,
@@ -430,7 +416,6 @@ class _LinkedUserCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Name + job title
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,10 +436,8 @@ class _LinkedUserCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // "Linked account" badge
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: AppTheme.accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),

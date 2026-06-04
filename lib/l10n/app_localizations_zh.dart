@@ -833,6 +833,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpenseTitle => 'Delete expense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Delete \"$description\"? This cannot be undone.';
+  }
+
+  @override
   String get noExpensesYet => '暂无支出';
 
   @override
@@ -845,12 +856,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => '由...支付';
+
+  @override
+  String get selectAll => '全选';
+
+  @override
+  String get deselectAll => '取消全选';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return '应收金额：$amount';
+  }
+
+  @override
+  String get settleUp => '结算';
+
+  @override
+  String get totalSpent => '总支出';
+
+  @override
+  String get theScore => '得分';
+
+  @override
+  String get settlementPlan => '结算方案';
+
+  @override
+  String get allSquare => '大家都平了！🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -881,5 +918,31 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => '旅行';
+
+  @override
+  String get eventTypeBirthday => '生日';
+
+  @override
+  String get eventTypeWedding => '婚礼';
+
+  @override
+  String get eventTypeSocial => '社交';
+
+  @override
+  String get eventTypePicker => '活动类型';
+
+  @override
+  String get routeTab => '路线';
+
+  @override
+  String get leaveEventTitle => '离开活动？';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return '您将从 $eventTitle 中被移除并失去访问权限。';
   }
 }

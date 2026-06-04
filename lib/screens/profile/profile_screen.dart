@@ -8,7 +8,6 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/trip_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../utils/avatar_utils.dart';
 import '../../utils/formatters.dart';
@@ -212,7 +211,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (ok == true && mounted) {
-      context.read<TripProvider>().clear();
       context.read<UserProfileProvider>().clear();
       context.read<AuthProvider>().logout();
     }

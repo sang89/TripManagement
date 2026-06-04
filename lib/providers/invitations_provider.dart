@@ -3,22 +3,22 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'trip_provider.dart';
+import 'event_provider.dart';
 
-/// A single pending trip invitation for the current user.
+/// A single pending trip-type event invitation for the current user.
 class InvitationItem {
-  final String memberId;
-  final String tripId;
-  final String tripTitle;
+  final String guestId;
+  final String eventId;
+  final String eventTitle;
   final String? destination;
   final DateTime? startAt;
   final DateTime? endAt;
   final String organiserName;
 
   const InvitationItem({
-    required this.memberId,
-    required this.tripId,
-    required this.tripTitle,
+    required this.guestId,
+    required this.eventId,
+    required this.eventTitle,
     this.destination,
     this.startAt,
     this.endAt,
@@ -26,7 +26,7 @@ class InvitationItem {
   });
 }
 
-/// Provides the list of pending trip invitations for the signed-in user.
+/// Provides the list of pending trip-type event invitations for the signed-in user.
 ///
 /// Uses Supabase Realtime to update in real time when a new invite arrives.
 /// Call [init] after sign-in and [clear] on sign-out.
@@ -62,24 +62,24 @@ class InvitationsProvider extends ChangeNotifier {
     if (_userId == null) return;
     try {
       final data = await _db
-          .from('trip_members')
-          .select('id, trip_id, trips(title, destination, start_at, end_at)')
+          .from('event_guests')
+          .select('id, event_id, events(title, location, start_at, end_at)')
           .eq('user_id', _userId!)
           .eq('status', 'pending');
 
       final rows = List<Map<String, dynamic>>.from(data as List);
       _invites = rows.map((row) {
-        final trip = row['trips'] as Map<String, dynamic>? ?? {};
+        final event = row['events'] as Map<String, dynamic>? ?? {};
         return InvitationItem(
-          memberId: row['id'] as String,
-          tripId: row['trip_id'] as String,
-          tripTitle: trip['title'] as String? ?? 'Trip',
-          destination: trip['destination'] as String?,
-          startAt: trip['start_at'] != null
-              ? DateTime.parse(trip['start_at'] as String)
+          guestId: row['id'] as String,
+          eventId: row['event_id'] as String,
+          eventTitle: event['title'] as String? ?? 'Event',
+          destination: event['location'] as String?,
+          startAt: event['start_at'] != null
+              ? DateTime.parse(event['start_at'] as String)
               : null,
-          endAt: trip['end_at'] != null
-              ? DateTime.parse(trip['end_at'] as String)
+          endAt: event['end_at'] != null
+              ? DateTime.parse(event['end_at'] as String)
               : null,
           organiserName: 'Someone',
         );
@@ -100,7 +100,7 @@ class InvitationsProvider extends ChangeNotifier {
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
-          table: 'trip_members',
+          table: 'event_guests',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
             column: 'user_id',
@@ -111,7 +111,7 @@ class InvitationsProvider extends ChangeNotifier {
         .onPostgresChanges(
           event: PostgresChangeEvent.update,
           schema: 'public',
-          table: 'trip_members',
+          table: 'event_guests',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
             column: 'user_id',
@@ -124,42 +124,36 @@ class InvitationsProvider extends ChangeNotifier {
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
-  /// Accept a pending invite. Reloads [tripProvider] so the trip appears in
-  /// the list immediately.
-  Future<void> accept(String memberId, TripProvider tripProvider) async {
+  /// Accept a pending invite. Reloads [eventProvider] so the event appears.
+  Future<void> accept(String guestId, EventProvider eventProvider) async {
     try {
       await _db
-          .from('trip_members')
+          .from('event_guests')
           .update({'status': 'accepted'})
-          .eq('id', memberId);
-      _invites.removeWhere((i) => i.memberId == memberId);
+          .eq('id', guestId);
+      _invites.removeWhere((i) => i.guestId == guestId);
       notifyListeners();
-      // Reload trips so the newly accepted one appears.
-      await tripProvider.load();
+      await eventProvider.load();
     } catch (e, st) {
       debugPrint('InvitationsProvider.accept error: $e\n$st');
       rethrow;
     }
   }
 
-  /// Decline a pending invite. Reloads [tripProvider] so the trip is removed
-  /// from the list (the invitee no longer has access once declined).
-  ///
-  /// If [blockReinvite] is true, also sets block_reinvite = true so that the
-  /// organiser cannot re-invite this user to the same trip.
+  /// Decline a pending invite.
   Future<void> decline(
-    String memberId,
-    TripProvider tripProvider, {
+    String guestId,
+    EventProvider eventProvider, {
     bool blockReinvite = false,
   }) async {
     try {
-      await _db.from('trip_members').update({
+      await _db.from('event_guests').update({
         'status': 'declined',
         if (blockReinvite) 'block_reinvite': true,
-      }).eq('id', memberId);
-      _invites.removeWhere((i) => i.memberId == memberId);
+      }).eq('id', guestId);
+      _invites.removeWhere((i) => i.guestId == guestId);
       notifyListeners();
-      await tripProvider.load();
+      await eventProvider.load();
     } catch (e, st) {
       debugPrint('InvitationsProvider.decline error: $e\n$st');
       rethrow;

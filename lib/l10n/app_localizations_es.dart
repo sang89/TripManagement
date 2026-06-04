@@ -847,6 +847,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Editar gasto';
+
+  @override
+  String get deleteExpenseTitle => 'Eliminar gasto';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Eliminar \"$description\"? Esta accion no se puede deshacer.';
+  }
+
+  @override
   String get noExpensesYet => 'Sin gastos aún';
 
   @override
@@ -859,12 +870,38 @@ class AppLocalizationsEs extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => 'Pagado por';
+
+  @override
+  String get selectAll => 'Seleccionar todo';
+
+  @override
+  String get deselectAll => 'Deseleccionar todo';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'Te deben: $amount';
+  }
+
+  @override
+  String get settleUp => 'Saldar cuentas';
+
+  @override
+  String get totalSpent => 'Total gastado';
+
+  @override
+  String get theScore => 'El marcador';
+
+  @override
+  String get settlementPlan => 'Plan de liquidación';
+
+  @override
+  String get allSquare => '¡Todo en orden! 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -895,5 +932,31 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => 'Viaje';
+
+  @override
+  String get eventTypeBirthday => 'Cumpleaños';
+
+  @override
+  String get eventTypeWedding => 'Boda';
+
+  @override
+  String get eventTypeSocial => 'Social';
+
+  @override
+  String get eventTypePicker => 'Tipo de evento';
+
+  @override
+  String get routeTab => 'Ruta';
+
+  @override
+  String get leaveEventTitle => '¿Salir del evento?';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return 'Serás eliminado de $eventTitle y perderás el acceso.';
   }
 }

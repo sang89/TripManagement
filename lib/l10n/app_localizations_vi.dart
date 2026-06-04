@@ -846,6 +846,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpenseTitle => 'Delete expense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Delete \"$description\"? This cannot be undone.';
+  }
+
+  @override
   String get noExpensesYet => 'Chưa có chi phí';
 
   @override
@@ -858,12 +869,38 @@ class AppLocalizationsVi extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => 'Người trả';
+
+  @override
+  String get selectAll => 'Chọn tất cả';
+
+  @override
+  String get deselectAll => 'Bỏ chọn tất cả';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'Bạn được nợ: $amount';
+  }
+
+  @override
+  String get settleUp => 'Thanh toán';
+
+  @override
+  String get totalSpent => 'Tổng chi tiêu';
+
+  @override
+  String get theScore => 'Bảng điểm';
+
+  @override
+  String get settlementPlan => 'Kế hoạch thanh toán';
+
+  @override
+  String get allSquare => 'Tất cả đã cân bằng! 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -894,5 +931,31 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => 'Chuyến đi';
+
+  @override
+  String get eventTypeBirthday => 'Sinh nhật';
+
+  @override
+  String get eventTypeWedding => 'Đám cưới';
+
+  @override
+  String get eventTypeSocial => 'Xã hội';
+
+  @override
+  String get eventTypePicker => 'Loại sự kiện';
+
+  @override
+  String get routeTab => 'Lộ trình';
+
+  @override
+  String get leaveEventTitle => 'Rời sự kiện?';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return 'Bạn sẽ bị xóa khỏi $eventTitle và mất quyền truy cập.';
   }
 }

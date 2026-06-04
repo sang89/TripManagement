@@ -842,6 +842,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpenseTitle => 'Delete expense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Delete \"$description\"? This cannot be undone.';
+  }
+
+  @override
   String get noExpensesYet => 'لا توجد نفقات حتى الآن';
 
   @override
@@ -854,12 +865,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => 'مدفوع من قبل';
+
+  @override
+  String get selectAll => 'تحديد الكل';
+
+  @override
+  String get deselectAll => 'إلغاء تحديد الكل';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'أنت مدين لك: $amount';
+  }
+
+  @override
+  String get settleUp => 'تسوية الحسابات';
+
+  @override
+  String get totalSpent => 'المجموع المنفق';
+
+  @override
+  String get theScore => 'النتيجة';
+
+  @override
+  String get settlementPlan => 'خطة التسوية';
+
+  @override
+  String get allSquare => 'الجميع متساوٍ! لا ديون 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -890,5 +927,31 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => 'رحلة';
+
+  @override
+  String get eventTypeBirthday => 'عيد ميلاد';
+
+  @override
+  String get eventTypeWedding => 'زفاف';
+
+  @override
+  String get eventTypeSocial => 'اجتماعي';
+
+  @override
+  String get eventTypePicker => 'نوع الحدث';
+
+  @override
+  String get routeTab => 'المسار';
+
+  @override
+  String get leaveEventTitle => 'مغادرة الحدث؟';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return 'ستتم إزالتك من $eventTitle وستفقد الوصول.';
   }
 }
