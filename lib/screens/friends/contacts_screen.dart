@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' hide Event;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart' show Share;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../models/trip.dart';
+import '../../models/event.dart';
+import '../../providers/event_provider.dart';
 import '../../providers/friends_provider.dart';
-import '../../providers/trip_provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
@@ -236,8 +236,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
   }
 
   Future<void> _addToTrip(_ContactInvite invite) async {
-    final tripProvider = context.read<TripProvider>();
-    final trips = tripProvider.trips;
+    final eventProvider = context.read<EventProvider>();
+    final trips = eventProvider.myEvents
+        .where((e) => e.isTrip)
+        .toList();
 
     if (trips.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -246,7 +248,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
       return;
     }
 
-    final selected = await showModalBottomSheet<Trip>(
+    final selected = await showModalBottomSheet<Event>(
       context: context,
       useRootNavigator: true,
       shape: const RoundedRectangleBorder(
@@ -258,7 +260,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     if (selected == null || !mounted) return;
 
     try {
-      await tripProvider.addMember(
+      await eventProvider.addMember(
         selected.id,
         displayName: invite.displayName,
         email: invite.email,
@@ -599,7 +601,7 @@ class _InviteCard extends StatelessWidget {
 // ── Trip picker sheet ─────────────────────────────────────────────────────────
 
 class _TripPickerSheet extends StatelessWidget {
-  final List<Trip> trips;
+  final List<Event> trips;
   const _TripPickerSheet({required this.trips});
 
   @override

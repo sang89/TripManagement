@@ -1668,6 +1668,24 @@ abstract class AppLocalizations {
   /// **'Add expense'**
   String get addExpense;
 
+  /// No description provided for @editExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit expense'**
+  String get editExpense;
+
+  /// No description provided for @deleteExpenseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete expense'**
+  String get deleteExpenseTitle;
+
+  /// No description provided for @deleteExpenseMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{description}\"? This cannot be undone.'**
+  String deleteExpenseMessage(String description);
+
   /// No description provided for @noExpensesYet.
   ///
   /// In en, this message translates to:
@@ -1692,17 +1710,65 @@ abstract class AppLocalizations {
   /// **'Split among guests'**
   String get splitAmong;
 
-  /// No description provided for @markSettled.
+  /// No description provided for @paidBy.
   ///
   /// In en, this message translates to:
-  /// **'Mark settled'**
-  String get markSettled;
+  /// **'Paid by'**
+  String get paidBy;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAll;
+
+  /// No description provided for @deselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect all'**
+  String get deselectAll;
 
   /// No description provided for @totalOwed.
   ///
   /// In en, this message translates to:
   /// **'You owe: {amount}'**
   String totalOwed(String amount);
+
+  /// No description provided for @youAreOwed.
+  ///
+  /// In en, this message translates to:
+  /// **'You are owed: {amount}'**
+  String youAreOwed(String amount);
+
+  /// No description provided for @settleUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Settle Up'**
+  String get settleUp;
+
+  /// No description provided for @totalSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Total spent'**
+  String get totalSpent;
+
+  /// No description provided for @theScore.
+  ///
+  /// In en, this message translates to:
+  /// **'The Score'**
+  String get theScore;
+
+  /// No description provided for @settlementPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Settlement plan'**
+  String get settlementPlan;
+
+  /// No description provided for @allSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'All square! Everyone\'s even 🎉'**
+  String get allSquare;
 
   /// No description provided for @eventFull.
   ///
@@ -1757,6 +1823,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete \"{title}\"? This cannot be undone.'**
   String deleteEventMessage(String title);
+
+  /// No description provided for @eventTypeTrip.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip'**
+  String get eventTypeTrip;
+
+  /// No description provided for @eventTypeBirthday.
+  ///
+  /// In en, this message translates to:
+  /// **'Birthday'**
+  String get eventTypeBirthday;
+
+  /// No description provided for @eventTypeWedding.
+  ///
+  /// In en, this message translates to:
+  /// **'Wedding'**
+  String get eventTypeWedding;
+
+  /// No description provided for @eventTypeSocial.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get eventTypeSocial;
+
+  /// No description provided for @eventTypePicker.
+  ///
+  /// In en, this message translates to:
+  /// **'Event type'**
+  String get eventTypePicker;
+
+  /// No description provided for @routeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Route'**
+  String get routeTab;
+
+  /// No description provided for @leaveEventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave event?'**
+  String get leaveEventTitle;
+
+  /// No description provided for @leaveEventMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be removed from {eventTitle} and lose access.'**
+  String leaveEventMessage(String eventTitle);
 }
 
 class _AppLocalizationsDelegate

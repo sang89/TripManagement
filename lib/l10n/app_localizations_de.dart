@@ -850,6 +850,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Ausgabe bearbeiten';
+
+  @override
+  String get deleteExpenseTitle => 'Ausgabe loschen';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return '\"$description\" loschen? Dies kann nicht ruckgangig gemacht werden.';
+  }
+
+  @override
   String get noExpensesYet => 'Noch keine Ausgaben';
 
   @override
@@ -862,12 +873,38 @@ class AppLocalizationsDe extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => 'Bezahlt von';
+
+  @override
+  String get selectAll => 'Alle auswählen';
+
+  @override
+  String get deselectAll => 'Alle abwählen';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'Dir wird geschuldet: $amount';
+  }
+
+  @override
+  String get settleUp => 'Abrechnen';
+
+  @override
+  String get totalSpent => 'Gesamtausgaben';
+
+  @override
+  String get theScore => 'Das Ergebnis';
+
+  @override
+  String get settlementPlan => 'Zahlungsplan';
+
+  @override
+  String get allSquare => 'Alles ausgeglichen! 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -898,5 +935,31 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => 'Reise';
+
+  @override
+  String get eventTypeBirthday => 'Geburtstag';
+
+  @override
+  String get eventTypeWedding => 'Hochzeit';
+
+  @override
+  String get eventTypeSocial => 'Gesellig';
+
+  @override
+  String get eventTypePicker => 'Ereignistyp';
+
+  @override
+  String get routeTab => 'Route';
+
+  @override
+  String get leaveEventTitle => 'Ereignis verlassen?';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return 'Sie werden von $eventTitle entfernt und verlieren den Zugang.';
   }
 }

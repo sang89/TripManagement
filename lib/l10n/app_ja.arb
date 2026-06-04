@@ -351,10 +351,22 @@
   "deletePhotoConfirm": "Delete this photo?",
   "noExpensesYet": "まだ費用がありません",
   "addExpense": "Add expense",
+  "editExpense": "Edit expense",
+  "deleteExpenseTitle": "Delete expense",
+  "deleteExpenseMessage": "Delete \"{description}\"? This cannot be undone.",
+  "@deleteExpenseMessage": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
   "expenseDescription": "What was paid for?",
   "expenseAmount": "Amount",
   "splitAmong": "Split among guests",
-  "markSettled": "Mark settled",
+  "paidBy": "支払い者",
+  "selectAll": "すべて選択",
+  "deselectAll": "すべて解除",
   "totalOwed": "You owe: {amount}",
   "@totalOwed": {
     "placeholders": {
@@ -363,6 +375,19 @@
       }
     }
   },
+  "youAreOwed": "あなたへの支払い: {amount}",
+  "@youAreOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settleUp": "精算する",
+  "totalSpent": "総支出",
+  "theScore": "スコア",
+  "settlementPlan": "精算プラン",
+  "allSquare": "全員イーブン！ 🎉",
   "eventFull": "This event is at capacity.",
   "publicRsvpTitle": "You're invited!",
   "publicRsvpName": "Your name",
@@ -382,6 +407,21 @@
   "@deleteEventMessage": {
     "placeholders": {
       "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeTrip": "旅行",
+  "eventTypeBirthday": "誕生日",
+  "eventTypeWedding": "結婚式",
+  "eventTypeSocial": "ソーシャル",
+  "eventTypePicker": "イベントの種類",
+  "routeTab": "ルート",
+  "leaveEventTitle": "イベントを退出しますか？",
+  "leaveEventMessage": "{eventTitle}から削除され、アクセスできなくなります。",
+  "@leaveEventMessage": {
+    "placeholders": {
+      "eventTitle": {
         "type": "String"
       }
     }

@@ -3,48 +3,48 @@ import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../config/api_keys.dart';
 import '../l10n/app_localizations.dart';
-import '../models/trip_stop.dart';
-import '../providers/trip_provider.dart';
+import '../models/event_stop.dart';
+import '../providers/event_provider.dart';
 import '../services/trip_places_service.dart';
 import 'places_autocomplete_field.dart';
 
 /// Opens the stop form sheet.
-/// - [tripId] null → draft mode; [onDraftSave] is called instead of the provider.
-/// - [tripId] non-null → normal mode; saves directly via TripProvider.
-Future<void> showTripStopFormSheet(
+/// - [eventId] null → draft mode; [onDraftSave] is called instead of the provider.
+/// - [eventId] non-null → normal mode; saves directly via EventProvider.
+Future<void> showEventStopFormSheet(
   BuildContext context, {
-  String? tripId,
-  TripStop? existing,
-  void Function(TripStop draft)? onDraftSave,
+  String? eventId,
+  EventStop? existing,
+  void Function(EventStop draft)? onDraftSave,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (ctx) => _TripStopFormSheet(
-      tripId: tripId,
+    builder: (ctx) => _EventStopFormSheet(
+      eventId: eventId,
       existing: existing,
       onDraftSave: onDraftSave,
     ),
   );
 }
 
-class _TripStopFormSheet extends StatefulWidget {
-  final String? tripId;
-  final TripStop? existing;
-  final void Function(TripStop draft)? onDraftSave;
+class _EventStopFormSheet extends StatefulWidget {
+  final String? eventId;
+  final EventStop? existing;
+  final void Function(EventStop draft)? onDraftSave;
 
-  const _TripStopFormSheet({
-    this.tripId,
+  const _EventStopFormSheet({
+    this.eventId,
     this.existing,
     this.onDraftSave,
   });
 
   @override
-  State<_TripStopFormSheet> createState() => _TripStopFormSheetState();
+  State<_EventStopFormSheet> createState() => _EventStopFormSheetState();
 }
 
-class _TripStopFormSheetState extends State<_TripStopFormSheet> {
+class _EventStopFormSheetState extends State<_EventStopFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleCtrl;
   late final TextEditingController _addressCtrl;
@@ -121,11 +121,10 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
     final address = _addressCtrl.text.trim();
     final notes = _notesCtrl.text.trim();
 
-    // Draft mode — return data to caller without touching the provider
     if (widget.onDraftSave != null) {
-      final draft = TripStop(
+      final draft = EventStop(
         id: widget.existing?.id ?? '',
-        tripId: widget.existing?.tripId ?? '',
+        eventId: widget.existing?.eventId ?? '',
         title: title,
         address: address,
         notes: notes,
@@ -141,10 +140,10 @@ class _TripStopFormSheetState extends State<_TripStopFormSheet> {
       return;
     }
 
-    final provider = context.read<TripProvider>();
+    final provider = context.read<EventProvider>();
     if (widget.existing == null) {
       await provider.addStop(
-        widget.tripId!,
+        widget.eventId!,
         title: title,
         address: address,
         notes: notes,
@@ -312,8 +311,8 @@ class _DateTimeRow extends StatelessWidget {
               : null,
         ),
         child: Text(display,
-            style: TextStyle(
-                color: value != null ? null : Colors.grey[500])),
+            style:
+                TextStyle(color: value != null ? null : Colors.grey[500])),
       ),
     );
   }

@@ -1,6 +1,6 @@
-class TripStop {
+class EventStop {
   final String id;
-  final String tripId;
+  final String eventId;
   final String title;
   final String address;
   final String notes;
@@ -11,9 +11,9 @@ class TripStop {
   final double? addressLat;
   final double? addressLng;
 
-  const TripStop({
+  const EventStop({
     required this.id,
-    required this.tripId,
+    required this.eventId,
     required this.title,
     required this.address,
     required this.notes,
@@ -25,9 +25,9 @@ class TripStop {
     this.addressLng,
   });
 
-  factory TripStop.fromJson(Map<String, dynamic> json) => TripStop(
+  factory EventStop.fromJson(Map<String, dynamic> json) => EventStop(
         id: json['id'] as String,
-        tripId: json['trip_id'] as String,
+        eventId: json['event_id'] as String,
         title: json['title'] as String? ?? '',
         address: json['address'] as String? ?? '',
         notes: json['notes'] as String? ?? '',
@@ -54,7 +54,7 @@ class TripStop {
         'address_lng': addressLng,
       };
 
-  TripStop copyWith({
+  EventStop copyWith({
     String? title,
     String? address,
     String? notes,
@@ -68,9 +68,9 @@ class TripStop {
     bool clearAddressLat = false,
     bool clearAddressLng = false,
   }) =>
-      TripStop(
+      EventStop(
         id: id,
-        tripId: tripId,
+        eventId: eventId,
         title: title ?? this.title,
         address: address ?? this.address,
         notes: notes ?? this.notes,

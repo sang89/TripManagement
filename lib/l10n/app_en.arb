@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-
   "cancel": "Cancel",
   "delete": "Delete",
   "close": "Close",
@@ -14,13 +13,20 @@
   "notSet": "Not set",
   "failed": "Failed: {error}",
   "@failed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "comingSoon": "{feature} — Coming soon",
   "@comingSoon": {
-    "placeholders": { "feature": { "type": "String" } }
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
   },
-
   "settingsTitle": "Settings",
   "languageSectionTitle": "Language",
   "selectLanguageTitle": "Select Language",
@@ -49,7 +55,6 @@
   "appVersion": "App Version",
   "privacyPolicy": "Privacy Policy",
   "termsOfService": "Terms of Service",
-
   "myProfile": "My Profile",
   "failedToLoadProfile": "Failed to load profile",
   "settingsTooltip": "Settings",
@@ -69,24 +74,35 @@
   "removePhoto": "Remove Photo",
   "uploadFailed": "Upload failed: {error}",
   "@uploadFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "uploadRequiresConnection": "Upload requires a connection",
   "photoUpdated": "Photo updated",
   "removeRequiresConnection": "Requires a connection to remove photo",
   "removeFailed": "Remove failed: {error}",
   "@removeFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "profileSaved": "Profile saved",
   "profileSaveFailed": "Save failed: {error}",
   "@profileSaveFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "signOutConfirmTitle": "Sign out?",
   "signOutConfirmMessage": "You will be returned to the login screen.",
   "nameTooLong": "Name is too long",
-
   "appTitle": "Trip Planner",
   "signInToAccount": "Sign in to your account",
   "planNextAdventure": "Plan your next adventure",
@@ -105,7 +121,6 @@
   "continueWithGoogle": "Continue with Google",
   "continueWithApple": "Continue with Apple",
   "orSignInWith": "or",
-
   "myTrips": "My Trips",
   "all": "All",
   "upcoming": "Upcoming",
@@ -113,7 +128,11 @@
   "deleteTripTitle": "Delete trip?",
   "deleteTripMessage": "Delete {tripTitle}? This cannot be undone.",
   "@deleteTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leave": "Leave",
   "leaveTripTooltip": "Leave trip",
@@ -121,7 +140,11 @@
   "leaveTripTitle": "Leave trip?",
   "leaveTripMessage": "You will be removed from {tripTitle} and lose access.",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "couldNotLoadTrips": "Could not load trips",
   "noTripsYet": "No trips yet",
@@ -130,7 +153,6 @@
   "noUpcomingTripsHint": "Tap + to plan your next adventure.",
   "noPastTrips": "No past trips",
   "noPastTripsHint": "Your completed trips will appear here.",
-
   "editTrip": "Edit trip",
   "newTrip": "New trip",
   "tripTitle": "Trip title",
@@ -155,7 +177,6 @@
   "you": "You",
   "organizer": "Organizer",
   "member": "Member",
-
   "tripNotFound": "Trip not found",
   "editTripTooltip": "Edit trip",
   "overview": "Overview",
@@ -168,62 +189,79 @@
   "removeStopTitle": "Remove stop?",
   "removeStopMessage": "Remove \"{stopTitle}\" from the itinerary?",
   "@removeStopMessage": {
-    "placeholders": { "stopTitle": { "type": "String" } }
+    "placeholders": {
+      "stopTitle": {
+        "type": "String"
+      }
+    }
   },
   "arrive": "Arrive",
   "depart": "Depart",
-
   "stopTitleLabel": "Title",
   "addressOptional": "Address (optional)",
   "arriveLabel": "Arrive",
   "departLabel": "Depart",
   "addStopButton": "Add stop",
   "editStop": "Edit stop",
-
   "navTrips": "Trips",
   "navJournal": "Journal",
   "navProfile": "Profile",
-
   "journalComingSoon": "Journal coming soon",
-
   "memberSearching": "Searching…",
   "memberAccountFound": "Account found",
   "memberNoAccountFound": "No account found",
   "memberLinkedAccount": "Linked account",
-
   "invitePending": "Pending",
   "inviteAccepted": "Accepted",
   "inviteDeclined": "Declined",
   "memberLeft": "Left",
   "invitedBy": "Invited by {name}",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, =1{1 trip invitation} other{{count} trip invitations}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "Accept",
   "declineInvite": "Decline",
   "inviteNotifTitle": "Trip invitation",
   "inviteNotifBody": "You've been invited to {tripTitle}",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "blockReinviteLabel": "Don't allow future invitations to this trip",
   "reinviteBlockedError": "This user has opted out of future invitations to this trip",
   "resendInvite": "Resend invite",
   "inviteResentTo": "Invite resent to {name}",
   "@inviteResentTo": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "declineInviteConfirmTitle": "Decline invitation?",
   "declineInviteConfirmMessage": "Decline the invitation to {tripTitle}? You will lose access.",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "Security",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "Use biometrics to unlock the app",
@@ -235,7 +273,6 @@
   "biometricReason": "Authenticate to access your account",
   "biometricFailed": "Authentication failed. Please try again.",
   "usePasswordInstead": "Use password instead",
-
   "navFriends": "Friends",
   "friendsTabFriends": "Friends",
   "friendsTabRequests": "Requests",
@@ -248,7 +285,11 @@
   "friendsRemove": "Remove Friend",
   "friendsRemoveConfirm": "Remove {name} from your friends?",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "No friends yet",
   "friendsNoFriendsHint": "Search for someone to add as a friend.",
@@ -256,16 +297,13 @@
   "friendsIncomingSection": "Incoming",
   "friendsOutgoingSection": "Sent",
   "friendsCancelRequest": "Cancel Request",
-
   "chatTabLabel": "Chat",
   "chatSendHint": "Message…",
   "chatNoMessages": "No messages yet. Say hello!",
   "chatSend": "Send",
-
   "notificationsSectionTitle": "Notifications",
   "mentionNotifToggleTitle": "Mention alerts",
   "mentionNotifToggleSubtitle": "Get notified when you're @mentioned in a trip chat",
-
   "privacySectionTitle": "Privacy",
   "blockedUsersTitle": "Blocked Users",
   "blockedUsersEmpty": "You haven't blocked anyone",
@@ -273,18 +311,29 @@
   "unblockUser": "Unblock",
   "blockConfirmTitle": "Block {name}?",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "They won't be able to add you to trips or send you friend requests.",
   "blockSuccess": "{name} has been blocked",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "{name} has been unblocked",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-
   "contactsButton": "From Contacts",
   "contactsScreenTitle": "Find from Contacts",
   "contactsPermissionDenied": "Contacts access is required to find your friends on TripManagement.",
@@ -297,9 +346,12 @@
   "contactsInvite": "Invite",
   "contactsInviteMessage": "Hey {name}! I''m using TripManagement to plan trips together. Join me here: [APP_STORE_LINK]",
   "@contactsInviteMessage": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-
   "navEvents": "Events",
   "newEvent": "New event",
   "editEvent": "Edit event",
@@ -325,15 +377,27 @@
   "changeRsvp": "Change RSVP",
   "goingCount": "{count} going",
   "@goingCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "maybeCount": "{count} maybe",
   "@maybeCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "declinedCount": "{count} can't go",
   "@declinedCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "shareEvent": "Share event",
   "linkCopied": "Link copied",
@@ -342,15 +406,44 @@
   "deletePhoto": "Delete photo",
   "deletePhotoConfirm": "Delete this photo?",
   "addExpense": "Add expense",
+  "editExpense": "Edit expense",
+  "deleteExpenseTitle": "Delete expense",
+  "deleteExpenseMessage": "Delete \"{description}\"? This cannot be undone.",
+  "@deleteExpenseMessage": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
   "noExpensesYet": "No expenses yet",
   "expenseDescription": "What was paid for?",
   "expenseAmount": "Amount",
   "splitAmong": "Split among guests",
-  "markSettled": "Mark settled",
+  "paidBy": "Paid by",
+  "selectAll": "Select all",
+  "deselectAll": "Deselect all",
   "totalOwed": "You owe: {amount}",
   "@totalOwed": {
-    "placeholders": { "amount": { "type": "String" } }
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
+  "youAreOwed": "You are owed: {amount}",
+  "@youAreOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settleUp": "Settle Up",
+  "totalSpent": "Total spent",
+  "theScore": "The Score",
+  "settlementPlan": "Settlement plan",
+  "allSquare": "All square! Everyone's even 🎉",
   "eventFull": "This event is at capacity.",
   "publicRsvpTitle": "You're invited!",
   "publicRsvpName": "Your name",
@@ -359,11 +452,34 @@
   "rsvpSuccess": "Your RSVP was saved!",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "deleteEventTitle": "Delete event",
   "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
   "@deleteEventMessage": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeTrip": "Trip",
+  "eventTypeBirthday": "Birthday",
+  "eventTypeWedding": "Wedding",
+  "eventTypeSocial": "Social",
+  "eventTypePicker": "Event type",
+  "routeTab": "Route",
+  "leaveEventTitle": "Leave event?",
+  "leaveEventMessage": "You will be removed from {eventTitle} and lose access.",
+  "@leaveEventMessage": {
+    "placeholders": {
+      "eventTitle": {
+        "type": "String"
+      }
+    }
   }
 }

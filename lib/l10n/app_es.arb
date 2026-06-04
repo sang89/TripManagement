@@ -351,10 +351,22 @@
   "deletePhotoConfirm": "Delete this photo?",
   "noExpensesYet": "Sin gastos aún",
   "addExpense": "Add expense",
+  "editExpense": "Editar gasto",
+  "deleteExpenseTitle": "Eliminar gasto",
+  "deleteExpenseMessage": "Eliminar \"{description}\"? Esta accion no se puede deshacer.",
+  "@deleteExpenseMessage": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
   "expenseDescription": "What was paid for?",
   "expenseAmount": "Amount",
   "splitAmong": "Split among guests",
-  "markSettled": "Mark settled",
+  "paidBy": "Pagado por",
+  "selectAll": "Seleccionar todo",
+  "deselectAll": "Deseleccionar todo",
   "totalOwed": "You owe: {amount}",
   "@totalOwed": {
     "placeholders": {
@@ -363,6 +375,19 @@
       }
     }
   },
+  "youAreOwed": "Te deben: {amount}",
+  "@youAreOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settleUp": "Saldar cuentas",
+  "totalSpent": "Total gastado",
+  "theScore": "El marcador",
+  "settlementPlan": "Plan de liquidación",
+  "allSquare": "¡Todo en orden! 🎉",
   "eventFull": "This event is at capacity.",
   "publicRsvpTitle": "You're invited!",
   "publicRsvpName": "Your name",
@@ -382,6 +407,21 @@
   "@deleteEventMessage": {
     "placeholders": {
       "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeTrip": "Viaje",
+  "eventTypeBirthday": "Cumpleaños",
+  "eventTypeWedding": "Boda",
+  "eventTypeSocial": "Social",
+  "eventTypePicker": "Tipo de evento",
+  "routeTab": "Ruta",
+  "leaveEventTitle": "¿Salir del evento?",
+  "leaveEventMessage": "Serás eliminado de {eventTitle} y perderás el acceso.",
+  "@leaveEventMessage": {
+    "placeholders": {
+      "eventTitle": {
         "type": "String"
       }
     }

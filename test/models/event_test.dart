@@ -10,7 +10,7 @@ void main() {
     'display_name': 'Alice',
     'email': 'alice@example.com',
     'phone': null,
-    'rsvp_status': 'going',
+    'status': 'going',
     'rsvp_at': '2026-06-01T09:00:00.000Z',
     'created_at': '2026-06-01T08:00:00.000Z',
   };
@@ -41,19 +41,19 @@ void main() {
       expect(g.displayName, 'Alice');
       expect(g.email, 'alice@example.com');
       expect(g.phone, isNull);
-      expect(g.rsvpStatus, 'going');
+      expect(g.status, 'going');
     });
 
-    test('defaults rsvp_status to going when missing', () {
-      final j = Map<String, dynamic>.from(guestJson)..remove('rsvp_status');
+    test('defaults status to going when missing', () {
+      final j = Map<String, dynamic>.from(guestJson)..remove('status');
       final g = EventGuest.fromJson(j);
-      expect(g.rsvpStatus, 'going');
+      expect(g.status, 'going');
     });
 
-    test('copyWith updates rsvpStatus only', () {
+    test('copyWith updates status only', () {
       final g = EventGuest.fromJson(guestJson);
-      final updated = g.copyWith(rsvpStatus: 'maybe');
-      expect(updated.rsvpStatus, 'maybe');
+      final updated = g.copyWith(status: 'maybe');
+      expect(updated.status, 'maybe');
       expect(updated.id, g.id);
       expect(updated.displayName, g.displayName);
     });
@@ -94,6 +94,7 @@ void main() {
 
   group('Event computed properties', () {
     late Event event;
+    final now = DateTime.now();
 
     setUp(() {
       event = Event.fromJson(eventJson).copyWith(guests: [
@@ -102,27 +103,27 @@ void main() {
           eventId: 'e1',
           userId: 'u2',
           displayName: 'Alice',
-          rsvpStatus: 'going',
-          rsvpAt: DateTime.now(),
-          createdAt: DateTime.now(),
+          status: 'going',
+          rsvpAt: now,
+          createdAt: now,
         ),
         EventGuest(
           id: 'g2',
           eventId: 'e1',
           userId: 'u3',
           displayName: 'Bob',
-          rsvpStatus: 'maybe',
-          rsvpAt: DateTime.now(),
-          createdAt: DateTime.now(),
+          status: 'maybe',
+          rsvpAt: now,
+          createdAt: now,
         ),
         EventGuest(
           id: 'g3',
           eventId: 'e1',
           userId: 'u4',
           displayName: 'Carol',
-          rsvpStatus: 'declined',
-          rsvpAt: DateTime.now(),
-          createdAt: DateTime.now(),
+          status: 'declined',
+          rsvpAt: now,
+          createdAt: now,
         ),
       ]);
     });

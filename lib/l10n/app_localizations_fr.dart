@@ -851,6 +851,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Modifier la depense';
+
+  @override
+  String get deleteExpenseTitle => 'Supprimer la depense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Supprimer \"$description\" ? Cette action est irreversible.';
+  }
+
+  @override
   String get noExpensesYet => 'Aucune dépense pour l\'instant';
 
   @override
@@ -863,12 +874,38 @@ class AppLocalizationsFr extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => 'Payé par';
+
+  @override
+  String get selectAll => 'Tout sélectionner';
+
+  @override
+  String get deselectAll => 'Tout désélectionner';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'On vous doit: $amount';
+  }
+
+  @override
+  String get settleUp => 'Régler les comptes';
+
+  @override
+  String get totalSpent => 'Total dépensé';
+
+  @override
+  String get theScore => 'Le score';
+
+  @override
+  String get settlementPlan => 'Plan de règlement';
+
+  @override
+  String get allSquare => 'Tout est réglé ! 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -899,5 +936,31 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => 'Voyage';
+
+  @override
+  String get eventTypeBirthday => 'Anniversaire';
+
+  @override
+  String get eventTypeWedding => 'Mariage';
+
+  @override
+  String get eventTypeSocial => 'Social';
+
+  @override
+  String get eventTypePicker => 'Type d\'événement';
+
+  @override
+  String get routeTab => 'Itinéraire';
+
+  @override
+  String get leaveEventTitle => 'Quitter l\'événement ?';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return 'Vous serez retiré de $eventTitle et perdrez l\'accès.';
   }
 }

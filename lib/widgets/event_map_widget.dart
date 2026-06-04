@@ -8,7 +8,7 @@ import '../services/directions_service.dart';
 
 export 'package:latlong2/latlong.dart' show LatLng;
 
-class TripMapPin {
+class EventMapPin {
   final String id;
   final LatLng position;
   final String title;
@@ -16,7 +16,7 @@ class TripMapPin {
   final bool isStart;
   final bool isDestination;
 
-  const TripMapPin({
+  const EventMapPin({
     required this.id,
     required this.position,
     required this.title,
@@ -29,11 +29,11 @@ class TripMapPin {
 /// Renders an ordered route: polyline + destination marker (blue) +
 /// numbered stop markers. Pass [compact] to embed in a form card
 /// (fixed 220px, gestures disabled so ListView can still scroll).
-class TripMapWidget extends StatefulWidget {
-  final List<TripMapPin> pins;
+class EventMapWidget extends StatefulWidget {
+  final List<EventMapPin> pins;
   final bool compact;
 
-  const TripMapWidget({
+  const EventMapWidget({
     super.key,
     required this.pins,
     this.compact = false,
@@ -54,7 +54,6 @@ class TripMapWidget extends StatefulWidget {
     });
   }
 
-  // No-op — flutter_map uses Flutter widgets for markers, no pre-rendering.
   static void prefetchIcons(int stopCount) {}
 
   @visibleForTesting
@@ -66,13 +65,13 @@ class TripMapWidget extends StatefulWidget {
   }
 
   @override
-  State<TripMapWidget> createState() => _TripMapWidgetState();
+  State<EventMapWidget> createState() => _EventMapWidgetState();
 }
 
-class _TripMapWidgetState extends State<TripMapWidget> {
+class _EventMapWidgetState extends State<EventMapWidget> {
   final _mapController = MapController();
   List<LatLng>? _routePoints;
-  List<TripMapPin> _lastPins = [];
+  List<EventMapPin> _lastPins = [];
 
   @override
   void initState() {
@@ -82,7 +81,7 @@ class _TripMapWidgetState extends State<TripMapWidget> {
   }
 
   @override
-  void didUpdateWidget(TripMapWidget old) {
+  void didUpdateWidget(EventMapWidget old) {
     super.didUpdateWidget(old);
     if (!_pinsEqual(widget.pins, _lastPins)) {
       _lastPins = widget.pins;
@@ -91,12 +90,14 @@ class _TripMapWidgetState extends State<TripMapWidget> {
     }
   }
 
-  static bool _pinsEqual(List<TripMapPin> a, List<TripMapPin> b) {
+  static bool _pinsEqual(List<EventMapPin> a, List<EventMapPin> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
       if (a[i].id != b[i].id ||
           a[i].position.latitude != b[i].position.latitude ||
-          a[i].position.longitude != b[i].position.longitude) { return false; }
+          a[i].position.longitude != b[i].position.longitude) {
+        return false;
+      }
     }
     return true;
   }
@@ -104,13 +105,15 @@ class _TripMapWidgetState extends State<TripMapWidget> {
   Future<void> _loadRoute() async {
     if (widget.pins.length < 2) return;
     final waypoints = widget.pins.map((p) => p.position).toList();
-    final key = TripMapWidget._routeKey(waypoints);
-    if (TripMapWidget._routeCache.containsKey(key)) {
-      if (mounted) { setState(() => _routePoints = TripMapWidget._routeCache[key]); }
+    final key = EventMapWidget._routeKey(waypoints);
+    if (EventMapWidget._routeCache.containsKey(key)) {
+      if (mounted) {
+        setState(() => _routePoints = EventMapWidget._routeCache[key]);
+      }
       return;
     }
     final points = await DirectionsService.getRoute(waypoints);
-    if (points != null) TripMapWidget._routeCache[key] = points;
+    if (points != null) EventMapWidget._routeCache[key] = points;
     if (mounted) setState(() => _routePoints = points);
   }
 
@@ -190,8 +193,8 @@ class _TripMapWidgetState extends State<TripMapWidget> {
       return _EmptyPlaceholder(compact: widget.compact);
     }
 
-    final routePoints = _routePoints ??
-        widget.pins.map((p) => p.position).toList();
+    final routePoints =
+        _routePoints ?? widget.pins.map((p) => p.position).toList();
     final isRealRoute = _routePoints != null;
 
     final map = FlutterMap(
@@ -218,8 +221,8 @@ class _TripMapWidgetState extends State<TripMapWidget> {
               color: AppTheme.primary,
               strokeWidth: isRealRoute ? 4 : 3,
               pattern: isRealRoute
-                ? const StrokePattern.solid()
-                : StrokePattern.dashed(segments: [10, 6]),
+                  ? const StrokePattern.solid()
+                  : StrokePattern.dashed(segments: [10, 6]),
             ),
           ],
         ),
@@ -251,7 +254,7 @@ class _PinDot extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
@@ -272,7 +275,7 @@ class _StopNumberPin extends StatelessWidget {
         color: AppTheme.primary,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
@@ -327,7 +330,8 @@ class _EmptyPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.map_outlined, size: 64, color: AppTheme.primaryLight),
+            const Icon(Icons.map_outlined,
+                size: 64, color: AppTheme.primaryLight),
             const SizedBox(height: 16),
             const Text('No mapped locations yet',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),

@@ -835,6 +835,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addExpense => 'Add expense';
 
   @override
+  String get editExpense => 'Edit expense';
+
+  @override
+  String get deleteExpenseTitle => 'Delete expense';
+
+  @override
+  String deleteExpenseMessage(String description) {
+    return 'Delete \"$description\"? This cannot be undone.';
+  }
+
+  @override
   String get noExpensesYet => 'まだ費用がありません';
 
   @override
@@ -847,12 +858,38 @@ class AppLocalizationsJa extends AppLocalizations {
   String get splitAmong => 'Split among guests';
 
   @override
-  String get markSettled => 'Mark settled';
+  String get paidBy => '支払い者';
+
+  @override
+  String get selectAll => 'すべて選択';
+
+  @override
+  String get deselectAll => 'すべて解除';
 
   @override
   String totalOwed(String amount) {
     return 'You owe: $amount';
   }
+
+  @override
+  String youAreOwed(String amount) {
+    return 'あなたへの支払い: $amount';
+  }
+
+  @override
+  String get settleUp => '精算する';
+
+  @override
+  String get totalSpent => '総支出';
+
+  @override
+  String get theScore => 'スコア';
+
+  @override
+  String get settlementPlan => '精算プラン';
+
+  @override
+  String get allSquare => '全員イーブン！ 🎉';
 
   @override
   String get eventFull => 'This event is at capacity.';
@@ -883,5 +920,31 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String deleteEventMessage(String title) {
     return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get eventTypeTrip => '旅行';
+
+  @override
+  String get eventTypeBirthday => '誕生日';
+
+  @override
+  String get eventTypeWedding => '結婚式';
+
+  @override
+  String get eventTypeSocial => 'ソーシャル';
+
+  @override
+  String get eventTypePicker => 'イベントの種類';
+
+  @override
+  String get routeTab => 'ルート';
+
+  @override
+  String get leaveEventTitle => 'イベントを退出しますか？';
+
+  @override
+  String leaveEventMessage(String eventTitle) {
+    return '$eventTitleから削除され、アクセスできなくなります。';
   }
 }

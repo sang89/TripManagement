@@ -351,10 +351,22 @@
   "deletePhotoConfirm": "Delete this photo?",
   "noExpensesYet": "Noch keine Ausgaben",
   "addExpense": "Add expense",
+  "editExpense": "Ausgabe bearbeiten",
+  "deleteExpenseTitle": "Ausgabe loschen",
+  "deleteExpenseMessage": "\"{description}\" loschen? Dies kann nicht ruckgangig gemacht werden.",
+  "@deleteExpenseMessage": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
   "expenseDescription": "What was paid for?",
   "expenseAmount": "Amount",
   "splitAmong": "Split among guests",
-  "markSettled": "Mark settled",
+  "paidBy": "Bezahlt von",
+  "selectAll": "Alle auswählen",
+  "deselectAll": "Alle abwählen",
   "totalOwed": "You owe: {amount}",
   "@totalOwed": {
     "placeholders": {
@@ -363,6 +375,19 @@
       }
     }
   },
+  "youAreOwed": "Dir wird geschuldet: {amount}",
+  "@youAreOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "settleUp": "Abrechnen",
+  "totalSpent": "Gesamtausgaben",
+  "theScore": "Das Ergebnis",
+  "settlementPlan": "Zahlungsplan",
+  "allSquare": "Alles ausgeglichen! 🎉",
   "eventFull": "This event is at capacity.",
   "publicRsvpTitle": "You're invited!",
   "publicRsvpName": "Your name",
@@ -382,6 +407,21 @@
   "@deleteEventMessage": {
     "placeholders": {
       "title": {
+        "type": "String"
+      }
+    }
+  },
+  "eventTypeTrip": "Reise",
+  "eventTypeBirthday": "Geburtstag",
+  "eventTypeWedding": "Hochzeit",
+  "eventTypeSocial": "Gesellig",
+  "eventTypePicker": "Ereignistyp",
+  "routeTab": "Route",
+  "leaveEventTitle": "Ereignis verlassen?",
+  "leaveEventMessage": "Sie werden von {eventTitle} entfernt und verlieren den Zugang.",
+  "@leaveEventMessage": {
+    "placeholders": {
+      "eventTitle": {
         "type": "String"
       }
     }
