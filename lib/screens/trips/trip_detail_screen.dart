@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
@@ -8,7 +9,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chat_message.dart';
 import '../../models/trip.dart';
+import '../../models/trip_expense.dart';
 import '../../models/trip_member.dart';
+import '../../models/trip_photo.dart';
 import '../../models/trip_stop.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
@@ -39,6 +42,8 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     Icons.route_outlined,
     Icons.map_outlined,
     Icons.chat_bubble_outline_rounded,
+    Icons.photo_library_outlined,
+    Icons.receipt_outlined,
   ];
 
   @override
@@ -49,6 +54,11 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       if (!_tabController.indexIsChanging) {
         setState(() => _tabIndex = _tabController.index);
       }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TripProvider>()
+        ..fetchPhotos(widget.tripId)
+        ..fetchExpenses(widget.tripId);
     });
   }
 
@@ -195,7 +205,14 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final tabLabels = [l10n.overview, l10n.itinerary, l10n.mapTab, l10n.chatTabLabel];
+    final tabLabels = [
+      l10n.overview,
+      l10n.itinerary,
+      l10n.mapTab,
+      l10n.chatTabLabel,
+      l10n.photosTab,
+      l10n.expensesTab,
+    ];
     final trip = context.watch<TripProvider>().getById(widget.tripId);
     if (trip == null) {
       return Scaffold(
@@ -270,6 +287,17 @@ class _TripDetailScreenState extends State<TripDetailScreen>
             ),
             TripMapWidget(pins: _buildMapPins(trip)),
             const _ChatTab(),
+            _PhotosTab(
+              tripId: trip.id,
+              photos: context.watch<TripProvider>().photosFor(trip.id),
+              currentUserId: currentUserId,
+              isOrganizer: isOrganizer,
+            ),
+            _ExpensesTab(
+              trip: trip,
+              expenses: context.watch<TripProvider>().expensesFor(trip.id),
+              currentUserId: currentUserId,
+            ),
           ],
         ),
         floatingActionButton: switch (_tabIndex) {
@@ -678,6 +706,448 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Photos tab ────────────────────────────────────────────────────────────────
+
+class _PhotosTab extends StatefulWidget {
+  final String tripId;
+  final List<TripPhoto> photos;
+  final String? currentUserId;
+  final bool isOrganizer;
+
+  const _PhotosTab({
+    required this.tripId,
+    required this.photos,
+    required this.currentUserId,
+    required this.isOrganizer,
+  });
+
+  @override
+  State<_PhotosTab> createState() => _PhotosTabState();
+}
+
+class _PhotosTabState extends State<_PhotosTab> {
+  bool _uploading = false;
+
+  Future<void> _pickAndUpload() async {
+    final picker = ImagePicker();
+    final image =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (image == null || !mounted) return;
+
+    setState(() => _uploading = true);
+    try {
+      final bytes = await image.readAsBytes();
+      final ext = image.name.split('.').last;
+      final db = Supabase.instance.client;
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final storagePath = '${widget.tripId}/$fileName';
+
+      await db.storage.from('trip-photos').uploadBinary(
+        storagePath,
+        bytes,
+        fileOptions: FileOptions(contentType: 'image/$ext', upsert: false),
+      );
+
+      if (mounted) {
+        await context
+            .read<TripProvider>()
+            .addPhoto(tripId: widget.tripId, storagePath: storagePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+    if (mounted) setState(() => _uploading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Stack(
+      children: [
+        widget.photos.isEmpty
+            ? Center(
+                child: Text(l10n.noPhotosYet,
+                    style: TextStyle(color: Colors.grey[400])))
+            : GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
+                ),
+                itemCount: widget.photos.length,
+                itemBuilder: (_, i) {
+                  final photo = widget.photos[i];
+                  final canDelete = widget.isOrganizer ||
+                      photo.uploadedBy == widget.currentUserId;
+                  return GestureDetector(
+                    onLongPress: canDelete
+                        ? () => _confirmDelete(context, photo)
+                        : null,
+                    onTap: () => _showFullScreen(context, photo),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: photo.publicUrl != null
+                          ? Image.network(photo.publicUrl!, fit: BoxFit.cover)
+                          : Container(color: Colors.grey[200]),
+                    ),
+                  );
+                },
+              ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            onPressed: _uploading ? null : _pickAndUpload,
+            backgroundColor: AppTheme.primary,
+            child: _uploading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.add_a_photo, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFullScreen(BuildContext context, TripPhoto photo) {
+    if (photo.publicUrl == null) return;
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(photo.publicUrl!),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, TripPhoto photo) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deletePhoto),
+        content: Text(l10n.deletePhotoConfirm),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<TripProvider>().deletePhoto(photo);
+    }
+  }
+}
+
+// ─── Expenses tab ───────────────────────────────────────────────────────────────
+
+class _ExpensesTab extends StatefulWidget {
+  final Trip trip;
+  final List<TripExpense> expenses;
+  final String? currentUserId;
+
+  const _ExpensesTab({
+    required this.trip,
+    required this.expenses,
+    required this.currentUserId,
+  });
+
+  @override
+  State<_ExpensesTab> createState() => _ExpensesTabState();
+}
+
+class _ExpensesTabState extends State<_ExpensesTab> {
+  void _showAddExpense() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _AddExpenseSheet(trip: widget.trip),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Stack(
+      children: [
+        widget.expenses.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.receipt_outlined,
+                        size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.noExpensesYet,
+                      style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                itemCount: widget.expenses.length,
+                itemBuilder: (_, i) => _TripExpenseCard(
+                  expense: widget.expenses[i],
+                  trip: widget.trip,
+                  currentUserId: widget.currentUserId,
+                ),
+              ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            onPressed: _showAddExpense,
+            backgroundColor: AppTheme.primary,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TripExpenseCard extends StatelessWidget {
+  final TripExpense expense;
+  final Trip trip;
+  final String? currentUserId;
+
+  const _TripExpenseCard(
+      {required this.expense, required this.trip, required this.currentUserId});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final fmt = NumberFormat.currency(symbol: '\$');
+    final myMember = trip.members
+        .where((m) => m.userId == currentUserId && m.status == 'accepted')
+        .firstOrNull;
+    final mySplit = myMember != null
+        ? expense.splits
+            .where((s) => s.memberId == myMember.id)
+            .firstOrNull
+        : null;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(expense.description,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                Text(fmt.format(expense.amount),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primary,
+                        fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Paid by ${expense.paidByName}',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+            if (mySplit != null) ...[
+              const Divider(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.totalOwed(fmt.format(mySplit.amount)),
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: mySplit.settled
+                              ? Colors.green
+                              : AppTheme.danger),
+                    ),
+                  ),
+                  if (!mySplit.settled)
+                    TextButton(
+                      onPressed: () => context
+                          .read<TripProvider>()
+                          .settleSplit(mySplit.id, expense.tripId),
+                      child: Text(l10n.markSettled),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddExpenseSheet extends StatefulWidget {
+  final Trip trip;
+
+  const _AddExpenseSheet({required this.trip});
+
+  @override
+  State<_AddExpenseSheet> createState() => _AddExpenseSheetState();
+}
+
+class _AddExpenseSheetState extends State<_AddExpenseSheet> {
+  final _descCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
+  final Set<String> _selectedMemberIds = {};
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final amount = double.tryParse(_amountCtrl.text.trim());
+    if (_descCtrl.text.trim().isEmpty || amount == null || amount <= 0) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<TripProvider>().addExpense(
+            tripId: widget.trip.id,
+            amount: amount,
+            description: _descCtrl.text.trim(),
+            splitMemberIds: _selectedMemberIds.toList(),
+          );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final acceptedMembers = widget.trip.members
+        .where((m) => m.status == 'accepted')
+        .toList();
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            child: Text(l10n.addExpense,
+                style: Theme.of(context).textTheme.titleMedium),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _descCtrl,
+                  decoration:
+                      InputDecoration(labelText: l10n.expenseDescription),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _amountCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.expenseAmount, prefixText: '\$'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(l10n.membersSection,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                children: acceptedMembers
+                    .map((m) => CheckboxListTile(
+                          title: Text(m.displayName),
+                          value: _selectedMemberIds.contains(m.id),
+                          onChanged: (v) => setState(() {
+                            if (v == true) {
+                              _selectedMemberIds.add(m.id);
+                            } else {
+                              _selectedMemberIds.remove(m.id);
+                            }
+                          }),
+                          dense: true,
+                          activeColor: AppTheme.primary,
+                        ))
+                    .toList(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: AppButton(
+              label: l10n.addExpense,
+              onPressed: _submit,
+              loading: _loading,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }

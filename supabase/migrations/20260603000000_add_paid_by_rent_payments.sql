@@ -1,0 +1,2 @@
+ALTER TABLE rent_payments
+  ADD COLUMN IF NOT EXISTS paid_by TEXT;

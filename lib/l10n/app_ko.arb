@@ -146,7 +146,6 @@
   "navJournal": "일지",
   "navProfile": "프로필",
   "journalComingSoon": "일지 기능 출시 예정",
-
   "memberSearching": "검색 중…",
   "memberAccountFound": "계정을 찾았습니다",
   "memberNoAccountFound": "계정을 찾을 수 없습니다",
@@ -157,21 +156,31 @@
   "memberLeft": "탈퇴함",
   "invitedBy": "{name}님이 초대함",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, other{여행 초대 {count}건}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "수락",
   "declineInvite": "거절",
   "inviteNotifTitle": "여행 초대",
   "inviteNotifBody": "{tripTitle}에 초대받으셨습니다",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
-
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
+  },
   "blockReinviteLabel": "이 여행에 대한 향후 초대 허용 안 함",
   "reinviteBlockedError": "이 사용자는 이 여행에 대한 향후 초대를 거부했습니다",
   "resendInvite": "초대 재전송",
@@ -179,9 +188,12 @@
   "declineInviteConfirmTitle": "초대 거절?",
   "declineInviteConfirmMessage": "«{tripTitle}» 초대를 거절하시겠습니까? 접근 권한을 잃게 됩니다.",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "보안",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "생체 인식으로 앱 잠금 해제",
@@ -192,9 +204,7 @@
   "biometricSignInWithBiometrics": "생체 인식으로 로그인",
   "biometricReason": "계정에 접근하려면 인증하세요",
   "biometricFailed": "인증에 실패했습니다. 다시 시도해 주세요.",
-  "usePasswordInstead": "비밀번호 사용"
-,
-
+  "usePasswordInstead": "비밀번호 사용",
   "navFriends": "친구",
   "friendsTabFriends": "친구",
   "friendsTabRequests": "요청",
@@ -207,7 +217,11 @@
   "friendsRemove": "친구 삭제",
   "friendsRemoveConfirm": "{name}을(를) 친구 목록에서 삭제하시겠습니까?",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "아직 친구가 없습니다",
   "friendsNoFriendsHint": "친구로 추가할 사람을 검색하세요.",
@@ -218,22 +232,22 @@
   "chatTabLabel": "체팅",
   "chatSendHint": "메시지…",
   "chatNoMessages": "아직 메시지가 없습니다. 인사해 보세요!",
-  "chatSend": "전송"
-,
-
+  "chatSend": "전송",
   "leave": "나가기",
   "leaveTripTitle": "여행에서 나가시겠습니까?",
   "leaveTripMessage": "{tripTitle}에서 제거되고 접근 권한을 잃게 됩니다.",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leaveTripTooltip": "여행 나가기",
   "thisTripFallback": "이 여행",
-
   "notificationsSectionTitle": "알림",
   "mentionNotifToggleTitle": "멘션 알림",
   "mentionNotifToggleSubtitle": "여행 채팅에서 @멘션될 때 알림 받기",
-
   "privacySectionTitle": "개인 정보",
   "blockedUsersTitle": "차단된 사용자",
   "blockedUsersEmpty": "차단한 사용자가 없습니다",
@@ -241,27 +255,135 @@
   "unblockUser": "차단 해제",
   "blockConfirmTitle": "{name}을(를) 차단할까요?",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "이 사람은 더 이상 당신을 여행에 추가하거나 친구 요청을 보낼 수 없습니다.",
   "blockSuccess": "{name}이(가) 차단되었습니다",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "{name}의 차단이 해제되었습니다",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-"contactsButton": "연락처에서",
-"contactsScreenTitle": "연락처에서 찾기",
-"contactsPermissionDenied": "TripManagement에서 친구를 찾으려면 연락처 접근이 필요합니다.",
-"contactsOpenSettings": "설정 열기",
-"contactsOnApp": "TripManagement 사용 중",
-"contactsInviteSection": "TripManagement에 초대",
-"contactsEmpty": "전화번호나 이메일이 있는 연락처를 찾을 수 없습니다.",
-"contactsAddFriend": "추가",
-"contactsPending": "대기 중",
-"contactsInvite": "초대",
-"contactsInviteMessage": "안녕 {name}! TripManagement로 함께 여행을 계획해요. 여기서 참여하세요: [APP_STORE_LINK]",
-"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
+  "contactsButton": "연락처에서",
+  "contactsScreenTitle": "연락처에서 찾기",
+  "contactsPermissionDenied": "TripManagement에서 친구를 찾으려면 연락처 접근이 필요합니다.",
+  "contactsOpenSettings": "설정 열기",
+  "contactsOnApp": "TripManagement 사용 중",
+  "contactsInviteSection": "TripManagement에 초대",
+  "contactsEmpty": "전화번호나 이메일이 있는 연락처를 찾을 수 없습니다.",
+  "contactsAddFriend": "추가",
+  "contactsPending": "대기 중",
+  "contactsInvite": "초대",
+  "contactsInviteMessage": "안녕 {name}! TripManagement로 함께 여행을 계획해요. 여기서 참여하세요: [APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "정보",
+  "guestsTab": "Guests",
+  "noGuestsYet": "아직 게스트가 없습니다. + 를 눌러 추가하세요.",
+  "addGuest": "게스트 추가",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "noExpensesYet": "아직 지출이 없습니다",
+  "addExpense": "Add expense",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

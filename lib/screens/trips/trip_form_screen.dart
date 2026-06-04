@@ -432,7 +432,13 @@ class _TripFormScreenState extends State<TripFormScreen> {
             TextFormField(
               controller: _titleCtrl,
               decoration: InputDecoration(
-                labelText: l10n.tripTitle,
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l10n.tripTitle),
+                    const Text(' *', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
                 prefixIcon: const Icon(Icons.flight_takeoff_rounded),
               ),
               validator: (v) =>

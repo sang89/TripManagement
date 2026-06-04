@@ -146,7 +146,6 @@
   "navJournal": "Diario",
   "navProfile": "Perfil",
   "journalComingSoon": "Diario próximamente",
-
   "memberSearching": "Buscando…",
   "memberAccountFound": "Cuenta encontrada",
   "memberNoAccountFound": "No se encontró ninguna cuenta",
@@ -157,21 +156,31 @@
   "memberLeft": "Salió",
   "invitedBy": "Invitado por {name}",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, =1{1 invitación de viaje} other{{count} invitaciones de viaje}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "Aceptar",
   "declineInvite": "Rechazar",
   "inviteNotifTitle": "Invitación de viaje",
   "inviteNotifBody": "Has sido invitado a {tripTitle}",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
-
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
+  },
   "blockReinviteLabel": "No permitir futuras invitaciones a este viaje",
   "reinviteBlockedError": "Este usuario ha rechazado futuras invitaciones a este viaje",
   "resendInvite": "Reenviar invitación",
@@ -179,9 +188,12 @@
   "declineInviteConfirmTitle": "¿Rechazar invitación?",
   "declineInviteConfirmMessage": "¿Rechazar la invitación a «{tripTitle}»? Perderás el acceso.",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "Seguridad",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "Usar biometría para desbloquear la app",
@@ -192,9 +204,7 @@
   "biometricSignInWithBiometrics": "Iniciar sesión con biometría",
   "biometricReason": "Autentícate para acceder a tu cuenta",
   "biometricFailed": "Autenticación fallida. Inténtalo de nuevo.",
-  "usePasswordInstead": "Usar contraseña"
-,
-
+  "usePasswordInstead": "Usar contraseña",
   "navFriends": "Amigos",
   "friendsTabFriends": "Amigos",
   "friendsTabRequests": "Solicitudes",
@@ -207,7 +217,11 @@
   "friendsRemove": "Eliminar amigo",
   "friendsRemoveConfirm": "¿Eliminar a {name} de tus amigos?",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "Aún sin amigos",
   "friendsNoFriendsHint": "Busca a alguien para agregar como amigo.",
@@ -218,22 +232,22 @@
   "chatTabLabel": "Chat",
   "chatSendHint": "Mensaje…",
   "chatNoMessages": "Aún sin mensajes. ¡Di hola!",
-  "chatSend": "Enviar"
-,
-
+  "chatSend": "Enviar",
   "leave": "Salir",
   "leaveTripTitle": "¿Salir del viaje?",
   "leaveTripMessage": "Serás eliminado de {tripTitle} y perderás el acceso.",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leaveTripTooltip": "Salir del viaje",
   "thisTripFallback": "este viaje",
-
   "notificationsSectionTitle": "Notificaciones",
   "mentionNotifToggleTitle": "Alertas de mención",
   "mentionNotifToggleSubtitle": "Recibe notificaciones cuando te @mencionen en un chat de viaje",
-
   "privacySectionTitle": "Privacidad",
   "blockedUsersTitle": "Usuarios bloqueados",
   "blockedUsersEmpty": "No has bloqueado a nadie",
@@ -241,27 +255,135 @@
   "unblockUser": "Desbloquear",
   "blockConfirmTitle": "¿Bloquear a {name}?",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "No podrán añadirte a viajes ni enviarte solicitudes de amistad.",
   "blockSuccess": "{name} ha sido bloqueado",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "{name} ha sido desbloqueado",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-"contactsButton": "Desde contactos",
-"contactsScreenTitle": "Buscar desde contactos",
-"contactsPermissionDenied": "Se necesita acceso a los contactos para encontrar tus amigos en TripManagement.",
-"contactsOpenSettings": "Abrir configuración",
-"contactsOnApp": "En TripManagement",
-"contactsInviteSection": "Invitar a TripManagement",
-"contactsEmpty": "No se encontraron contactos con teléfono o correo electrónico.",
-"contactsAddFriend": "Agregar",
-"contactsPending": "Pendiente",
-"contactsInvite": "Invitar",
-"contactsInviteMessage": "¡Hola {name}! Estoy usando TripManagement para planificar viajes. Únete aquí: [APP_STORE_LINK]",
-"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
+  "contactsButton": "Desde contactos",
+  "contactsScreenTitle": "Buscar desde contactos",
+  "contactsPermissionDenied": "Se necesita acceso a los contactos para encontrar tus amigos en TripManagement.",
+  "contactsOpenSettings": "Abrir configuración",
+  "contactsOnApp": "En TripManagement",
+  "contactsInviteSection": "Invitar a TripManagement",
+  "contactsEmpty": "No se encontraron contactos con teléfono o correo electrónico.",
+  "contactsAddFriend": "Agregar",
+  "contactsPending": "Pendiente",
+  "contactsInvite": "Invitar",
+  "contactsInviteMessage": "¡Hola {name}! Estoy usando TripManagement para planificar viajes. Únete aquí: [APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "Info",
+  "guestsTab": "Guests",
+  "noGuestsYet": "Aún no hay invitados. Toca + para agregar uno.",
+  "addGuest": "Agregar invitado",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "noExpensesYet": "Sin gastos aún",
+  "addExpense": "Add expense",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

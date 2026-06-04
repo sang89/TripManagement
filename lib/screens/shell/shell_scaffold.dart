@@ -5,6 +5,7 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/invitations_provider.dart';
+import '../../providers/event_provider.dart';
 
 class ShellScaffold extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -59,6 +60,23 @@ class ShellScaffold extends StatelessWidget {
               ),
             ),
             label: l10n.navFriends,
+          ),
+          BottomNavigationBarItem(
+            icon: Consumer<EventProvider>(
+              builder: (_, events, _) => Badge(
+                isLabelVisible: events.pendingRsvpCount > 0,
+                label: Text('${events.pendingRsvpCount}'),
+                child: const Icon(Icons.celebration_outlined),
+              ),
+            ),
+            activeIcon: Consumer<EventProvider>(
+              builder: (_, events, _) => Badge(
+                isLabelVisible: events.pendingRsvpCount > 0,
+                label: Text('${events.pendingRsvpCount}'),
+                child: const Icon(Icons.celebration),
+              ),
+            ),
+            label: l10n.navEvents,
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),

@@ -47,7 +47,12 @@ lib/
 │   ├── trip_stop.dart      # TripStop (title, address, lat/lng, arrive_at, depart_at, sort_order)
 │   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
 │   ├── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
-│   └── chat_message.dart   # ChatMessage — id, tripId, userId, content, enriched senderName
+│   ├── chat_message.dart   # ChatMessage — id, tripId, userId, content, enriched senderName
+│   ├── event.dart          # Event; embeds List<EventGuest>; inviteCode for public RSVP link
+│   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, rsvpStatus
+│   ├── event_message.dart  # EventMessage — id, eventId, userId, content, enriched senderName
+│   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, publicUrl (resolved at load)
+│   └── event_expense.dart  # EventExpense + EventExpenseSplit for cost splitting
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart      # Auth session; login/register/logout
 │   ├── trip_provider.dart      # All trips + nested stops/members; full CRUD + Realtime
@@ -55,11 +60,18 @@ lib/
 │   ├── friends_provider.dart   # Friend list + requests; two Realtime channels; searchUsers RPC
 │   ├── blocked_users_provider.dart  # Global block list; blockUser RPC + optimistic unblock
 │   ├── chat_provider.dart      # Trip-scoped chat messages; paginated load + Realtime INSERT
+│   ├── event_provider.dart     # Global events (organizer + guest); photos/expenses fetched on demand; Realtime
+│   ├── event_chat_provider.dart  # Event-scoped chat; mirrors ChatProvider pattern; scoped to event detail route
 │   └── settings_provider.dart  # Theme mode + language persistence
 ├── screens/
 │   ├── auth/
 │   │   ├── login_screen.dart
 │   │   └── register_screen.dart
+│   ├── events/
+│   │   ├── events_screen.dart       # Events tab: My events + Invited sections
+│   │   ├── event_form_screen.dart   # Create / edit event (title, description, location, dates, capacity)
+│   │   ├── event_detail_screen.dart # 5-tab detail: Info, Guests (FAB for organizer → _AddGuestSheet with friends quick-add + email/phone lookup), Chat, Photos, Expenses
+│   │   └── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   ├── friends/
 │   │   ├── friends_screen.dart  # Friends tab: accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
 │   │   └── contacts_screen.dart # Batch-match device contacts against registered users; share-sheet invite for non-members
@@ -69,7 +81,7 @@ lib/
 │   │   ├── settings_screen.dart      # Theme, language, account, notifications, privacy sections
 │   │   └── blocked_users_screen.dart # List of globally blocked users with Unblock action
 │   ├── shell/
-│   │   └── shell_scaffold.dart     # StatefulShellRoute wrapper; 3-tab bottom nav; invite + friend-request badges
+│   │   └── shell_scaffold.dart     # StatefulShellRoute wrapper; 4-tab bottom nav; invite + friend-request + event badges
 │   └── trips/
 │       ├── trips_screen.dart       # Trip list; invite banner; swipe-to-delete/leave; tap → detail
 │       ├── trip_form_screen.dart   # Create / edit trip (destination, dates, notes, map preview, members)
@@ -104,27 +116,29 @@ lib/
 
 ## Navigation (GoRouter)
 
-All routes are defined in `main.dart`. Auth state drives a redirect guard. The app uses `StatefulShellRoute.indexedStack` (go_router) for a 2-tab bottom nav shell.
+All routes are defined in `main.dart`. Auth state drives a redirect guard. The app uses `StatefulShellRoute.indexedStack` (go_router) for a 4-tab bottom nav shell.
 
 **Shell branches (bottom nav tabs):**
 
 | Tab | Icon | Route | Sub-routes |
 |---|---|---|---|
-| Trips | `map_outlined` | `/trips` → TripsScreen | `/trip/new`, `/trip/:id`, `/trip/:id/edit` |
+| Trips | `luggage_outlined` | `/trips` → TripsScreen | `/trip/new`, `/trip/:id`, `/trip/:id/edit` |
 | Friends | `people_outline` | `/friends` → FriendsScreen | — |
+| Events | `celebration_outlined` | `/events` → EventsScreen | `/event/new`, `/event/:id`, `/event/:id/edit` |
 | Profile | `person_outline` | `/profile` → ProfileScreen | `/profile/settings` → SettingsScreen, `/profile/settings/blocked` → BlockedUsersScreen |
 
-`/trip/:id` route builder in `main.dart` creates a scoped `ChatProvider` and wraps `TripDetailScreen` in `ChangeNotifierProvider<ChatProvider>`, enabling test injection without touching widget state.
+`/trip/:id` creates a scoped `ChatProvider`. `/event/:id` creates a scoped `EventChatProvider`. Both wrap the detail screen in `ChangeNotifierProvider`, enabling test injection.
 
 **Top-level routes (outside shell):**
 ```
-/           → redirects to /trips
-/home       → redirects to /trips
-/login      → LoginScreen
-/register   → RegisterScreen
+/                        → redirects to /trips
+/home                    → redirects to /trips
+/login                   → LoginScreen
+/register                → RegisterScreen
+/event/invite/:code      → EventInviteScreen (public — no auth required)
 ```
 
-**Auth guard:** Unauthenticated users are redirected to `/login`. Logged-in users visiting `/login` or `/register` are redirected to `/trips`. Guard is driven by `AuthProvider` as a `refreshListenable`.
+**Auth guard:** Unauthenticated users are redirected to `/login`. Exception: `/event/invite/*` routes are public (accessible without auth). Logged-in users visiting `/login` or `/register` are redirected to `/trips`. Guard is driven by `AuthProvider` as a `refreshListenable`.
 
 ---
 
@@ -140,13 +154,15 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
 | `BlockedUsersProvider` | Global block list | `load()`, `clear()`, `blockUser(userId)`, `unblockUser(userId)`, `isBlocked(userId)`; optimistic unblock with revert on error; loaded on login, cleared on logout |
 | `ChatProvider` | Trip-scoped chat messages | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel |
+| `EventProvider` | All events (organizer + guest) | `load()`, `clear()`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status)`, `addGuest(eventId, displayName, [email, phone, userId])`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`; Realtime via `event_sync_<userId>` channel |
+| `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; same pagination/optimistic pattern as `ChatProvider`; scoped to `/event/:id` route |
 | `SettingsProvider` | Theme mode + language preference | `load()`, `setThemeMode()`, `setLocale()` |
 | `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |
 | `OfflineQueue` | Pending write operations | `init()`, `enqueue()`, `flush()`, `pendingCount`, `hasPending` |
 
-Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` / `TripProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, `FriendsProvider.init()` / `FriendsProvider.clear()`, and `BlockedUsersProvider.load()` / `BlockedUsersProvider.clear()`.
+Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `TripProvider.load()` / `TripProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, `FriendsProvider.init()` / `FriendsProvider.clear()`, `BlockedUsersProvider.load()` / `BlockedUsersProvider.clear()`, and `EventProvider.load()` / `EventProvider.clear()`.
 
-`ChatProvider` is **not global** — it is instantiated in the `/trip/:id` GoRouter route builder (not in `MultiProvider`) so it is scoped to a single trip and disposed when the user navigates away.
+`ChatProvider` and `EventChatProvider` are **not global** — each is instantiated in its respective GoRouter route builder (not in `MultiProvider`), scoped to one trip/event, and disposed when the user navigates away.
 
 ### Offline behaviour
 
@@ -301,6 +317,94 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 - `find_user_by_contact` excludes callers who are blocked by the target (so the blocked user can't find the blocker when adding trip members).
 - `search_users` excludes both directions (blocker ↔ blocked are invisible to each other in friend search).
 - `friendships_insert` RLS WITH CHECK prevents sending a friend request to someone who has blocked you.
+
+#### `events`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `created_by` | uuid FK→auth.users | organizer |
+| `title` | text | |
+| `description` | text | default '' |
+| `location` | text | |
+| `location_lat/lng` | float8 nullable | |
+| `start_at` | timestamptz | required |
+| `end_at` | timestamptz nullable | |
+| `capacity` | integer nullable | null = unlimited |
+| `invite_code` | uuid UNIQUE | auto-generated; used for public share link |
+| `created_at / updated_at` | timestamptz | |
+
+#### `event_guests`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `user_id` | uuid FK→auth.users nullable | null for non-app RSVPs |
+| `display_name` | text | |
+| `email / phone` | text nullable | |
+| `rsvp_status` | text | `'going'` \| `'maybe'` \| `'declined'`; default `'going'` |
+| `rsvp_at` | timestamptz | updated on each RSVP change |
+| `created_at` | timestamptz | |
+
+**Constraints:** Partial UNIQUE INDEX on `(event_id, user_id) WHERE user_id IS NOT NULL`  
+**REPLICA IDENTITY:** FULL (DELETE payloads include event_id for Realtime routing)
+
+#### `event_messages`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | |
+| `user_id` | uuid FK→auth.users | sender |
+| `content` | text | |
+| `created_at` | timestamptz | |
+
+**Index:** `(event_id, created_at DESC)` for paginated fetch
+
+#### `event_photos`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | |
+| `uploaded_by` | uuid FK→auth.users | |
+| `storage_path` | text | key in `event-photos` Storage bucket: `{event_id}/{filename}` |
+| `caption` | text | default '' |
+| `created_at` | timestamptz | |
+
+**REPLICA IDENTITY:** FULL
+
+#### `event_expenses`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | |
+| `paid_by_user_id` | uuid FK→auth.users | |
+| `paid_by_name` | text | snapshot of payer name at creation time |
+| `amount` | numeric(10,2) | > 0 |
+| `description` | text | |
+| `created_at` | timestamptz | |
+
+#### `event_expense_splits`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | denormalized for RLS — avoids join |
+| `expense_id` | uuid FK→event_expenses | |
+| `guest_id` | uuid FK→event_guests | |
+| `amount` | numeric(10,2) | share for this guest |
+| `settled` | boolean | default false |
+| `settled_at` | timestamptz nullable | |
+
+**RLS helper:** `auth_user_is_event_member(p_event_id uuid)` — `SECURITY DEFINER` function; returns true if caller is event creator OR has a guest row for that event. Used by all event-related RLS policies.
+
+**Authenticated RPCs (`authenticated` role only):**
+- `create_event(p_title, p_description, p_location, p_start_at, [p_location_lat, p_location_lng, p_end_at, p_capacity])` — `SECURITY DEFINER`; inserts an event row with `created_by = auth.uid()`, bypassing the RLS INSERT check. Raises `not_authenticated` if `auth.uid()` is NULL. Used by `EventProvider.addEvent()` to avoid 42501 errors caused by the `sb_publishable_` key format + RLS interaction.
+
+**Public RPCs (`anon` + `authenticated` access):**
+- `get_event_by_invite_code(p_invite_code uuid)` — returns event info + RSVP counts + organizer name; used by `EventInviteScreen` without auth.
+- `rsvp_event_public(p_invite_code, p_display_name, p_email, p_phone, p_rsvp_status)` — inserts an anonymous `event_guests` row (user_id = null); enforces capacity limit; returns event summary.
+
+**Storage:** `event-photos` bucket (public read); path = `{event_id}/{filename}`.
+
+**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses` all added to `supabase_realtime`. EventProvider channel: `event_sync_<userId>`.
 
 ---
 

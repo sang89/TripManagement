@@ -298,5 +298,72 @@
   "contactsInviteMessage": "Hey {name}! I''m using TripManagement to plan trips together. Join me here: [APP_STORE_LINK]",
   "@contactsInviteMessage": {
     "placeholders": { "name": { "type": "String" } }
+  },
+
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "Info",
+  "guestsTab": "Guests",
+  "noGuestsYet": "No guests yet. Tap + to add one.",
+  "addGuest": "Add guest",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "addExpense": "Add expense",
+  "noExpensesYet": "No expenses yet",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": { "title": { "type": "String" } }
   }
 }

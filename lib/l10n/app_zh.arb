@@ -146,7 +146,6 @@
   "navJournal": "日记",
   "navProfile": "资料",
   "journalComingSoon": "日记即将推出",
-
   "memberSearching": "搜索中…",
   "memberAccountFound": "找到账户",
   "memberNoAccountFound": "未找到账户",
@@ -157,21 +156,31 @@
   "memberLeft": "已离开",
   "invitedBy": "由{name}邀请",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, other{{count}个行程邀请}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "接受",
   "declineInvite": "拒绝",
   "inviteNotifTitle": "行程邀请",
   "inviteNotifBody": "您被邀请加入{tripTitle}",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
-
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
+  },
   "blockReinviteLabel": "不允许此行程的未来邀请",
   "reinviteBlockedError": "该用户已选择拒绝此行程的未来邀请",
   "resendInvite": "重新发送邀请",
@@ -179,9 +188,12 @@
   "declineInviteConfirmTitle": "拒绝邀请？",
   "declineInviteConfirmMessage": "拒绝«{tripTitle}»的邀请？您将失去访问权限。",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "安全",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "使用生物识别解锁应用",
@@ -192,9 +204,7 @@
   "biometricSignInWithBiometrics": "使用生物识别登录",
   "biometricReason": "请验证身份以访问您的账户",
   "biometricFailed": "身份验证失败，请重试。",
-  "usePasswordInstead": "使用密码登录"
-,
-
+  "usePasswordInstead": "使用密码登录",
   "navFriends": "好友",
   "friendsTabFriends": "好友",
   "friendsTabRequests": "请求",
@@ -207,7 +217,11 @@
   "friendsRemove": "删除好友",
   "friendsRemoveConfirm": "将 {name} 从好友列表中删除？",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "还没有好友",
   "friendsNoFriendsHint": "搜索要添加为好友的人。",
@@ -218,22 +232,22 @@
   "chatTabLabel": "聊天",
   "chatSendHint": "消息…",
   "chatNoMessages": "还没有消息。打个招呼吧！",
-  "chatSend": "发送"
-,
-
+  "chatSend": "发送",
   "leave": "离开",
   "leaveTripTitle": "离开行程？",
   "leaveTripMessage": "您将被从 {tripTitle} 中移除，并失去访问权限。",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leaveTripTooltip": "离开行程",
   "thisTripFallback": "此行程",
-
   "notificationsSectionTitle": "通知",
   "mentionNotifToggleTitle": "提及通知",
   "mentionNotifToggleSubtitle": "当您在旅行聊天中被@提及时收到通知",
-
   "privacySectionTitle": "隐私",
   "blockedUsersTitle": "已屏蔽用户",
   "blockedUsersEmpty": "您尚未屏蔽任何人",
@@ -241,27 +255,135 @@
   "unblockUser": "取消屏蔽",
   "blockConfirmTitle": "屏蔽 {name}？",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "他们将无法将您添加到行程或向您发送好友请求。",
   "blockSuccess": "已屏蔽 {name}",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "已取消屏蔽 {name}",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-"contactsButton": "从通讯录",
-"contactsScreenTitle": "从通讯录查找",
-"contactsPermissionDenied": "需要访问通讯录才能在TripManagement中找到您的朋友。",
-"contactsOpenSettings": "打开设置",
-"contactsOnApp": "已在TripManagement",
-"contactsInviteSection": "邀请加入TripManagement",
-"contactsEmpty": "未找到有电话或电子邮件的联系人。",
-"contactsAddFriend": "添加",
-"contactsPending": "待处理",
-"contactsInvite": "邀请",
-"contactsInviteMessage": "嗨 {name}！我在使用TripManagement一起规划旅行。在这里加入我：[APP_STORE_LINK]",
-"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
+  "contactsButton": "从通讯录",
+  "contactsScreenTitle": "从通讯录查找",
+  "contactsPermissionDenied": "需要访问通讯录才能在TripManagement中找到您的朋友。",
+  "contactsOpenSettings": "打开设置",
+  "contactsOnApp": "已在TripManagement",
+  "contactsInviteSection": "邀请加入TripManagement",
+  "contactsEmpty": "未找到有电话或电子邮件的联系人。",
+  "contactsAddFriend": "添加",
+  "contactsPending": "待处理",
+  "contactsInvite": "邀请",
+  "contactsInviteMessage": "嗨 {name}！我在使用TripManagement一起规划旅行。在这里加入我：[APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "信息",
+  "guestsTab": "Guests",
+  "noGuestsYet": "暂无嘉宾。点击 + 添加。",
+  "addGuest": "添加嘉宾",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "noExpensesYet": "暂无支出",
+  "addExpense": "Add expense",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }
