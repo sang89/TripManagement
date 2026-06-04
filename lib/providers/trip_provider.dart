@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/trip.dart';
+import '../models/trip_expense.dart';
 import '../models/trip_member.dart';
+import '../models/trip_photo.dart';
 import '../models/trip_stop.dart';
 import '../services/connectivity_service.dart';
 import '../services/local_cache.dart';
@@ -27,6 +29,9 @@ class TripProvider extends ChangeNotifier {
   String? _loadError;
   String? _userId;
   RealtimeChannel? _realtimeChannel;
+
+  final Map<String, List<TripPhoto>> _photos = {};
+  final Map<String, List<TripExpense>> _expenses = {};
 
   final ConnectivityService? _connectivity;
   final OfflineQueue? _queue;
@@ -542,10 +547,15 @@ class TripProvider extends ChangeNotifier {
         .subscribe();
   }
 
+  List<TripPhoto> photosFor(String tripId) => _photos[tripId] ?? [];
+  List<TripExpense> expensesFor(String tripId) => _expenses[tripId] ?? [];
+
   void clear() {
     _realtimeChannel?.unsubscribe();
     _realtimeChannel = null;
     _trips = [];
+    _photos.clear();
+    _expenses.clear();
     _loaded = false;
     _loadError = null;
     if (_userId != null) {
@@ -1041,5 +1051,132 @@ class TripProvider extends ChangeNotifier {
 
   Future<void> resendInvite(String memberId) async {
     await _db.rpc('resend_invite', params: {'p_member_id': memberId});
+  }
+
+  // ─── Photos ────────────────────────────────────────────────────────────────
+
+  Future<List<TripPhoto>> fetchPhotos(String tripId) async {
+    try {
+      final data = await _db
+          .from('trip_photos')
+          .select()
+          .eq('trip_id', tripId)
+          .order('created_at', ascending: false);
+      final photos = List<Map<String, dynamic>>.from(data).map((r) {
+        final photo = TripPhoto.fromJson(r);
+        final url =
+            _db.storage.from('trip-photos').getPublicUrl(photo.storagePath);
+        return photo.withPublicUrl(url);
+      }).toList();
+      _photos[tripId] = photos;
+      notifyListeners();
+      return photos;
+    } catch (e) {
+      debugPrint('TripProvider.fetchPhotos error: $e');
+      return [];
+    }
+  }
+
+  Future<TripPhoto?> addPhoto({
+    required String tripId,
+    required String storagePath,
+    String caption = '',
+  }) async {
+    try {
+      final data = await _db.from('trip_photos').insert({
+        'trip_id': tripId,
+        'uploaded_by': _userId,
+        'storage_path': storagePath,
+        'caption': caption,
+      }).select().single();
+      final photo = TripPhoto.fromJson(data);
+      final url =
+          _db.storage.from('trip-photos').getPublicUrl(photo.storagePath);
+      final withUrl = photo.withPublicUrl(url);
+      _photos[tripId] = [withUrl, ...(_photos[tripId] ?? [])];
+      notifyListeners();
+      return withUrl;
+    } catch (e) {
+      debugPrint('TripProvider.addPhoto error: $e');
+      return null;
+    }
+  }
+
+  Future<void> deletePhoto(TripPhoto photo) async {
+    await _db.storage.from('trip-photos').remove([photo.storagePath]);
+    await _db.from('trip_photos').delete().eq('id', photo.id);
+    _photos[photo.tripId] =
+        (_photos[photo.tripId] ?? []).where((p) => p.id != photo.id).toList();
+    notifyListeners();
+  }
+
+  // ─── Expenses ──────────────────────────────────────────────────────────────
+
+  Future<List<TripExpense>> fetchExpenses(String tripId) async {
+    try {
+      final data = await _db
+          .from('trip_expenses')
+          .select('*, trip_expense_splits(*)')
+          .eq('trip_id', tripId)
+          .order('created_at', ascending: true);
+      final expenses = List<Map<String, dynamic>>.from(data)
+          .map(TripExpense.fromJson)
+          .toList();
+      _expenses[tripId] = expenses;
+      notifyListeners();
+      return expenses;
+    } catch (e) {
+      debugPrint('TripProvider.fetchExpenses error: $e');
+      return [];
+    }
+  }
+
+  Future<void> addExpense({
+    required String tripId,
+    required double amount,
+    required String description,
+    required List<String> splitMemberIds,
+  }) async {
+    final profile = await _db
+        .from('user_profiles')
+        .select('full_name')
+        .eq('user_id', _userId!)
+        .maybeSingle();
+    final paidByName =
+        (profile?['full_name'] as String?)?.trim().isNotEmpty == true
+            ? profile!['full_name'] as String
+            : 'Unknown';
+
+    final expenseData = await _db.from('trip_expenses').insert({
+      'trip_id': tripId,
+      'paid_by_user_id': _userId,
+      'paid_by_name': paidByName,
+      'amount': amount,
+      'description': description,
+    }).select().single();
+
+    final expenseId = expenseData['id'] as String;
+    final splitAmount = splitMemberIds.isEmpty
+        ? amount
+        : (amount / splitMemberIds.length * 100).round() / 100;
+
+    for (final memberId in splitMemberIds) {
+      await _db.from('trip_expense_splits').insert({
+        'trip_id': tripId,
+        'expense_id': expenseId,
+        'member_id': memberId,
+        'amount': splitAmount,
+      });
+    }
+
+    unawaited(fetchExpenses(tripId));
+  }
+
+  Future<void> settleSplit(String splitId, String tripId) async {
+    await _db.from('trip_expense_splits').update({
+      'settled': true,
+      'settled_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', splitId);
+    unawaited(fetchExpenses(tripId));
   }
 }

@@ -735,4 +735,160 @@ class AppLocalizationsAr extends AppLocalizations {
   String contactsInviteMessage(String name) {
     return 'مرحباً $name! أستخدم TripManagement لتخطيط الرحلات معًا. انضم إليّ هنا: [APP_STORE_LINK]';
   }
+
+  @override
+  String get navEvents => 'Events';
+
+  @override
+  String get newEvent => 'New event';
+
+  @override
+  String get editEvent => 'Edit event';
+
+  @override
+  String get saveEvent => 'Save event';
+
+  @override
+  String get eventTitle => 'Event title';
+
+  @override
+  String get eventDescription => 'Description (optional)';
+
+  @override
+  String get eventLocation => 'Location';
+
+  @override
+  String get eventCapacity => 'Max guests (optional)';
+
+  @override
+  String get eventStartDateTime => 'Start date & time';
+
+  @override
+  String get eventEndDateTime => 'End date & time (optional)';
+
+  @override
+  String get noEventsYet => 'No events yet. Tap + to create one.';
+
+  @override
+  String get myEvents => 'My events';
+
+  @override
+  String get invitedEvents => 'Invited';
+
+  @override
+  String get infoTab => 'معلومات';
+
+  @override
+  String get guestsTab => 'Guests';
+
+  @override
+  String get noGuestsYet => 'لا يوجد ضيوف بعد. اضغط + لإضافة ضيف.';
+
+  @override
+  String get addGuest => 'إضافة ضيف';
+
+  @override
+  String get photosTab => 'Photos';
+
+  @override
+  String get expensesTab => 'Expenses';
+
+  @override
+  String get rsvpGoing => 'Going';
+
+  @override
+  String get rsvpMaybe => 'Maybe';
+
+  @override
+  String get rsvpDeclined => 'Can\'t go';
+
+  @override
+  String get changeRsvp => 'Change RSVP';
+
+  @override
+  String goingCount(int count) {
+    return '$count going';
+  }
+
+  @override
+  String maybeCount(int count) {
+    return '$count maybe';
+  }
+
+  @override
+  String declinedCount(int count) {
+    return '$count can\'t go';
+  }
+
+  @override
+  String get shareEvent => 'Share event';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get addPhoto => 'Add photo';
+
+  @override
+  String get noPhotosYet => 'No photos yet.';
+
+  @override
+  String get deletePhoto => 'Delete photo';
+
+  @override
+  String get deletePhotoConfirm => 'Delete this photo?';
+
+  @override
+  String get addExpense => 'Add expense';
+
+  @override
+  String get noExpensesYet => 'لا توجد نفقات حتى الآن';
+
+  @override
+  String get expenseDescription => 'What was paid for?';
+
+  @override
+  String get expenseAmount => 'Amount';
+
+  @override
+  String get splitAmong => 'Split among guests';
+
+  @override
+  String get markSettled => 'Mark settled';
+
+  @override
+  String totalOwed(String amount) {
+    return 'You owe: $amount';
+  }
+
+  @override
+  String get eventFull => 'This event is at capacity.';
+
+  @override
+  String get publicRsvpTitle => 'You\'re invited!';
+
+  @override
+  String get publicRsvpName => 'Your name';
+
+  @override
+  String get publicRsvpEmail => 'Email (optional)';
+
+  @override
+  String get publicRsvpPhone => 'Phone (optional)';
+
+  @override
+  String get rsvpSuccess => 'Your RSVP was saved!';
+
+  @override
+  String organizedBy(String name) {
+    return 'Organised by $name';
+  }
+
+  @override
+  String get deleteEventTitle => 'Delete event';
+
+  @override
+  String deleteEventMessage(String title) {
+    return 'Delete \"$title\"? This cannot be undone.';
+  }
 }

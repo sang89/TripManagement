@@ -146,7 +146,6 @@
   "navJournal": "日記",
   "navProfile": "プロフィール",
   "journalComingSoon": "日記機能は近日公開",
-
   "memberSearching": "検索中…",
   "memberAccountFound": "アカウントが見つかりました",
   "memberNoAccountFound": "アカウントが見つかりません",
@@ -157,21 +156,31 @@
   "memberLeft": "退出済み",
   "invitedBy": "{name}から招待",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, other{{count}件の旅行招待}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "承諾",
   "declineInvite": "辞退",
   "inviteNotifTitle": "旅行招待",
   "inviteNotifBody": "{tripTitle}に招待されました",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
-
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
+  },
   "blockReinviteLabel": "このトリップへの今後の招待を許可しない",
   "reinviteBlockedError": "このユーザーはこのトリップへの今後の招待を拒否しています",
   "resendInvite": "招待を再送信",
@@ -179,9 +188,12 @@
   "declineInviteConfirmTitle": "招待を断りますか？",
   "declineInviteConfirmMessage": "「{tripTitle}」への招待を断りますか？アクセスできなくなります。",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "セキュリティ",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "生体認証でアプリのロックを解除する",
@@ -192,9 +204,7 @@
   "biometricSignInWithBiometrics": "生体認証でサインイン",
   "biometricReason": "アカウントにアクセスするために認証してください",
   "biometricFailed": "認証に失敗しました。もう一度お試しください。",
-  "usePasswordInstead": "パスワードを使用する"
-,
-
+  "usePasswordInstead": "パスワードを使用する",
   "navFriends": "友達",
   "friendsTabFriends": "友達",
   "friendsTabRequests": "リクエスト",
@@ -207,7 +217,11 @@
   "friendsRemove": "友達を削除",
   "friendsRemoveConfirm": "{name} を友達から削除しますか？",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "まだ友達がいません",
   "friendsNoFriendsHint": "友達として追加する人を検索してください。",
@@ -218,22 +232,22 @@
   "chatTabLabel": "チャット",
   "chatSendHint": "メッセージ…",
   "chatNoMessages": "メッセージはまだありません。挨拶してみよう！",
-  "chatSend": "送信"
-,
-
+  "chatSend": "送信",
   "leave": "退出",
   "leaveTripTitle": "旅行から退出しますか？",
   "leaveTripMessage": "{tripTitle} から削除され、アクセスできなくなります。",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leaveTripTooltip": "旅行から退出",
   "thisTripFallback": "この旅行",
-
   "notificationsSectionTitle": "通知",
   "mentionNotifToggleTitle": "メンション通知",
   "mentionNotifToggleSubtitle": "旅行チャットで@メンションされたときに通知を受け取る",
-
   "privacySectionTitle": "プライバシー",
   "blockedUsersTitle": "ブロック中のユーザー",
   "blockedUsersEmpty": "ブロックしているユーザーはいません",
@@ -241,27 +255,135 @@
   "unblockUser": "ブロック解除",
   "blockConfirmTitle": "{name}をブロックしますか？",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "この人はあなたを旅行に追加したり、フレンド申請を送ることができなくなります。",
   "blockSuccess": "{name}をブロックしました",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "{name}のブロックを解除しました",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-"contactsButton": "連絡先から",
-"contactsScreenTitle": "連絡先から探す",
-"contactsPermissionDenied": "TripManagementで友達を見つけるには連絡先へのアクセスが必要です。",
-"contactsOpenSettings": "設定を開く",
-"contactsOnApp": "TripManagement登録済み",
-"contactsInviteSection": "TripManagementに招待",
-"contactsEmpty": "電話番号またはメールアドレスのある連絡先が見つかりませんでした。",
-"contactsAddFriend": "追加",
-"contactsPending": "保留中",
-"contactsInvite": "招待",
-"contactsInviteMessage": "{name}さん、TripManagementで一緒に旅行を計画しましょう！こちらから参加：[APP_STORE_LINK]",
-"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
+  "contactsButton": "連絡先から",
+  "contactsScreenTitle": "連絡先から探す",
+  "contactsPermissionDenied": "TripManagementで友達を見つけるには連絡先へのアクセスが必要です。",
+  "contactsOpenSettings": "設定を開く",
+  "contactsOnApp": "TripManagement登録済み",
+  "contactsInviteSection": "TripManagementに招待",
+  "contactsEmpty": "電話番号またはメールアドレスのある連絡先が見つかりませんでした。",
+  "contactsAddFriend": "追加",
+  "contactsPending": "保留中",
+  "contactsInvite": "招待",
+  "contactsInviteMessage": "{name}さん、TripManagementで一緒に旅行を計画しましょう！こちらから参加：[APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "詳細",
+  "guestsTab": "Guests",
+  "noGuestsYet": "まだゲストがいません。＋ をタップして追加してください。",
+  "addGuest": "ゲストを追加",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "noExpensesYet": "まだ費用がありません",
+  "addExpense": "Add expense",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

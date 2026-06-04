@@ -13,6 +13,8 @@ import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/blocked_users_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/event_chat_provider.dart';
+import 'providers/event_provider.dart';
 import 'providers/friends_provider.dart';
 import 'providers/invitations_provider.dart';
 import 'providers/settings_provider.dart';
@@ -22,6 +24,10 @@ import 'screens/auth/biometric_lock_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'services/biometric_service.dart';
+import 'screens/events/event_detail_screen.dart';
+import 'screens/events/event_form_screen.dart';
+import 'screens/events/event_invite_screen.dart';
+import 'screens/events/events_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/blocked_users_screen.dart';
 import 'screens/settings/settings_screen.dart';
@@ -61,6 +67,7 @@ void main() async {
   final invitations = InvitationsProvider();
   final friends = FriendsProvider();
   final blockedUsers = BlockedUsersProvider();
+  final events = EventProvider();
   final biometricService = BiometricService();
 
   if (auth.isLoggedIn) {
@@ -72,6 +79,7 @@ void main() async {
       await invitations.init(uid);
       await friends.init(uid);
     }
+    await events.load();
   }
 
   runApp(TripManagementApp(
@@ -82,6 +90,7 @@ void main() async {
     invitations: invitations,
     friends: friends,
     blockedUsers: blockedUsers,
+    events: events,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
     biometricService: biometricService,
@@ -96,6 +105,7 @@ class TripManagementApp extends StatefulWidget {
   final InvitationsProvider invitations;
   final FriendsProvider friends;
   final BlockedUsersProvider blockedUsers;
+  final EventProvider events;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
   final BiometricService biometricService;
@@ -109,6 +119,7 @@ class TripManagementApp extends StatefulWidget {
     required this.invitations,
     required this.friends,
     required this.blockedUsers,
+    required this.events,
     required this.connectivity,
     required this.offlineQueue,
     required this.biometricService,
@@ -140,8 +151,9 @@ class _TripManagementAppState extends State<TripManagementApp> {
         final loc = state.matchedLocation;
         final onAuth = loc == '/login' || loc == '/register';
         final onBiometricLock = loc == '/biometric-lock';
+        final isPublic = loc.startsWith('/event/invite/');
 
-        if (!loggedIn && !onBiometricLock && !onAuth) return '/login';
+        if (!loggedIn && !onBiometricLock && !onAuth && !isPublic) return '/login';
         if (!loggedIn && onBiometricLock) return '/login';
 
         final needsBiometric = widget.settings.biometricLockEnabled &&
@@ -162,6 +174,11 @@ class _TripManagementAppState extends State<TripManagementApp> {
         GoRoute(
           path: '/biometric-lock',
           builder: (_, _) => const BiometricLockScreen(),
+        ),
+        GoRoute(
+          path: '/event/invite/:code',
+          builder: (_, state) =>
+              EventInviteScreen(inviteCode: state.pathParameters['code']!),
         ),
         StatefulShellRoute.indexedStack(
           builder: (_, _, shell) => ShellScaffold(navigationShell: shell),
@@ -206,6 +223,38 @@ class _TripManagementAppState extends State<TripManagementApp> {
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
+                path: '/events',
+                builder: (_, _) => const EventsScreen(),
+              ),
+              GoRoute(
+                path: '/event/new',
+                builder: (_, _) => const EventFormScreen(),
+              ),
+              GoRoute(
+                path: '/event/:id',
+                builder: (context, state) {
+                  final eventId = state.pathParameters['id']!;
+                  final userId =
+                      context.read<AuthProvider>().userId ?? '';
+                  return ChangeNotifierProvider(
+                    create: (_) {
+                      final p = EventChatProvider(
+                          eventId: eventId, userId: userId);
+                      p.init();
+                      return p;
+                    },
+                    child: EventDetailScreen(eventId: eventId),
+                  );
+                },
+              ),
+              GoRoute(
+                path: '/event/:id/edit',
+                builder: (_, state) =>
+                    EventFormScreen(eventId: state.pathParameters['id']),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
                 path: '/profile',
                 builder: (_, _) => const ProfileScreen(),
                 routes: [
@@ -233,6 +282,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
       widget.trips.load();
       widget.profile.load();
       widget.blockedUsers.load();
+      widget.events.load();
       final uid = widget.auth.userId;
       if (uid != null) {
         widget.invitations.init(uid);
@@ -246,6 +296,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
       widget.blockedUsers.clear();
       widget.trips.clear();
       widget.profile.clear();
+      widget.events.clear();
     }
   }
 
@@ -266,6 +317,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.invitations),
         ChangeNotifierProvider.value(value: widget.friends),
         ChangeNotifierProvider.value(value: widget.blockedUsers),
+        ChangeNotifierProvider.value(value: widget.events),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
         Provider<BiometricService>.value(value: widget.biometricService),

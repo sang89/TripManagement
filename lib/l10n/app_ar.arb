@@ -146,7 +146,6 @@
   "navJournal": "المذكرات",
   "navProfile": "الملف الشخصي",
   "journalComingSoon": "المذكرات قريباً",
-
   "memberSearching": "جارٍ البحث…",
   "memberAccountFound": "تم العثور على الحساب",
   "memberNoAccountFound": "لم يتم العثور على حساب",
@@ -157,21 +156,31 @@
   "memberLeft": "غادر",
   "invitedBy": "تمت الدعوة بواسطة {name}",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, =1{دعوة رحلة واحدة} other{{count} دعوات رحلات}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "قبول",
   "declineInvite": "رفض",
   "inviteNotifTitle": "دعوة رحلة",
   "inviteNotifBody": "لقد تمت دعوتك إلى {tripTitle}",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
-
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
+  },
   "blockReinviteLabel": "عدم السماح بالدعوات المستقبلية لهذه الرحلة",
   "reinviteBlockedError": "اختار هذا المستخدم إلغاء الاشتراك في الدعوات المستقبلية لهذه الرحلة",
   "resendInvite": "إعادة إرسال الدعوة",
@@ -179,9 +188,12 @@
   "declineInviteConfirmTitle": "رفض الدعوة؟",
   "declineInviteConfirmMessage": "رفض الدعوة إلى '{tripTitle}'؟ ستفقد الوصول.",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "الأمان",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "استخدام المقاييس الحيوية لفتح التطبيق",
@@ -192,9 +204,7 @@
   "biometricSignInWithBiometrics": "تسجيل الدخول بالمقاييس الحيوية",
   "biometricReason": "المصادقة للوصول إلى حسابك",
   "biometricFailed": "فشلت المصادقة. يرجى المحاولة مرة أخرى.",
-  "usePasswordInstead": "استخدام كلمة المرور"
-,
-
+  "usePasswordInstead": "استخدام كلمة المرور",
   "navFriends": "الأصدقاء",
   "friendsTabFriends": "الأصدقاء",
   "friendsTabRequests": "الطلبات",
@@ -207,7 +217,11 @@
   "friendsRemove": "إزالة صديق",
   "friendsRemoveConfirm": "إزالة {name} من قائمة أصدقائك؟",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "لا أصدقاء بعد",
   "friendsNoFriendsHint": "ابحث عن شخص لإضافته كصديق.",
@@ -218,22 +232,22 @@
   "chatTabLabel": "محادثة",
   "chatSendHint": "رسالة…",
   "chatNoMessages": "لا رسائل بعد. قل مرحباً!",
-  "chatSend": "إرسال"
-,
-
+  "chatSend": "إرسال",
   "leave": "مغادرة",
   "leaveTripTitle": "مغادرة الرحلة؟",
   "leaveTripMessage": "ستتم إزالتك من {tripTitle} وستفقد الوصول.",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leaveTripTooltip": "مغادرة الرحلة",
   "thisTripFallback": "هذه الرحلة",
-
   "notificationsSectionTitle": "الإشعارات",
   "mentionNotifToggleTitle": "تنبيهات الإشارة",
   "mentionNotifToggleSubtitle": "احصل على إشعار عند الإشارة إليك بـ @ في دردشة الرحلة",
-
   "privacySectionTitle": "الخصوصية",
   "blockedUsersTitle": "المستخدمون المحظورون",
   "blockedUsersEmpty": "لم تحظر أي شخص",
@@ -241,27 +255,135 @@
   "unblockUser": "إلغاء الحظر",
   "blockConfirmTitle": "حظر {name}؟",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "لن يتمكنوا من إضافتك إلى الرحلات أو إرسال طلبات الصداقة إليك.",
   "blockSuccess": "تم حظر {name}",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "تم إلغاء حظر {name}",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-"contactsButton": "من جهات الاتصال",
-"contactsScreenTitle": "البحث من جهات الاتصال",
-"contactsPermissionDenied": "يلزم الوصول إلى جهات الاتصال للعثور على أصدقائك في TripManagement.",
-"contactsOpenSettings": "فتح الإعدادات",
-"contactsOnApp": "على TripManagement",
-"contactsInviteSection": "دعوة إلى TripManagement",
-"contactsEmpty": "لم يتم العثور على جهات اتصال برقم هاتف أو بريد إلكتروني.",
-"contactsAddFriend": "إضافة",
-"contactsPending": "قيد الانتظار",
-"contactsInvite": "دعوة",
-"contactsInviteMessage": "مرحباً {name}! أستخدم TripManagement لتخطيط الرحلات معًا. انضم إليّ هنا: [APP_STORE_LINK]",
-"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
+  "contactsButton": "من جهات الاتصال",
+  "contactsScreenTitle": "البحث من جهات الاتصال",
+  "contactsPermissionDenied": "يلزم الوصول إلى جهات الاتصال للعثور على أصدقائك في TripManagement.",
+  "contactsOpenSettings": "فتح الإعدادات",
+  "contactsOnApp": "على TripManagement",
+  "contactsInviteSection": "دعوة إلى TripManagement",
+  "contactsEmpty": "لم يتم العثور على جهات اتصال برقم هاتف أو بريد إلكتروني.",
+  "contactsAddFriend": "إضافة",
+  "contactsPending": "قيد الانتظار",
+  "contactsInvite": "دعوة",
+  "contactsInviteMessage": "مرحباً {name}! أستخدم TripManagement لتخطيط الرحلات معًا. انضم إليّ هنا: [APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "معلومات",
+  "guestsTab": "Guests",
+  "noGuestsYet": "لا يوجد ضيوف بعد. اضغط + لإضافة ضيف.",
+  "addGuest": "إضافة ضيف",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "noExpensesYet": "لا توجد نفقات حتى الآن",
+  "addExpense": "Add expense",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

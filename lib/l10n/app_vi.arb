@@ -146,7 +146,6 @@
   "navJournal": "Nhật ký",
   "navProfile": "Hồ sơ",
   "journalComingSoon": "Nhật ký sắp ra mắt",
-
   "memberSearching": "Đang tìm kiếm…",
   "memberAccountFound": "Đã tìm thấy tài khoản",
   "memberNoAccountFound": "Không tìm thấy tài khoản",
@@ -157,21 +156,31 @@
   "memberLeft": "Đã rời",
   "invitedBy": "Được mời bởi {name}",
   "@invitedBy": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tripInvitationsTitle": "{count, plural, =1{1 lời mời chuyến đi} other{{count} lời mời chuyến đi}}",
   "@tripInvitationsTitle": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "acceptInvite": "Chấp nhận",
   "declineInvite": "Từ chối",
   "inviteNotifTitle": "Lời mời chuyến đi",
   "inviteNotifBody": "Bạn đã được mời tham gia {tripTitle}",
   "@inviteNotifBody": {
-    "placeholders": { "tripTitle": { "type": "String" } }
-  }
-,
-
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
+  },
   "blockReinviteLabel": "Không cho phép lời mời trong tương lai cho chuyến đi này",
   "reinviteBlockedError": "Người dùng này đã từ chối lời mời trong tương lai cho chuyến đi này",
   "resendInvite": "Gửi lại lời mời",
@@ -179,9 +188,12 @@
   "declineInviteConfirmTitle": "Từ chối lời mời?",
   "declineInviteConfirmMessage": "Từ chối lời mời tới «{tripTitle}»? Bạn sẽ mất quyền truy cập.",
   "@declineInviteConfirmMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
-
   "securitySectionTitle": "Bảo mật",
   "biometricToggleTitle": "Face ID / Touch ID",
   "biometricToggleSubtitle": "Dùng sinh trắc học để mở khóa ứng dụng",
@@ -192,9 +204,7 @@
   "biometricSignInWithBiometrics": "Đăng nhập bằng sinh trắc học",
   "biometricReason": "Xác thực để truy cập tài khoản của bạn",
   "biometricFailed": "Xác thực thất bại. Vui lòng thử lại.",
-  "usePasswordInstead": "Dùng mật khẩu thay thế"
-,
-
+  "usePasswordInstead": "Dùng mật khẩu thay thế",
   "navFriends": "Bạn bè",
   "friendsTabFriends": "Bạn bè",
   "friendsTabRequests": "Lời mời",
@@ -207,7 +217,11 @@
   "friendsRemove": "Xóa bạn",
   "friendsRemoveConfirm": "Xóa {name} khỏi danh sách bạn bè?",
   "@friendsRemoveConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "friendsNoFriends": "Chưa có bạn bè",
   "friendsNoFriendsHint": "Tìm kiếm ai đó để kết bạn.",
@@ -218,22 +232,22 @@
   "chatTabLabel": "Trò chuyện",
   "chatSendHint": "Tin nhắn…",
   "chatNoMessages": "Chưa có tin nhắn. Hãy chào nhau!",
-  "chatSend": "Gửi"
-,
-
+  "chatSend": "Gửi",
   "leave": "Rời",
   "leaveTripTitle": "Rời khỏi chuyến đi?",
   "leaveTripMessage": "Bạn sẽ bị xóa khỏi {tripTitle} và mất quyền truy cập.",
   "@leaveTripMessage": {
-    "placeholders": { "tripTitle": { "type": "String" } }
+    "placeholders": {
+      "tripTitle": {
+        "type": "String"
+      }
+    }
   },
   "leaveTripTooltip": "Rời khỏi chuyến đi",
   "thisTripFallback": "chuyến đi này",
-
   "notificationsSectionTitle": "Thông báo",
   "mentionNotifToggleTitle": "Cảnh báo đề cập",
   "mentionNotifToggleSubtitle": "Nhận thông báo khi bạn được @đề cập trong cuộc trò chuyện chuyến đi",
-
   "privacySectionTitle": "Quyền riêng tư",
   "blockedUsersTitle": "Người dùng bị chặn",
   "blockedUsersEmpty": "Bạn chưa chặn ai",
@@ -241,27 +255,135 @@
   "unblockUser": "Bỏ chặn",
   "blockConfirmTitle": "Chặn {name}?",
   "@blockConfirmTitle": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "blockConfirmBody": "Họ sẽ không thể thêm bạn vào chuyến đi hoặc gửi lời mời kết bạn.",
   "blockSuccess": "{name} đã bị chặn",
   "@blockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "unblockSuccess": "{name} đã được bỏ chặn",
   "@unblockSuccess": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
-"contactsButton": "Từ danh bạ",
-"contactsScreenTitle": "Tìm từ danh bạ",
-"contactsPermissionDenied": "Cần quyền truy cập danh bạ để tìm bạn bè của bạn trên TripManagement.",
-"contactsOpenSettings": "Mở cài đặt",
-"contactsOnApp": "Đang dùng TripManagement",
-"contactsInviteSection": "Mời vào TripManagement",
-"contactsEmpty": "Không tìm thấy liên hệ nào có số điện thoại hoặc email.",
-"contactsAddFriend": "Thêm",
-"contactsPending": "Đang chờ",
-"contactsInvite": "Mời",
-"contactsInviteMessage": "Xin chào {name}! Tôi dùng TripManagement để lên kế hoạch du lịch cùng nhau. Tham gia tại đây: [APP_STORE_LINK]",
-"@contactsInviteMessage": { "placeholders": {"name": {"type": "String"}}}
+  "contactsButton": "Từ danh bạ",
+  "contactsScreenTitle": "Tìm từ danh bạ",
+  "contactsPermissionDenied": "Cần quyền truy cập danh bạ để tìm bạn bè của bạn trên TripManagement.",
+  "contactsOpenSettings": "Mở cài đặt",
+  "contactsOnApp": "Đang dùng TripManagement",
+  "contactsInviteSection": "Mời vào TripManagement",
+  "contactsEmpty": "Không tìm thấy liên hệ nào có số điện thoại hoặc email.",
+  "contactsAddFriend": "Thêm",
+  "contactsPending": "Đang chờ",
+  "contactsInvite": "Mời",
+  "contactsInviteMessage": "Xin chào {name}! Tôi dùng TripManagement để lên kế hoạch du lịch cùng nhau. Tham gia tại đây: [APP_STORE_LINK]",
+  "@contactsInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navEvents": "Events",
+  "newEvent": "New event",
+  "editEvent": "Edit event",
+  "saveEvent": "Save event",
+  "eventTitle": "Event title",
+  "eventDescription": "Description (optional)",
+  "eventLocation": "Location",
+  "eventCapacity": "Max guests (optional)",
+  "eventStartDateTime": "Start date & time",
+  "eventEndDateTime": "End date & time (optional)",
+  "noEventsYet": "No events yet. Tap + to create one.",
+  "myEvents": "My events",
+  "invitedEvents": "Invited",
+  "infoTab": "Thông tin",
+  "guestsTab": "Guests",
+  "noGuestsYet": "Chưa có khách. Nhấn + để thêm khách.",
+  "addGuest": "Thêm khách",
+  "photosTab": "Photos",
+  "expensesTab": "Expenses",
+  "rsvpGoing": "Going",
+  "rsvpMaybe": "Maybe",
+  "rsvpDeclined": "Can't go",
+  "changeRsvp": "Change RSVP",
+  "goingCount": "{count} going",
+  "@goingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "maybeCount": "{count} maybe",
+  "@maybeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "declinedCount": "{count} can't go",
+  "@declinedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareEvent": "Share event",
+  "linkCopied": "Link copied",
+  "addPhoto": "Add photo",
+  "noPhotosYet": "No photos yet.",
+  "deletePhoto": "Delete photo",
+  "deletePhotoConfirm": "Delete this photo?",
+  "noExpensesYet": "Chưa có chi phí",
+  "addExpense": "Add expense",
+  "expenseDescription": "What was paid for?",
+  "expenseAmount": "Amount",
+  "splitAmong": "Split among guests",
+  "markSettled": "Mark settled",
+  "totalOwed": "You owe: {amount}",
+  "@totalOwed": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "eventFull": "This event is at capacity.",
+  "publicRsvpTitle": "You're invited!",
+  "publicRsvpName": "Your name",
+  "publicRsvpEmail": "Email (optional)",
+  "publicRsvpPhone": "Phone (optional)",
+  "rsvpSuccess": "Your RSVP was saved!",
+  "organizedBy": "Organised by {name}",
+  "@organizedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEventTitle": "Delete event",
+  "deleteEventMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@deleteEventMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

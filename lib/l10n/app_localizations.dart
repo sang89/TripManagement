@@ -1469,6 +1469,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hey {name}! I\'\'m using TripManagement to plan trips together. Join me here: [APP_STORE_LINK]'**
   String contactsInviteMessage(String name);
+
+  /// No description provided for @navEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get navEvents;
+
+  /// No description provided for @newEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'New event'**
+  String get newEvent;
+
+  /// No description provided for @editEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit event'**
+  String get editEvent;
+
+  /// No description provided for @saveEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Save event'**
+  String get saveEvent;
+
+  /// No description provided for @eventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event title'**
+  String get eventTitle;
+
+  /// No description provided for @eventDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get eventDescription;
+
+  /// No description provided for @eventLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get eventLocation;
+
+  /// No description provided for @eventCapacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Max guests (optional)'**
+  String get eventCapacity;
+
+  /// No description provided for @eventStartDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date & time'**
+  String get eventStartDateTime;
+
+  /// No description provided for @eventEndDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End date & time (optional)'**
+  String get eventEndDateTime;
+
+  /// No description provided for @noEventsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No events yet. Tap + to create one.'**
+  String get noEventsYet;
+
+  /// No description provided for @myEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'My events'**
+  String get myEvents;
+
+  /// No description provided for @invitedEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited'**
+  String get invitedEvents;
+
+  /// No description provided for @infoTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get infoTab;
+
+  /// No description provided for @guestsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Guests'**
+  String get guestsTab;
+
+  /// No description provided for @noGuestsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No guests yet. Tap + to add one.'**
+  String get noGuestsYet;
+
+  /// No description provided for @addGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Add guest'**
+  String get addGuest;
+
+  /// No description provided for @photosTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get photosTab;
+
+  /// No description provided for @expensesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses'**
+  String get expensesTab;
+
+  /// No description provided for @rsvpGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Going'**
+  String get rsvpGoing;
+
+  /// No description provided for @rsvpMaybe.
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe'**
+  String get rsvpMaybe;
+
+  /// No description provided for @rsvpDeclined.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t go'**
+  String get rsvpDeclined;
+
+  /// No description provided for @changeRsvp.
+  ///
+  /// In en, this message translates to:
+  /// **'Change RSVP'**
+  String get changeRsvp;
+
+  /// No description provided for @goingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} going'**
+  String goingCount(int count);
+
+  /// No description provided for @maybeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} maybe'**
+  String maybeCount(int count);
+
+  /// No description provided for @declinedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} can\'t go'**
+  String declinedCount(int count);
+
+  /// No description provided for @shareEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Share event'**
+  String get shareEvent;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get linkCopied;
+
+  /// No description provided for @addPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photo'**
+  String get addPhoto;
+
+  /// No description provided for @noPhotosYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No photos yet.'**
+  String get noPhotosYet;
+
+  /// No description provided for @deletePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete photo'**
+  String get deletePhoto;
+
+  /// No description provided for @deletePhotoConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this photo?'**
+  String get deletePhotoConfirm;
+
+  /// No description provided for @addExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Add expense'**
+  String get addExpense;
+
+  /// No description provided for @noExpensesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No expenses yet'**
+  String get noExpensesYet;
+
+  /// No description provided for @expenseDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'What was paid for?'**
+  String get expenseDescription;
+
+  /// No description provided for @expenseAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get expenseAmount;
+
+  /// No description provided for @splitAmong.
+  ///
+  /// In en, this message translates to:
+  /// **'Split among guests'**
+  String get splitAmong;
+
+  /// No description provided for @markSettled.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark settled'**
+  String get markSettled;
+
+  /// No description provided for @totalOwed.
+  ///
+  /// In en, this message translates to:
+  /// **'You owe: {amount}'**
+  String totalOwed(String amount);
+
+  /// No description provided for @eventFull.
+  ///
+  /// In en, this message translates to:
+  /// **'This event is at capacity.'**
+  String get eventFull;
+
+  /// No description provided for @publicRsvpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re invited!'**
+  String get publicRsvpTitle;
+
+  /// No description provided for @publicRsvpName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get publicRsvpName;
+
+  /// No description provided for @publicRsvpEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email (optional)'**
+  String get publicRsvpEmail;
+
+  /// No description provided for @publicRsvpPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone (optional)'**
+  String get publicRsvpPhone;
+
+  /// No description provided for @rsvpSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your RSVP was saved!'**
+  String get rsvpSuccess;
+
+  /// No description provided for @organizedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Organised by {name}'**
+  String organizedBy(String name);
+
+  /// No description provided for @deleteEventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete event'**
+  String get deleteEventTitle;
+
+  /// No description provided for @deleteEventMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{title}\"? This cannot be undone.'**
+  String deleteEventMessage(String title);
 }
 
 class _AppLocalizationsDelegate
