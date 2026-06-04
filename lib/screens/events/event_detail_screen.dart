@@ -1,8 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' show min;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -2934,18 +2941,26 @@ class _Settlement {
 
 // ── Settlement sheet ───────────────────────────────────────────────────────
 
-class _SettlementSheet extends StatelessWidget {
+class _SettlementSheet extends StatefulWidget {
   final Event event;
   final List<EventExpense> expenses;
 
   const _SettlementSheet({required this.event, required this.expenses});
 
+  @override
+  State<_SettlementSheet> createState() => _SettlementSheetState();
+}
+
+class _SettlementSheetState extends State<_SettlementSheet> {
+  final _shareButtonKey = GlobalKey();
+  bool _exporting = false;
+
   List<_PersonBalance> _computeBalances() {
-    final guests = event.guests.where((g) => g.isAccepted).toList();
+    final guests = widget.event.guests.where((g) => g.isAccepted).toList();
     final paid = <String, double>{for (final g in guests) g.id: 0.0};
     final owes = <String, double>{for (final g in guests) g.id: 0.0};
 
-    for (final expense in expenses) {
+    for (final expense in widget.expenses) {
       final payerNames = expense.paidByName.split(', ');
       final amountPerPayer = expense.amount / payerNames.length;
       for (final g in guests) {
@@ -3000,15 +3015,320 @@ class _SettlementSheet extends StatelessWidget {
     return settlements;
   }
 
+  // ── Export helpers ─────────────────────────────────────────────────────────
+
+  Rect? _shareOrigin() {
+    final box =
+        _shareButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    final offset = box.localToGlobal(Offset.zero);
+    return offset & box.size;
+  }
+
+  void _showExportOptions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Save as Image'),
+              subtitle: const Text('Export a screenshot of this summary'),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                // Wait for the dismiss animation to finish before capturing
+                await Future.delayed(const Duration(milliseconds: 400));
+                if (mounted) _exportImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Export as PDF'),
+              subtitle: const Text('Generate a shareable PDF report'),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await Future.delayed(const Duration(milliseconds: 400));
+                if (mounted) _exportPdf();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportImage() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final origin = _shareOrigin();
+    setState(() => _exporting = true);
+    try {
+      // Rasterise the first page of the PDF at 150 dpi — always the full
+      // content regardless of how long the sheet is.
+      final pdfBytes = await _buildPdfBytes();
+      final raster = await Printing.raster(pdfBytes, dpi: 150).first;
+      final bytes = await raster.toPng();
+      final safeName =
+          widget.event.title.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+      final name = '${safeName}_settle_up.png';
+      if (kIsWeb) {
+        await Share.shareXFiles(
+          [XFile.fromData(bytes, name: name, mimeType: 'image/png')],
+          subject: '${widget.event.title} — Settle Up',
+          sharePositionOrigin: origin,
+        );
+      } else {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$name');
+        await file.writeAsBytes(bytes);
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: '${widget.event.title} — Settle Up',
+          sharePositionOrigin: origin,
+        );
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<Uint8List> _buildPdfBytes() async {
+    final fmt = NumberFormat.currency(symbol: '\$');
+    final balances = _computeBalances();
+    final settlements = _computeSettlements(balances);
+    final totalSpent = widget.expenses.fold(0.0, (s, e) => s + e.amount);
+    final now = DateTime.now();
+
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (ctx) => [
+          // Header
+          pw.Container(
+            padding: const pw.EdgeInsets.all(20),
+            decoration: pw.BoxDecoration(
+              color: const PdfColor(0.102, 0.322, 0.463),
+              borderRadius:
+                  const pw.BorderRadius.all(pw.Radius.circular(12)),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Settle Up',
+                    style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 24,
+                        fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Text(widget.event.title,
+                    style: const pw.TextStyle(
+                        color: PdfColors.white, fontSize: 13)),
+                pw.SizedBox(height: 16),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(fmt.format(totalSpent),
+                            style: pw.TextStyle(
+                                color: PdfColors.white,
+                                fontSize: 28,
+                                fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Total spent',
+                            style: const pw.TextStyle(
+                                color: PdfColors.white, fontSize: 11)),
+                      ],
+                    ),
+                    pw.Row(children: [
+                      _pdfStat('Expenses', '${widget.expenses.length}'),
+                      pw.SizedBox(width: 24),
+                      _pdfStat('People', '${balances.length}'),
+                    ]),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 24),
+
+          // The Score
+          pw.Text('THE SCORE',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: PdfColors.grey600)),
+          pw.SizedBox(height: 8),
+          ...balances.map((b) => _pdfBalanceRow(b, fmt)),
+          pw.SizedBox(height: 20),
+
+          // Settlement plan
+          pw.Text('SETTLEMENT PLAN',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: PdfColors.grey600)),
+          pw.SizedBox(height: 8),
+          if (settlements.isEmpty)
+            pw.Text('Everyone is square! No payments needed.',
+                style: const pw.TextStyle(color: PdfColors.grey))
+          else
+            ...settlements.map((s) => _pdfSettlementRow(s, fmt)),
+
+          pw.SizedBox(height: 24),
+          pw.Text(
+            'Generated on ${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+            style: const pw.TextStyle(color: PdfColors.grey, fontSize: 10),
+          ),
+        ],
+      ),
+    );
+    return pdf.save();
+  }
+
+  Future<void> _exportPdf() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final origin = _shareOrigin();
+    setState(() => _exporting = true);
+    try {
+      final bytes = await _buildPdfBytes();
+      final safeName =
+          widget.event.title.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+      final name = '${safeName}_settle_up.pdf';
+      if (kIsWeb) {
+        await Share.shareXFiles(
+          [XFile.fromData(bytes, name: name, mimeType: 'application/pdf')],
+          subject: '${widget.event.title} — Settle Up',
+          sharePositionOrigin: origin,
+        );
+      } else {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$name');
+        await file.writeAsBytes(bytes);
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: '${widget.event.title} — Settle Up',
+          sharePositionOrigin: origin,
+        );
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  pw.Widget _pdfStat(String label, String value) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(value,
+              style: pw.TextStyle(
+                  color: PdfColors.white,
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold)),
+          pw.Text(label,
+              style:
+                  const pw.TextStyle(color: PdfColors.white, fontSize: 11)),
+        ],
+      );
+
+  pw.Widget _pdfBalanceRow(_PersonBalance b, NumberFormat fmt) {
+    final isPositive = b.net >= 0;
+    final netColor = isPositive ? PdfColors.green700 : PdfColors.red700;
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 8),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(b.name,
+                  style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold, fontSize: 13)),
+              pw.Text(
+                  'Paid ${fmt.format(b.paid)}  ·  Split ${fmt.format(b.owes)}',
+                  style:
+                      const pw.TextStyle(color: PdfColors.grey600, fontSize: 11)),
+            ],
+          ),
+          pw.Text(
+            '${isPositive ? '+' : ''}${fmt.format(b.net)}',
+            style: pw.TextStyle(
+                color: netColor,
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfSettlementRow(_Settlement s, NumberFormat fmt) =>
+      pw.Container(
+        margin: const pw.EdgeInsets.only(bottom: 8),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey300),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+        ),
+        child: pw.Row(
+          children: [
+            pw.Text(s.fromName,
+                style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold, fontSize: 13)),
+            pw.SizedBox(width: 8),
+            pw.Text('pays', style: const pw.TextStyle(color: PdfColors.grey600)),
+            pw.SizedBox(width: 8),
+            pw.Text(fmt.format(s.amount),
+                style: pw.TextStyle(
+                    color: PdfColors.red700,
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 13)),
+            pw.SizedBox(width: 8),
+            pw.Text('to', style: const pw.TextStyle(color: PdfColors.grey600)),
+            pw.SizedBox(width: 8),
+            pw.Text(s.toName,
+                style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold, fontSize: 13)),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final fmt = NumberFormat.currency(symbol: '\$');
     final balances = _computeBalances();
     final settlements = _computeSettlements(balances);
-    final totalSpent = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    final totalSpent = widget.expenses.fold(0.0, (sum, e) => sum + e.amount);
     final participantCount =
-        event.guests.where((g) => g.isAccepted).length;
+        widget.event.guests.where((g) => g.isAccepted).length;
 
     return Container(
       decoration: BoxDecoration(
@@ -3061,7 +3381,7 @@ class _SettlementSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            event.title,
+                            widget.event.title,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 13,
@@ -3069,6 +3389,20 @@ class _SettlementSheet extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
+                      ),
+                    ),
+                    AppTappable(
+                      key: _shareButtonKey,
+                      onTap: _exporting ? null : () => _showExportOptions(context),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _exporting
+                            ? const SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Icon(Icons.ios_share,
+                                color: Colors.white.withValues(alpha: 0.8)),
                       ),
                     ),
                     AppTappable(
@@ -3093,7 +3427,7 @@ class _SettlementSheet extends StatelessWidget {
                     const Spacer(),
                     _HeaderStat(
                       label: 'Expenses',
-                      value: '${expenses.length}',
+                      value: '${widget.expenses.length}',
                       align: CrossAxisAlignment.center,
                     ),
                     const SizedBox(width: 20),
