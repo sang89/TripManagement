@@ -1806,6 +1806,150 @@ abstract class AppLocalizations {
   /// **'Your RSVP was saved!'**
   String get rsvpSuccess;
 
+  /// No description provided for @rsvpNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note (optional)'**
+  String get rsvpNoteHint;
+
+  /// No description provided for @organizeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize'**
+  String get organizeTab;
+
+  /// No description provided for @detailsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get detailsTab;
+
+  /// No description provided for @todoTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Todo'**
+  String get todoTab;
+
+  /// No description provided for @pollsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Polls'**
+  String get pollsTab;
+
+  /// No description provided for @pollsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No polls yet.'**
+  String get pollsEmpty;
+
+  /// No description provided for @pollsAddPoll.
+  ///
+  /// In en, this message translates to:
+  /// **'Add poll'**
+  String get pollsAddPoll;
+
+  /// No description provided for @pollsQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get pollsQuestion;
+
+  /// No description provided for @pollsOptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Option {n}'**
+  String pollsOptionHint(int n);
+
+  /// No description provided for @pollsAddOption.
+  ///
+  /// In en, this message translates to:
+  /// **'+ Add option'**
+  String get pollsAddOption;
+
+  /// No description provided for @pollsVoteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 vote} other{{count} votes}}'**
+  String pollsVoteCount(int count);
+
+  /// No description provided for @pollsDeletePoll.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete poll'**
+  String get pollsDeletePoll;
+
+  /// No description provided for @bringListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Todo'**
+  String get bringListTitle;
+
+  /// No description provided for @bringListEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks yet. Tap + to add one.'**
+  String get bringListEmpty;
+
+  /// No description provided for @bringListAddItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add task'**
+  String get bringListAddItem;
+
+  /// No description provided for @bringListEditItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit task'**
+  String get bringListEditItem;
+
+  /// No description provided for @bringListItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What to do'**
+  String get bringListItemLabel;
+
+  /// No description provided for @bringListNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get bringListNote;
+
+  /// No description provided for @bringListAssignTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to member'**
+  String get bringListAssignTo;
+
+  /// No description provided for @bringListNoAssignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get bringListNoAssignment;
+
+  /// No description provided for @bringListTake.
+  ///
+  /// In en, this message translates to:
+  /// **'Take'**
+  String get bringListTake;
+
+  /// No description provided for @bringListUnassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassign'**
+  String get bringListUnassign;
+
+  /// No description provided for @rsvpNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your note'**
+  String get rsvpNoteLabel;
+
+  /// No description provided for @confirmRsvp.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirmRsvp;
+
   /// No description provided for @organizedBy.
   ///
   /// In en, this message translates to:

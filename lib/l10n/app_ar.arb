@@ -394,6 +394,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "أضف ملاحظة (اختياري)",
+  "organizeTab": "تنظيم",
+  "detailsTab": "التفاصيل",
+  "todoTab": "المهام",
+  "pollsTab": "الاستطلاعات",
+  "pollsEmpty": "لا توجد استطلاعات بعد.",
+  "pollsAddPoll": "إضافة استطلاع",
+  "pollsQuestion": "السؤال",
+  "pollsOptionHint": "الخيار {n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ إضافة خيار",
+  "pollsVoteCount": "{count, plural, =1{صوت واحد} other{{count} أصوات}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "حذف الاستطلاع",
+  "bringListTitle": "المهام",
+  "bringListEmpty": "لا توجد مهام بعد. اضغط + لإضافة واحدة.",
+  "bringListAddItem": "إضافة مهمة",
+  "bringListEditItem": "تعديل المهمة",
+  "bringListItemLabel": "ماذا تفعل",
+  "bringListNote": "ملاحظة (اختياري)",
+  "bringListAssignTo": "تعيين لعضو",
+  "bringListNoAssignment": "غير مخصص",
+  "bringListTake": "خذ",
+  "bringListUnassign": "إلغاء التعيين",
+  "rsvpNoteLabel": "ملاحظتك",
+  "confirmRsvp": "تأكيد",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

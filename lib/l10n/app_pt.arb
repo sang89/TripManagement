@@ -394,6 +394,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "Adicionar nota (opcional)",
+  "organizeTab": "Organizar",
+  "detailsTab": "Detalhes",
+  "todoTab": "Tarefas",
+  "pollsTab": "Enquetes",
+  "pollsEmpty": "Nenhuma enquete ainda.",
+  "pollsAddPoll": "Adicionar enquete",
+  "pollsQuestion": "Pergunta",
+  "pollsOptionHint": "Opção {n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ Adicionar opção",
+  "pollsVoteCount": "{count, plural, =1{1 voto} other{{count} votos}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "Excluir enquete",
+  "bringListTitle": "Tarefas",
+  "bringListEmpty": "Sem tarefas ainda. Toque em +.",
+  "bringListAddItem": "Adicionar tarefa",
+  "bringListEditItem": "Editar tarefa",
+  "bringListItemLabel": "O que fazer",
+  "bringListNote": "Nota (opcional)",
+  "bringListAssignTo": "Atribuir a membro",
+  "bringListNoAssignment": "Nao atribuido",
+  "bringListTake": "Pegar",
+  "bringListUnassign": "Desatribuir",
+  "rsvpNoteLabel": "Sua nota",
+  "confirmRsvp": "Confirmar",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

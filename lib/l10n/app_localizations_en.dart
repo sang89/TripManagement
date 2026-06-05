@@ -918,6 +918,88 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => 'Add a note (optional)';
+
+  @override
+  String get organizeTab => 'Organize';
+
+  @override
+  String get detailsTab => 'Details';
+
+  @override
+  String get todoTab => 'Todo';
+
+  @override
+  String get pollsTab => 'Polls';
+
+  @override
+  String get pollsEmpty => 'No polls yet.';
+
+  @override
+  String get pollsAddPoll => 'Add poll';
+
+  @override
+  String get pollsQuestion => 'Question';
+
+  @override
+  String pollsOptionHint(int n) {
+    return 'Option $n';
+  }
+
+  @override
+  String get pollsAddOption => '+ Add option';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count votes',
+      one: '1 vote',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => 'Delete poll';
+
+  @override
+  String get bringListTitle => 'Todo';
+
+  @override
+  String get bringListEmpty => 'No tasks yet. Tap + to add one.';
+
+  @override
+  String get bringListAddItem => 'Add task';
+
+  @override
+  String get bringListEditItem => 'Edit task';
+
+  @override
+  String get bringListItemLabel => 'What to do';
+
+  @override
+  String get bringListNote => 'Note (optional)';
+
+  @override
+  String get bringListAssignTo => 'Assign to member';
+
+  @override
+  String get bringListNoAssignment => 'Unassigned';
+
+  @override
+  String get bringListTake => 'Take';
+
+  @override
+  String get bringListUnassign => 'Unassign';
+
+  @override
+  String get rsvpNoteLabel => 'Your note';
+
+  @override
+  String get confirmRsvp => 'Confirm';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

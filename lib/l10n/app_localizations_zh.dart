@@ -908,6 +908,88 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => '添加备注（可选）';
+
+  @override
+  String get organizeTab => '组织';
+
+  @override
+  String get detailsTab => '详情';
+
+  @override
+  String get todoTab => '待办';
+
+  @override
+  String get pollsTab => '投票';
+
+  @override
+  String get pollsEmpty => '暂无投票。';
+
+  @override
+  String get pollsAddPoll => '添加投票';
+
+  @override
+  String get pollsQuestion => '问题';
+
+  @override
+  String pollsOptionHint(int n) {
+    return '选项$n';
+  }
+
+  @override
+  String get pollsAddOption => '+ 添加选项';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count票',
+      one: '1票',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => '删除投票';
+
+  @override
+  String get bringListTitle => '待办';
+
+  @override
+  String get bringListEmpty => '暂无任务。点击 + 添加。';
+
+  @override
+  String get bringListAddItem => '添加任务';
+
+  @override
+  String get bringListEditItem => '编辑任务';
+
+  @override
+  String get bringListItemLabel => '做什么';
+
+  @override
+  String get bringListNote => '备注（可选）';
+
+  @override
+  String get bringListAssignTo => '分配给成员';
+
+  @override
+  String get bringListNoAssignment => '未分配';
+
+  @override
+  String get bringListTake => '认领';
+
+  @override
+  String get bringListUnassign => '取消分配';
+
+  @override
+  String get rsvpNoteLabel => '您的备注';
+
+  @override
+  String get confirmRsvp => '确认';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

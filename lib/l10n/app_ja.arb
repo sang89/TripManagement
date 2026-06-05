@@ -394,6 +394,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "メモを追加（任意）",
+  "organizeTab": "整理",
+  "detailsTab": "詳細",
+  "todoTab": "タスク",
+  "pollsTab": "投票",
+  "pollsEmpty": "まだ投票がありません。",
+  "pollsAddPoll": "投票を追加",
+  "pollsQuestion": "質問",
+  "pollsOptionHint": "選択肢{n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ 選択肢を追加",
+  "pollsVoteCount": "{count, plural, =1{1票} other{{count}票}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "投票を削除",
+  "bringListTitle": "タスク",
+  "bringListEmpty": "タスクがありません。プラスをタップ。",
+  "bringListAddItem": "タスクを追加",
+  "bringListEditItem": "タスクを編集",
+  "bringListItemLabel": "何をするか",
+  "bringListNote": "メモ（任意）",
+  "bringListAssignTo": "メンバーに割り当て",
+  "bringListNoAssignment": "未割り当て",
+  "bringListTake": "引き受ける",
+  "bringListUnassign": "割り当て解除",
+  "rsvpNoteLabel": "あなたのメモ",
+  "confirmRsvp": "確認",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

@@ -911,6 +911,88 @@ class AppLocalizationsKo extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => '메모 추가 (선택사항)';
+
+  @override
+  String get organizeTab => '정리';
+
+  @override
+  String get detailsTab => '세부 정보';
+
+  @override
+  String get todoTab => '할 일';
+
+  @override
+  String get pollsTab => '투표';
+
+  @override
+  String get pollsEmpty => '아직 투표가 없습니다.';
+
+  @override
+  String get pollsAddPoll => '투표 추가';
+
+  @override
+  String get pollsQuestion => '질문';
+
+  @override
+  String pollsOptionHint(int n) {
+    return '옵션 $n';
+  }
+
+  @override
+  String get pollsAddOption => '+ 옵션 추가';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count표',
+      one: '1표',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => '투표 삭제';
+
+  @override
+  String get bringListTitle => '할 일';
+
+  @override
+  String get bringListEmpty => '할 일 없음. 추가하세요.';
+
+  @override
+  String get bringListAddItem => '할 일 추가';
+
+  @override
+  String get bringListEditItem => '작업 편집';
+
+  @override
+  String get bringListItemLabel => '무엇을 할지';
+
+  @override
+  String get bringListNote => '메모 (선택)';
+
+  @override
+  String get bringListAssignTo => '멤버에게 할당';
+
+  @override
+  String get bringListNoAssignment => '미할당';
+
+  @override
+  String get bringListTake => '맡기';
+
+  @override
+  String get bringListUnassign => '할당 취소';
+
+  @override
+  String get rsvpNoteLabel => '메모';
+
+  @override
+  String get confirmRsvp => '확인';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

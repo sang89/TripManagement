@@ -450,6 +450,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "Add a note (optional)",
+  "organizeTab": "Organize",
+  "detailsTab": "Details",
+  "todoTab": "Todo",
+  "pollsTab": "Polls",
+  "pollsEmpty": "No polls yet.",
+  "pollsAddPoll": "Add poll",
+  "pollsQuestion": "Question",
+  "pollsOptionHint": "Option {n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ Add option",
+  "pollsVoteCount": "{count, plural, =1{1 vote} other{{count} votes}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "Delete poll",
+  "bringListTitle": "Todo",
+  "bringListEmpty": "No tasks yet. Tap + to add one.",
+  "bringListAddItem": "Add task",
+  "bringListEditItem": "Edit task",
+  "bringListItemLabel": "What to do",
+  "bringListNote": "Note (optional)",
+  "bringListAssignTo": "Assign to member",
+  "bringListNoAssignment": "Unassigned",
+  "bringListTake": "Take",
+  "bringListUnassign": "Unassign",
+  "rsvpNoteLabel": "Your note",
+  "confirmRsvp": "Confirm",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

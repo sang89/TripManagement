@@ -910,6 +910,88 @@ class AppLocalizationsJa extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => 'メモを追加（任意）';
+
+  @override
+  String get organizeTab => '整理';
+
+  @override
+  String get detailsTab => '詳細';
+
+  @override
+  String get todoTab => 'タスク';
+
+  @override
+  String get pollsTab => '投票';
+
+  @override
+  String get pollsEmpty => 'まだ投票がありません。';
+
+  @override
+  String get pollsAddPoll => '投票を追加';
+
+  @override
+  String get pollsQuestion => '質問';
+
+  @override
+  String pollsOptionHint(int n) {
+    return '選択肢$n';
+  }
+
+  @override
+  String get pollsAddOption => '+ 選択肢を追加';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count票',
+      one: '1票',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => '投票を削除';
+
+  @override
+  String get bringListTitle => 'タスク';
+
+  @override
+  String get bringListEmpty => 'タスクがありません。プラスをタップ。';
+
+  @override
+  String get bringListAddItem => 'タスクを追加';
+
+  @override
+  String get bringListEditItem => 'タスクを編集';
+
+  @override
+  String get bringListItemLabel => '何をするか';
+
+  @override
+  String get bringListNote => 'メモ（任意）';
+
+  @override
+  String get bringListAssignTo => 'メンバーに割り当て';
+
+  @override
+  String get bringListNoAssignment => '未割り当て';
+
+  @override
+  String get bringListTake => '引き受ける';
+
+  @override
+  String get bringListUnassign => '割り当て解除';
+
+  @override
+  String get rsvpNoteLabel => 'あなたのメモ';
+
+  @override
+  String get confirmRsvp => '確認';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

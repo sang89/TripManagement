@@ -922,6 +922,88 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => 'Agregar una nota (opcional)';
+
+  @override
+  String get organizeTab => 'Organizar';
+
+  @override
+  String get detailsTab => 'Detalles';
+
+  @override
+  String get todoTab => 'Tareas';
+
+  @override
+  String get pollsTab => 'Encuestas';
+
+  @override
+  String get pollsEmpty => 'Sin encuestas aún.';
+
+  @override
+  String get pollsAddPoll => 'Agregar encuesta';
+
+  @override
+  String get pollsQuestion => 'Pregunta';
+
+  @override
+  String pollsOptionHint(int n) {
+    return 'Opción $n';
+  }
+
+  @override
+  String get pollsAddOption => '+ Agregar opción';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count votos',
+      one: '1 voto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => 'Eliminar encuesta';
+
+  @override
+  String get bringListTitle => 'Tareas';
+
+  @override
+  String get bringListEmpty => 'Sin tareas aún. Toca + para añadir.';
+
+  @override
+  String get bringListAddItem => 'Añadir tarea';
+
+  @override
+  String get bringListEditItem => 'Editar tarea';
+
+  @override
+  String get bringListItemLabel => 'Qué hacer';
+
+  @override
+  String get bringListNote => 'Nota (opcional)';
+
+  @override
+  String get bringListAssignTo => 'Asignar a miembro';
+
+  @override
+  String get bringListNoAssignment => 'Sin asignar';
+
+  @override
+  String get bringListTake => 'Tomar';
+
+  @override
+  String get bringListUnassign => 'Desasignar';
+
+  @override
+  String get rsvpNoteLabel => 'Tu nota';
+
+  @override
+  String get confirmRsvp => 'Confirmar';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
