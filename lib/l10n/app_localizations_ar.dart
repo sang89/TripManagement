@@ -746,6 +746,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => 'تحديث التفاصيل أو التاريخ أو الموقع';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -758,7 +761,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => 'الحد الأقصى للأعضاء (اختياري)';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -779,13 +782,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get infoTab => 'معلومات';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => 'الأعضاء';
 
   @override
-  String get noGuestsYet => 'لا يوجد ضيوف بعد. اضغط + لإضافة ضيف.';
+  String get noGuestsYet => 'لا أعضاء حتى الآن. انقر + لإضافة أحد.';
 
   @override
-  String get addGuest => 'إضافة ضيف';
+  String get addGuest => 'إضافة عضو';
 
   @override
   String get photosTab => 'Photos';
@@ -862,7 +865,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => 'توزيع بين الأعضاء';
 
   @override
   String get paidBy => 'مدفوع من قبل';
@@ -927,6 +930,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get todoTab => 'المهام';
+
+  @override
+  String get cravingsTab => 'شهيات';
 
   @override
   String get pollsTab => 'الاستطلاعات';
@@ -999,12 +1005,66 @@ class AppLocalizationsAr extends AppLocalizations {
   String get confirmRsvp => 'تأكيد';
 
   @override
+  String get foodMoodTitle => 'كم أنت جائع؟';
+
+  @override
+  String get foodMoodStarving => 'جائع جداً';
+
+  @override
+  String get foodMoodCouldEat => 'يمكنني الأكل';
+
+  @override
+  String get foodMoodDrinksOnly => 'للمشروبات فقط';
+
+  @override
+  String get foodMoodNibble => 'سأتناول شيئاً خفيفاً';
+
+  @override
+  String get foodMoodDDMode => 'سائق مخصص';
+
+  @override
+  String get cravingsPrompt => 'ماذا تشتهي؟';
+
+  @override
+  String get cravingsHint => 'رامن حار، أجواء مريحة، أقل من 20\$...';
+
+  @override
+  String get cravingsPrivacyNote => 'فقط أنت يمكنك رؤية هذا';
+
+  @override
+  String get cravingsFindButton => 'ابحث لي عن مكان';
+
+  @override
+  String get cravingsEmpty => 'لا توجد نتائج. جرب كلمات مختلفة.';
+
+  @override
+  String get cravingsPitchButton => 'اقتراح للمجموعة';
+
+  @override
+  String get cravingsPitched => 'تمت الإضافة إلى تصويت المجموعة!';
+
+  @override
+  String get restaurantPollTitle => 'اختيار مكان';
+
+  @override
+  String get addRestaurantOption => 'إضافة مطعم';
+
+  @override
+  String get restaurantSearchHint => 'ابحث عن المطاعم...';
+
+  @override
+  String get setAsVenueButton => 'تعيين كموقع';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => 'إزالة هذا الحدث نهائياً';
 
   @override
   String deleteEventMessage(String title) {
@@ -1022,6 +1082,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get eventTypeSocial => 'اجتماعي';
+
+  @override
+  String get eventTypeQuickBites => 'لقمات سريعة';
 
   @override
   String get eventTypePicker => 'نوع الحدث';
@@ -1118,4 +1181,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'التسجيل والتخطيط الأساسي';
+
+  @override
+  String get budgetPerHeadLabel => 'الميزانية لكل شخص (اختياري)';
+
+  @override
+  String get cuisineTagsLabel => 'المطبخ';
+
+  @override
+  String get rsvpDeadlineLabel => 'الموعد النهائي للتأكيد';
+
+  @override
+  String get rsvpDeadlineClosed => 'التأكيد مغلق';
+
+  @override
+  String get vibePickerLabel => 'الأجواء (اختياري)';
 }

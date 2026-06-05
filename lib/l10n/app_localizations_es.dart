@@ -751,6 +751,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => 'Actualizar detalles, fecha o ubicación';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -763,7 +766,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => 'Máximo de miembros (opcional)';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -784,13 +787,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get infoTab => 'Info';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => 'Miembros';
 
   @override
-  String get noGuestsYet => 'Aún no hay invitados. Toca + para agregar uno.';
+  String get noGuestsYet => 'Aún no hay miembros. Toca + para añadir uno.';
 
   @override
-  String get addGuest => 'Agregar invitado';
+  String get addGuest => 'Añadir miembro';
 
   @override
   String get photosTab => 'Photos';
@@ -867,7 +870,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => 'Dividir entre miembros';
 
   @override
   String get paidBy => 'Pagado por';
@@ -932,6 +935,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get todoTab => 'Tareas';
+
+  @override
+  String get cravingsTab => 'Antojos';
 
   @override
   String get pollsTab => 'Encuestas';
@@ -1004,12 +1010,68 @@ class AppLocalizationsEs extends AppLocalizations {
   String get confirmRsvp => 'Confirmar';
 
   @override
+  String get foodMoodTitle => '¿Cuánta hambre tienes?';
+
+  @override
+  String get foodMoodStarving => 'Muerto de hambre';
+
+  @override
+  String get foodMoodCouldEat => 'Podría comer';
+
+  @override
+  String get foodMoodDrinksOnly => 'Solo para tomar algo';
+
+  @override
+  String get foodMoodNibble => 'Picaré algo';
+
+  @override
+  String get foodMoodDDMode => 'Conductor designado';
+
+  @override
+  String get cravingsPrompt => '¿Qué se te antoja?';
+
+  @override
+  String get cravingsHint =>
+      'ramen picante, ambiente acogedor, menos de 20\$...';
+
+  @override
+  String get cravingsPrivacyNote => 'Solo tú puedes ver esto';
+
+  @override
+  String get cravingsFindButton => 'Encuéntrame un lugar';
+
+  @override
+  String get cravingsEmpty =>
+      'Sin resultados. Prueba con otras palabras clave.';
+
+  @override
+  String get cravingsPitchButton => 'Proponer al grupo';
+
+  @override
+  String get cravingsPitched => '¡Añadido a la votación del grupo!';
+
+  @override
+  String get restaurantPollTitle => 'Elegir un lugar';
+
+  @override
+  String get addRestaurantOption => 'Añadir restaurante';
+
+  @override
+  String get restaurantSearchHint => 'Buscar restaurantes...';
+
+  @override
+  String get setAsVenueButton => 'Establecer como lugar';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => 'Eliminar este evento permanentemente';
 
   @override
   String deleteEventMessage(String title) {
@@ -1027,6 +1089,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get eventTypeSocial => 'Social';
+
+  @override
+  String get eventTypeQuickBites => 'Bocados Rápidos';
 
   @override
   String get eventTypePicker => 'Tipo de evento';
@@ -1125,4 +1190,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP y planificación básica';
+
+  @override
+  String get budgetPerHeadLabel => 'Presupuesto por persona (opcional)';
+
+  @override
+  String get cuisineTagsLabel => 'Cocina';
+
+  @override
+  String get rsvpDeadlineLabel => 'Fecha límite RSVP';
+
+  @override
+  String get rsvpDeadlineClosed => 'RSVP cerrado';
+
+  @override
+  String get vibePickerLabel => 'Ambiente (opcional)';
 }

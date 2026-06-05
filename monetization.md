@@ -1,6 +1,6 @@
 # TripManagement — Monetization Reference
 
-## Model
+## Freemium Model
 
 **Freemium + Pro.** Free users can plan events immediately with no sign-up friction; Pro unlocks higher limits and premium features. Subscriptions are per-app — TripManagement Pro is completely separate from PropertyManagement Pro, even though both apps share the same Supabase project.
 
@@ -145,3 +145,135 @@ The `app` column (`trip_management` | `property_management`) ensures subscriptio
 - [ ] Offline access implementation (Phase 5)
 - [ ] Event templates (Phase 5)
 - [ ] Affiliate booking links — commission revenue from hotel/activity bookings (Phase 4)
+
+---
+
+## API Cost Reference
+
+Tracks every billable API call with per-call pricing, trigger conditions, and monthly cost projections. **Update this section whenever a new API call is added or an existing one changes.**
+
+### Free credit summary
+
+| Provider | Free allowance | Notes |
+|---|---|---|
+| Google Maps Platform | **$200/month** credit | Shared across all Google APIs on the key — autocomplete, place details, text search, photo, directions |
+| Stadia Maps | **200,000 tiles/month** | Independent from Google credit |
+| Supabase | Free tier: 500 MB DB, 2 GB bandwidth, 500K Edge Function invocations/month | Shared with PropertyManagement |
+| Google Gemini (direct) | Free tier varies by model | Debug builds only — not billed in production (Edge Function used instead) |
+
+---
+
+### Google Maps Platform — per-call pricing
+
+All calls use `kGooglePlacesApiKey`. Prices are in USD and consume the $200/month free credit first.
+
+#### Places API (New)
+
+| Endpoint | Trigger | Cost/call | Free calls/month (from $200 credit) |
+|---|---|---|---|
+| `POST places:autocomplete` | Each debounced keystroke in a location search field | **$0.00283** | ~70,700 |
+| `GET places/{placeId}` — Basic fields | User selects a prediction from autocomplete | **$0.017** | ~11,760 |
+| `GET places/{placeId}` — Advanced fields (rating, priceLevel, photos) | `fetchRestaurantDetails()` — called after autocomplete select when the destination is a restaurant | **$0.020** | ~10,000 |
+| `POST places:searchText` | User taps **"Find me a spot"** in the Cravings tab | **$0.032** | ~6,250 |
+| `GET places/{photoRef}/media` | Each restaurant photo rendered in the UI — triggered in two places: (1) each result card in the Cravings tab (up to 5 per search), (2) each restaurant option row in the Polls tab | **$0.007** | ~28,570 |
+
+#### Directions API
+
+| Endpoint | Trigger | Cost/call | Free calls/month |
+|---|---|---|---|
+| `GET directions/json` | `TripMapWidget` mount + every stop-pin change on trip-type events with ≥2 stops | **$0.005** | ~40,000 |
+
+---
+
+### Per-feature cost breakdown
+
+#### Location autocomplete (trip/event creation, stop editing)
+
+Each search session = type N characters (one request per debounced keystroke, min 3 chars) + one place-details call on selection.
+
+| Action | Calls | Cost |
+|---|---|---|
+| 5-character query → select a place | 3 autocomplete + 1 place details | $0.00849 + $0.017 = **$0.025** |
+| Typical session (8 chars typed) | 6 autocomplete + 1 place details | $0.01698 + $0.017 = **$0.034** |
+
+#### Cravings tab (Quick Bites events only)
+
+One "Find me a spot" session = 1 text search + up to 5 photo fetches (one per result card).
+
+| Action | Calls | Cost |
+|---|---|---|
+| Search that returns 5 results | 1 text search + 5 photos | $0.032 + $0.035 = **$0.067** |
+| Viewing Polls tab with 5 pitched restaurants | 5 photo fetches (one per poll option row) | **$0.035** |
+| Pitching a restaurant (no extra API call) | 0 — uses data already fetched in the search | **$0.000** |
+
+> **Photo caching note:** `Image.network` caches images in memory for the session and on disk via the platform HTTP cache. A user who searches, then opens the Polls tab, will NOT re-fetch the same photos — the platform cache serves them. Cost above is the worst case (cold cache).
+
+#### Route display (trip-type events)
+
+| Scenario | Calls | Cost |
+|---|---|---|
+| Open a trip with 3 stops | 1 directions call | **$0.005** |
+| Add/move one stop | 1 directions call | **$0.005** |
+
+---
+
+### Monthly cost estimates
+
+Assumptions: MAU = monthly active users, avg sessions/user/month below.
+
+#### Small scale (100 MAU)
+
+| Usage pattern | Calls/month | Cost before credit | After $200 credit |
+|---|---|---|---|
+| Autocomplete: 2 searches/user | 200 text + 100 details | $0.57 + $1.70 | **$0** |
+| Cravings: 3 searches/user, 2 poll views/user | 300 text search + 1,500 photos + 1,000 poll photos | $9.60 + $10.50 + $7.00 | **$0** |
+| Directions: 5 trip views/user | 500 | $2.50 | **$0** |
+| **Monthly total** | | **~$32** | **$0 (within free credit)** |
+
+#### Medium scale (1,000 MAU)
+
+| Usage pattern | Calls/month | Cost before credit | After $200 credit |
+|---|---|---|---|
+| Autocomplete: 2 searches/user | 2,000 text + 1,000 details | $5.66 + $17.00 | **$0** |
+| Cravings: 3 searches/user, 2 poll views/user | 3,000 text search + 15,000 photos + 10,000 poll photos | $96 + $105 + $70 | **$96** |
+| Directions: 5 trip views/user | 5,000 | $25 | **$0** |
+| **Monthly total** | | **~$319** | **~$119 out-of-pocket** |
+
+#### Large scale (10,000 MAU)
+
+At this scale all costs are out-of-pocket (credit exhausted in the first ~620 text search calls).
+
+| Feature | Calls/month | Cost/month |
+|---|---|---|
+| Autocomplete | 20,000 text + 10,000 details | $56.60 + $170 = **$227** |
+| Cravings text search | 30,000 | **$960** |
+| Cravings + poll photos | 250,000 | **$1,750** |
+| Directions | 50,000 | **$250** |
+| **Monthly total** | | **~$3,187** |
+
+> At 10K MAU the photo cost dominates. Mitigation options: add a CDN proxy layer that caches `/media` responses so each unique photo is fetched from Google only once regardless of how many users view it.
+
+---
+
+### Supabase
+
+| Resource | Free limit | Est. usage at 1K MAU |
+|---|---|---|
+| Database rows | 500 MB | Well within — events + polls + votes are small |
+| Bandwidth | 2 GB/month | Well within for API-only traffic |
+| Edge Function invocations | 500K/month | ~5K AI chat calls at 1K MAU — well within |
+| Realtime connections | 200 concurrent | Sufficient until ~500+ simultaneous active users |
+
+Paid tier (Pro, $25/month): 8 GB DB, 250 GB bandwidth, 2M Edge Function invocations.
+
+---
+
+### Cost-control checklist
+
+When adding any new feature that calls an external API:
+
+- [ ] Add the endpoint + per-call cost to the table above.
+- [ ] Add it to the relevant per-feature breakdown section.
+- [ ] Re-run the monthly estimate rows (or add a new feature row).
+- [ ] Consider whether the call can be avoided with client-side caching (`CacheEntry`, `Image.network` disk cache, or a local `Map<>`).
+- [ ] Update this file in the same PR as the feature code.

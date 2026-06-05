@@ -739,6 +739,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => '詳細、日付、または場所を更新';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -751,7 +754,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => '最大メンバー数（任意）';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -772,13 +775,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get infoTab => '詳細';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => 'メンバー';
 
   @override
-  String get noGuestsYet => 'まだゲストがいません。＋ をタップして追加してください。';
+  String get noGuestsYet => 'まだメンバーがいません。+をタップして追加してください。';
 
   @override
-  String get addGuest => 'ゲストを追加';
+  String get addGuest => 'メンバーを追加';
 
   @override
   String get photosTab => 'Photos';
@@ -855,7 +858,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => 'メンバー間で分割';
 
   @override
   String get paidBy => '支払い者';
@@ -920,6 +923,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get todoTab => 'タスク';
+
+  @override
+  String get cravingsTab => '気分';
 
   @override
   String get pollsTab => '投票';
@@ -992,12 +998,66 @@ class AppLocalizationsJa extends AppLocalizations {
   String get confirmRsvp => '確認';
 
   @override
+  String get foodMoodTitle => 'どのくらいお腹が空いていますか？';
+
+  @override
+  String get foodMoodStarving => '激腹';
+
+  @override
+  String get foodMoodCouldEat => '食べられる';
+
+  @override
+  String get foodMoodDrinksOnly => '飲み物だけ';
+
+  @override
+  String get foodMoodNibble => '少し食べる';
+
+  @override
+  String get foodMoodDDMode => 'ドライバー当番';
+
+  @override
+  String get cravingsPrompt => '何が食べたい？';
+
+  @override
+  String get cravingsHint => '辛いラーメン、落ち着いた雰囲気、2000円以下...';
+
+  @override
+  String get cravingsPrivacyNote => 'あなただけが見ることができます';
+
+  @override
+  String get cravingsFindButton => 'スポットを見つける';
+
+  @override
+  String get cravingsEmpty => '結果が見つかりませんでした。別のキーワードをお試しください。';
+
+  @override
+  String get cravingsPitchButton => 'グループに提案';
+
+  @override
+  String get cravingsPitched => 'グループ投票に追加しました！';
+
+  @override
+  String get restaurantPollTitle => '場所を選ぶ';
+
+  @override
+  String get addRestaurantOption => 'レストランを追加';
+
+  @override
+  String get restaurantSearchHint => 'レストランを検索...';
+
+  @override
+  String get setAsVenueButton => '会場に設定';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => 'このイベントを完全に削除';
 
   @override
   String deleteEventMessage(String title) {
@@ -1015,6 +1075,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get eventTypeSocial => 'ソーシャル';
+
+  @override
+  String get eventTypeQuickBites => 'クイックバイツ';
 
   @override
   String get eventTypePicker => 'イベントの種類';
@@ -1110,4 +1173,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP・基本プランニング';
+
+  @override
+  String get budgetPerHeadLabel => '一人あたりの予算（任意）';
+
+  @override
+  String get cuisineTagsLabel => '料理ジャンル';
+
+  @override
+  String get rsvpDeadlineLabel => '返信期限';
+
+  @override
+  String get rsvpDeadlineClosed => '返信締め切り';
+
+  @override
+  String get vibePickerLabel => '雰囲気（任意）';
 }

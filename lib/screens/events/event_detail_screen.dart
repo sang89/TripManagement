@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../config/api_keys.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../models/event_bring_item.dart';
@@ -34,6 +35,7 @@ import '../../providers/event_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../services/connectivity_service.dart';
+import '../../services/trip_places_service.dart';
 import '../../services/user_lookup_service.dart';
 import '../../utils/avatar_utils.dart';
 import '../../widgets/add_member_sheet.dart';
@@ -238,6 +240,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 isOrganizer: isOrganizer,
               ),
               _OrganizeTabGroup(
+                key: ValueKey('organize_${event.isQuickBites}'),
                 event: event,
                 authUid: authUid,
                 isOrganizer: isOrganizer,
@@ -435,6 +438,7 @@ class _OrganizeTabGroup extends StatefulWidget {
   final List<EventPoll> polls;
 
   const _OrganizeTabGroup({
+    super.key,
     required this.event,
     required this.authUid,
     required this.isOrganizer,
@@ -451,10 +455,21 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
     with SingleTickerProviderStateMixin {
   late TabController _ctrl;
 
+  int get _tabCount => widget.event.isQuickBites ? 4 : 3;
+
   @override
   void initState() {
     super.initState();
-    _ctrl = TabController(length: 3, vsync: this);
+    _ctrl = TabController(length: _tabCount, vsync: this);
+  }
+
+  @override
+  void didUpdateWidget(_OrganizeTabGroup old) {
+    super.didUpdateWidget(old);
+    if (old.event.isQuickBites != widget.event.isQuickBites) {
+      _ctrl.dispose();
+      _ctrl = TabController(length: _tabCount, vsync: this);
+    }
   }
 
   @override
@@ -465,6 +480,12 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
 
   @override
   Widget build(BuildContext context) {
+    // Guard against hot-reload leaving a stale controller with wrong length.
+    if (_ctrl.length != _tabCount) {
+      _ctrl.dispose();
+      _ctrl = TabController(length: _tabCount, vsync: this);
+    }
+
     final l10n = AppLocalizations.of(context);
 
     final colorScheme = Theme.of(context).colorScheme;
@@ -486,6 +507,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
               Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
               Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
               Tab(icon: const Icon(Icons.poll_outlined, size: 18), text: l10n.pollsTab),
+              if (widget.event.isQuickBites)
+                Tab(icon: const Icon(Icons.emoji_food_beverage_outlined, size: 18), text: l10n.cravingsTab),
             ],
           ),
         ),
@@ -511,6 +534,12 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                 polls: widget.polls,
                 isOrganizer: widget.isOrganizer,
               ),
+              if (widget.event.isQuickBites)
+                _CravingsTab(
+                  event: widget.event,
+                  authUid: widget.authUid,
+                  isOrganizer: widget.isOrganizer,
+                ),
             ],
           ),
         ),
@@ -701,10 +730,12 @@ class _TodoTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Filter out legacy [order:*] items created by the removed Orders tab.
+    final visibleItems = items.where((i) => !(i.note?.startsWith('[order:') ?? false)).toList();
 
     return Stack(
       children: [
-        items.isEmpty
+        visibleItems.isEmpty
             ? Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -719,9 +750,9 @@ class _TodoTab extends StatelessWidget {
               )
             : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                itemCount: items.length,
+                itemCount: visibleItems.length,
                 itemBuilder: (_, i) {
-                  final item = items[i];
+                  final item = visibleItems[i];
                   final row = _BringItemRow(
                     item: item,
                     isOrganizer: isOrganizer,
@@ -1228,9 +1259,13 @@ class _PollCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isRestaurant = poll.isRestaurantPoll;
     final myVoteOptionId =
-        authUid != null ? poll.myVoteOptionId(authUid!) : null;
+        authUid != null && !isRestaurant ? poll.myVoteOptionId(authUid!) : null;
+    final myVotedIds =
+        authUid != null && isRestaurant ? poll.myVotedOptionIds(authUid!) : const <String>{};
     final total = poll.totalVotes;
+    final uniqueVoterCount = poll.votes.map((v) => v.userId).toSet().length;
 
     return Card(
       child: Padding(
@@ -1262,27 +1297,46 @@ class _PollCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             for (final option in poll.options) ...[
-              _PollOptionRow(
-                option: option,
-                votes: poll.votesFor(option.id),
-                total: total,
-                isSelected: myVoteOptionId == option.id,
-                onTap: authUid == null
-                    ? null
-                    : () {
-                        final provider = context.read<EventProvider>();
-                        if (myVoteOptionId == null) {
-                          provider.vote(poll.id, option.id, eventId);
-                        } else if (myVoteOptionId != option.id) {
-                          provider.changeVote(poll.id, option.id, eventId);
-                        }
-                      },
-              ),
+              if (isRestaurant)
+                _RestaurantPollOptionRow(
+                  option: option,
+                  votes: poll.votesFor(option.id),
+                  isSelected: myVotedIds.contains(option.id),
+                  onTap: authUid == null
+                      ? null
+                      : () {
+                          final provider = context.read<EventProvider>();
+                          if (myVotedIds.contains(option.id)) {
+                            provider.unvote(poll.id, option.id, eventId);
+                          } else {
+                            provider.vote(poll.id, option.id, eventId);
+                          }
+                        },
+                )
+              else
+                _PollOptionRow(
+                  option: option,
+                  votes: poll.votesFor(option.id),
+                  total: total,
+                  isSelected: myVoteOptionId == option.id,
+                  onTap: authUid == null
+                      ? null
+                      : () {
+                          final provider = context.read<EventProvider>();
+                          if (myVoteOptionId == null) {
+                            provider.vote(poll.id, option.id, eventId);
+                          } else if (myVoteOptionId != option.id) {
+                            provider.changeVote(poll.id, option.id, eventId);
+                          }
+                        },
+                ),
               const SizedBox(height: 8),
             ],
             const SizedBox(height: 4),
             Text(
-              l10n.pollsVoteCount(total),
+              isRestaurant
+                  ? '$uniqueVoterCount voter${uniqueVoterCount == 1 ? '' : 's'}'
+                  : l10n.pollsVoteCount(total),
               style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
           ],
@@ -1371,6 +1425,147 @@ class _PollOptionRow extends StatelessWidget {
             ),
           ),
         ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RestaurantPollOptionRow extends StatelessWidget {
+  final EventPollOption option;
+  final int votes;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  const _RestaurantPollOptionRow({
+    required this.option,
+    required this.votes,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  @override
+  Widget build(BuildContext context) {
+    final meta = option.placeMetadata;
+    final photoRef = meta?['photo_ref'] as String?;
+    final photoUrl = photoRef != null
+        ? 'https://places.googleapis.com/v1/$photoRef/media'
+            '?maxWidthPx=200&key=$kGooglePlacesApiKey'
+        : null;
+    final address = meta?['address'] as String?;
+    final rating = (meta?['rating'] as num?)?.toDouble();
+
+    return AppTappable(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primary.withValues(alpha: 0.06)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primary.withValues(alpha: 0.45)
+                : Colors.grey.shade200,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Thumbnail.
+            ClipRRect(
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: photoUrl != null
+                    ? Image.network(
+                        photoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: Colors.grey[100],
+                          child: const Icon(Icons.restaurant, size: 24, color: Colors.black12),
+                        ),
+                      )
+                    : Container(
+                        color: Colors.grey[100],
+                        child: const Icon(Icons.restaurant, size: 24, color: Colors.black12),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Name + address + rating.
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      option.text,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? AppTheme.primary : null,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (address != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        address,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (rating != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, size: 12, color: Colors.amber),
+                          const SizedBox(width: 2),
+                          Text(rating.toStringAsFixed(1),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            // Vote count + check.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle : Icons.circle_outlined,
+                    size: 18,
+                    color: isSelected ? AppTheme.primary : Colors.grey[350],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$votes',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? AppTheme.primary : Colors.grey[700],
+                    ),
+                  ),
+                  Text(
+                    'vote${votes == 1 ? '' : 's'}',
+                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1675,6 +1870,369 @@ class _RsvpButton extends StatelessWidget {
       );
 }
 
+// ── Cravings tab (Quick Bites only) ──────────────────────────────────────────
+
+class _FoodEmojiBubble extends StatelessWidget {
+  final String emoji;
+
+  const _FoodEmojiBubble(this.emoji);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber.withValues(alpha: 0.35),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(emoji, style: const TextStyle(fontSize: 20)),
+    );
+  }
+}
+
+class _CravingsTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+
+  const _CravingsTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+  });
+
+  @override
+  State<_CravingsTab> createState() => _CravingsTabState();
+}
+
+class _CravingsTabState extends State<_CravingsTab> {
+  final _keywordCtrl = TextEditingController();
+  List<RestaurantSuggestion> _results = [];
+  bool _loading = false;
+  String? _error;
+  String? _restaurantPollId;
+
+  @override
+  void dispose() {
+    _keywordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search() async {
+    final q = _keywordCtrl.text.trim();
+    if (q.isEmpty) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final svc = TripPlacesService(kGooglePlacesApiKey);
+      final results = await svc.searchRestaurants(
+        q,
+        lat: widget.event.locationLat,
+        lng: widget.event.locationLng,
+      );
+      setState(() { _results = results; _loading = false; });
+    } catch (e) {
+      setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  Future<void> _pitch(RestaurantSuggestion r, AppLocalizations l10n) async {
+    final provider = context.read<EventProvider>();
+    // Validate cached poll ID against live polls.
+    if (_restaurantPollId != null) {
+      final livePollIds = provider.pollsFor(widget.event.id)
+          .map((p) => p.id).toSet();
+      if (!livePollIds.contains(_restaurantPollId)) {
+        _restaurantPollId = null;
+      }
+    }
+    // Derive current poll ID from live state if not cached.
+    _restaurantPollId ??= provider.pollsFor(widget.event.id)
+        .where((p) => p.isRestaurantPoll)
+        .firstOrNull
+        ?.id;
+
+    final metadata = {
+      'place_id': r.placeId,
+      'name': r.name,
+      'address': r.address,
+      if (r.rating != null) 'rating': r.rating,
+      if (r.priceLevel != null) 'price_level': r.priceLevel,
+      if (r.photoRef != null) 'photo_ref': r.photoRef,
+    };
+    try {
+      _restaurantPollId = await provider.pitchRestaurantOption(
+        widget.event.id,
+        r.name,
+        metadata,
+        l10n.cravingsTab,
+        existingPollId: _restaurantPollId,
+      );
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final existingPitchedIds = context.watch<EventProvider>()
+        .pollsFor(widget.event.id)
+        .where((p) => p.isRestaurantPoll)
+        .firstOrNull
+        ?.options
+        .map((o) => o.placeMetadata?['place_id'] as String?)
+        .whereType<String>()
+        .toSet() ?? {};
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      children: [
+        // Header card.
+        Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  _FoodEmojiBubble('🍜'),
+                  SizedBox(width: 8),
+                  _FoodEmojiBubble('🌮'),
+                  SizedBox(width: 8),
+                  _FoodEmojiBubble('🍕'),
+                  SizedBox(width: 8),
+                  _FoodEmojiBubble('🍣'),
+                  SizedBox(width: 8),
+                  _FoodEmojiBubble('🥗'),
+                  SizedBox(width: 8),
+                  _FoodEmojiBubble('🍔'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.cravingsPrompt,
+                style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF5D4037)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.cravingsPrivacyNote,
+                style: TextStyle(fontSize: 12, color: Colors.brown[400]),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Keyword input.
+        TextField(
+          controller: _keywordCtrl,
+          decoration: InputDecoration(
+            hintText: l10n.cravingsHint,
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _search(),
+        ),
+        const SizedBox(height: 10),
+        // Full-width search button — avoids Row + ElevatedButton in unbounded-width context.
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            onPressed: _loading ? null : _search,
+            icon: _loading
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.search_rounded, size: 18),
+            label: Text(l10n.cravingsFindButton),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+        ],
+        const SizedBox(height: 16),
+        if (!_loading && _results.isEmpty && _keywordCtrl.text.isNotEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(l10n.cravingsEmpty,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+            ),
+          ),
+        for (final r in _results)
+          _CravingResultCard(
+            restaurant: r,
+            isPitched: existingPitchedIds.contains(r.placeId),
+            onPitch: () => _pitch(r, l10n),
+            l10n: l10n,
+          ),
+      ],
+    );
+  }
+}
+
+class _CravingResultCard extends StatefulWidget {
+  final RestaurantSuggestion restaurant;
+  final bool isPitched;
+  final VoidCallback onPitch;
+  final AppLocalizations l10n;
+
+  const _CravingResultCard({
+    required this.restaurant,
+    required this.isPitched,
+    required this.onPitch,
+    required this.l10n,
+  });
+
+  @override
+  State<_CravingResultCard> createState() => _CravingResultCardState();
+}
+
+class _CravingResultCardState extends State<_CravingResultCard> {
+  bool _pitching = false;
+
+  Future<void> _handlePitch() async {
+    if (_pitching || widget.isPitched) return;
+    setState(() => _pitching = true);
+    try {
+      widget.onPitch();
+      await Future.delayed(const Duration(milliseconds: 800));
+    } finally {
+      if (mounted) setState(() => _pitching = false);
+    }
+  }
+
+  String _priceLabel(int? level) {
+    if (level == null) return '';
+    return '\$' * level;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.restaurant;
+    final photoUrl = r.photoRef != null
+        ? 'https://places.googleapis.com/v1/${r.photoRef}/media'
+            '?maxWidthPx=600&key=$kGooglePlacesApiKey'
+        : null;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (photoUrl != null)
+            SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : Container(
+                        color: Colors.grey[100],
+                        child: const Center(
+                          child: Icon(Icons.restaurant, size: 36, color: Colors.black12),
+                        ),
+                      ),
+                errorBuilder: (_, _, _) => Container(
+                  color: Colors.grey[100],
+                  child: const Center(
+                    child: Icon(Icons.restaurant, size: 36, color: Colors.black12),
+                  ),
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(r.name,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(r.address,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (r.rating != null) ...[
+                      const Icon(Icons.star_rounded, size: 15, color: Colors.amber),
+                      const SizedBox(width: 2),
+                      Text(r.rating!.toStringAsFixed(1),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                      const SizedBox(width: 10),
+                    ],
+                    if (r.priceLevel != null)
+                      Text(_priceLabel(r.priceLevel),
+                          style: TextStyle(fontSize: 13, color: Colors.green[700], fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    widget.isPitched
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+                              const SizedBox(width: 4),
+                              Text(widget.l10n.cravingsPitched,
+                                  style: TextStyle(fontSize: 13, color: Colors.green[700], fontWeight: FontWeight.w500)),
+                            ],
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: _pitching ? null : _handlePitch,
+                            icon: _pitching
+                                ? const SizedBox(width: 14, height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.send_outlined, size: 14),
+                            label: Text(widget.l10n.cravingsPitchButton,
+                                style: const TextStyle(fontSize: 13)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Route tab (trip-type only) ────────────────────────────────────────────────
 
 enum _RouteView { list, map }
@@ -1969,19 +2527,17 @@ class _GuestsTabState extends State<_GuestsTab> {
       return _buildTripMembersList(context, l10n);
     }
 
-    // Non-trip: RSVP groups
-    final groups = <String, List<EventGuest>>{
-      'going': [],
-      'maybe': [],
-      'declined': [],
-    };
-    for (final g in event.guests) {
-      groups[g.status]?.add(g);
-    }
+    // Non-trip: same rich tile design as trip members list.
+    final sortedGuests = [...event.guests]
+      ..sort((a, b) {
+        if (a.role == 'organizer') return -1;
+        if (b.role == 'organizer') return 1;
+        return 0;
+      });
 
     return Stack(
       children: [
-        event.guests.isEmpty
+        sortedGuests.isEmpty
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -2000,40 +2556,125 @@ class _GuestsTabState extends State<_GuestsTab> {
                   ),
                 ),
               )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
-                children: [
-                  for (final status in [
-                    'going',
-                    'maybe',
-                    'declined'
-                  ]) ...[
-                    if (groups[status]!.isNotEmpty) ...[
-                      Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                        child: Text(
-                          switch (status) {
-                            'going' => l10n.rsvpGoing,
-                            'maybe' => l10n.rsvpMaybe,
-                            _ => l10n.rsvpDeclined,
-                          },
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                color: AppTheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                itemCount: sortedGuests.length,
+                itemBuilder: (_, i) {
+                  final g = sortedGuests[i];
+                  final isMe = g.userId != null &&
+                      g.userId == widget.authUid;
+                  final canResend = widget.isOrganizer &&
+                      g.status == 'pending' &&
+                      g.userId != null &&
+                      !isMe;
+                  final hasEmail = g.email != null &&
+                      g.email!.isNotEmpty &&
+                      !isMe;
+                  final hasAvatar =
+                      g.avatarUrl != null && g.avatarUrl!.isNotEmpty;
+
+                  String? inviterLabel;
+                  if (g.invitedBy != null) {
+                    inviterLabel = g.invitedBy == widget.authUid
+                        ? l10n.invitedBy(l10n.you)
+                        : l10n.invitedBy(
+                            event.guests
+                                    .where((x) => x.userId == g.invitedBy)
+                                    .firstOrNull
+                                    ?.displayName ??
+                                '');
+                  }
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: g.role == 'organizer'
+                          ? AppTheme.primary
+                          : Colors.grey[200],
+                      backgroundImage:
+                          hasAvatar ? NetworkImage(g.avatarUrl!) : null,
+                      child: hasAvatar
+                          ? null
+                          : Text(
+                              g.displayName.isNotEmpty
+                                  ? g.displayName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                  color: g.role == 'organizer'
+                                      ? Colors.white
+                                      : AppTheme.primary),
+                            ),
+                    ),
+                    title: Text(isMe ? l10n.you : g.displayName),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(g.role == 'organizer'
+                                ? l10n.organizer
+                                : l10n.member),
+                            const SizedBox(width: 6),
+                            _StatusChip(
+                              label: switch (g.status) {
+                                'pending' => l10n.invitePending,
+                                'declined' => l10n.inviteDeclined,
+                                'left' => l10n.memberLeft,
+                                'maybe' => l10n.rsvpMaybe,
+                                _ => l10n.inviteAccepted,
+                              },
+                              color: switch (g.status) {
+                                'pending' => Colors.orange,
+                                'declined' => AppTheme.danger,
+                                'left' => Colors.grey,
+                                'maybe' => Colors.amber,
+                                _ => Colors.green,
+                              },
+                            ),
+                          ],
                         ),
-                      ),
-                      ...groups[status]!.map((g) => _GuestTile(
-                            guest: g,
-                            isOrganizer: widget.isOrganizer,
-                          )),
-                    ],
-                  ],
-                ],
+                        if (hasEmail)
+                          Text(
+                            g.email!,
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        if (inviterLabel != null)
+                          Text(
+                            inviterLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                      ],
+                    ),
+                    trailing: canResend
+                        ? _resendingIds.contains(g.id)
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator.adaptive(
+                                    strokeWidth: 2),
+                              )
+                            : Tooltip(
+                                message: l10n.resendInvite,
+                                waitDuration: Duration.zero,
+                                preferBelow: false,
+                                child: IconButton(
+                                  icon: const Icon(Icons.send_outlined),
+                                  iconSize: 20,
+                                  onPressed: () => _resend(g),
+                                ),
+                              )
+                        : null,
+                    dense: true,
+                    isThreeLine: hasEmail || inviterLabel != null,
+                  );
+                },
               ),
         if (widget.isOrganizer)
           Positioned(
@@ -2245,103 +2886,6 @@ class _StatusChip extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _GuestTile extends StatelessWidget {
-  final EventGuest guest;
-  final bool isOrganizer;
-
-  const _GuestTile({required this.guest, required this.isOrganizer});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasAvatar =
-        guest.avatarUrl != null && guest.avatarUrl!.isNotEmpty;
-    final contact = [
-      if (guest.email != null) guest.email!,
-      if (guest.phone != null) guest.phone!,
-    ].join(' · ');
-
-    final hasNote =
-        guest.rsvpNote != null && guest.rsvpNote!.isNotEmpty;
-
-    Widget? subtitle;
-    if (hasNote && contact.isNotEmpty) {
-      subtitle = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            guest.rsvpNote!,
-            style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey[700]),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(contact,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12)),
-        ],
-      );
-    } else if (hasNote) {
-      subtitle = Text(
-        guest.rsvpNote!,
-        style: TextStyle(
-            fontSize: 12,
-            fontStyle: FontStyle.italic,
-            color: Colors.grey[700]),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      );
-    } else if (contact.isNotEmpty) {
-      subtitle =
-          Text(contact, maxLines: 1, overflow: TextOverflow.ellipsis);
-    }
-
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: Colors.grey[200],
-        backgroundImage:
-            hasAvatar ? NetworkImage(guest.avatarUrl!) : null,
-        child: hasAvatar
-            ? null
-            : Text(
-                guest.displayName.isNotEmpty
-                    ? guest.displayName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(color: AppTheme.primary),
-              ),
-      ),
-      title: Text(guest.displayName),
-      subtitle: subtitle,
-      trailing: isOrganizer
-          ? IconButton(
-              icon: const Icon(Icons.remove_circle_outline,
-                  color: AppTheme.danger, size: 20),
-              onPressed: () => _removeGuest(context),
-            )
-          : null,
-      dense: true,
-    );
-  }
-
-  Future<void> _removeGuest(BuildContext context) async {
-    try {
-      await Supabase.instance.client
-          .from('event_guests')
-          .delete()
-          .eq('id', guest.id);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    }
   }
 }
 

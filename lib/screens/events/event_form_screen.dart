@@ -27,6 +27,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _locationCtrl = TextEditingController();
   final _startLocationCtrl = TextEditingController();
   final _capacityCtrl = TextEditingController();
+  final _budgetCtrl = TextEditingController();
 
   DateTime? _startAt;
   DateTime? _endAt;
@@ -36,6 +37,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
   double? _startLng;
   late EventType _eventType;
 
+  // Quick Bites fields
+  List<String> _cuisineTags = [];
+  DateTime? _rsvpDeadline;
+  String? _vibe;
+
   bool _loading = false;
   String? _error;
 
@@ -43,6 +49,23 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _places = TripPlacesService(kGooglePlacesApiKey);
   bool get _isEdit => widget.eventId != null;
   bool get _isTrip => _eventType == EventType.trip;
+  bool get _isQuickBites => _eventType == EventType.quickBites;
+
+  static const _kCuisineTags = [
+    'Asian', 'Italian', 'Mexican', 'Japanese', 'Chinese',
+    'Indian', 'American', 'BBQ', 'Seafood', 'Brunch',
+    'Street Food', 'Dessert',
+  ];
+
+  static const _kVibes = [
+    'Just catching up',
+    'Post-work treat',
+    'Work lunch',
+    'Celebrating something',
+    'Post-workout fuel',
+    'Hangover cure',
+    'No reason needed',
+  ];
 
   @override
   void initState() {
@@ -62,6 +85,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _locationCtrl.text = event.location;
     _startLocationCtrl.text = event.startLocation ?? '';
     _capacityCtrl.text = event.capacity?.toString() ?? '';
+    _budgetCtrl.text = event.budgetPerHead?.toStringAsFixed(2) ?? '';
     setState(() {
       _startAt = event.startAt;
       _endAt = event.endAt;
@@ -70,6 +94,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
       _startLat = event.startLat;
       _startLng = event.startLng;
       _eventType = event.eventType;
+      _cuisineTags = List<String>.from(event.cuisineTags);
+      _rsvpDeadline = event.rsvpDeadline;
+      _vibe = event.vibe;
     });
   }
 
@@ -80,7 +107,29 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _locationCtrl.dispose();
     _startLocationCtrl.dispose();
     _capacityCtrl.dispose();
+    _budgetCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickRsvpDeadline() async {
+    final now = DateTime.now();
+    final initial = _rsvpDeadline ?? _startAt ?? now;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(now) ? now : initial,
+      firstDate: now,
+      lastDate: DateTime(2100),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !mounted) return;
+    setState(() {
+      _rsvpDeadline =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
   }
 
   Future<void> _pickDateTime(bool isStart) async {
@@ -139,6 +188,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
           _isTrip && _startLocationCtrl.text.trim().isNotEmpty
               ? _startLocationCtrl.text.trim()
               : null;
+      final budgetPerHead = _isQuickBites && _budgetCtrl.text.trim().isNotEmpty
+          ? double.tryParse(_budgetCtrl.text.trim())
+          : null;
 
       if (_isEdit && _existing != null) {
         final updated = _existing!.copyWith(
@@ -161,6 +213,13 @@ class _EventFormScreenState extends State<EventFormScreen> {
           clearStartLat: !_isTrip || _startLat == null,
           startLng: _isTrip ? _startLng : null,
           clearStartLng: !_isTrip || _startLng == null,
+          budgetPerHead: budgetPerHead,
+          clearBudgetPerHead: budgetPerHead == null,
+          cuisineTags: _isQuickBites ? _cuisineTags : [],
+          rsvpDeadline: _isQuickBites ? _rsvpDeadline : null,
+          clearRsvpDeadline: !_isQuickBites || _rsvpDeadline == null,
+          vibe: _isQuickBites ? _vibe : null,
+          clearVibe: !_isQuickBites || _vibe == null,
         );
         await provider.updateEvent(updated);
         if (mounted) context.pop();
@@ -178,6 +237,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
           startLocation: startLocation,
           startLat: _isTrip ? _startLat : null,
           startLng: _isTrip ? _startLng : null,
+          budgetPerHead: budgetPerHead,
+          cuisineTags: _isQuickBites ? _cuisineTags : [],
+          rsvpDeadline: _isQuickBites ? _rsvpDeadline : null,
+          vibe: _isQuickBites ? _vibe : null,
         );
         if (mounted) context.go('/event/${event.id}');
       }
@@ -196,6 +259,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         EventType.birthday => l10n.eventTypeBirthday,
         EventType.wedding => l10n.eventTypeWedding,
         EventType.social => l10n.eventTypeSocial,
+        EventType.quickBites => l10n.eventTypeQuickBites,
       };
 
   IconData _eventTypeIcon(EventType type) => switch (type) {
@@ -203,6 +267,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         EventType.birthday => Icons.cake_outlined,
         EventType.wedding => Icons.favorite_outline,
         EventType.social => Icons.celebration_outlined,
+        EventType.quickBites => Icons.restaurant_outlined,
       };
 
   @override
@@ -343,6 +408,81 @@ class _EventFormScreenState extends State<EventFormScreen> {
                       return null;
                     },
                   ),
+
+                  // ── Quick Bites-only fields ──────────────────────────────
+                  if (_isQuickBites) ...[
+                    const SizedBox(height: 16),
+
+                    // Budget per head
+                    TextFormField(
+                      controller: _budgetCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.budgetPerHeadLabel,
+                        prefixIcon:
+                            const Icon(Icons.attach_money_outlined),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final n = double.tryParse(v.trim());
+                        if (n == null || n <= 0) return l10n.required;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Vibe picker
+                    AppPickerField<String>(
+                      label: l10n.vibePickerLabel,
+                      value: _vibe,
+                      items: _kVibes,
+                      labelOf: (v) => v,
+                      onChanged: (v) => setState(() => _vibe = v),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // RSVP deadline
+                    _DateTimeTile(
+                      label: l10n.rsvpDeadlineLabel,
+                      value: _rsvpDeadline,
+                      display: _rsvpDeadline != null
+                          ? fmt.format(_rsvpDeadline!)
+                          : l10n.notSet,
+                      onTap: _pickRsvpDeadline,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Cuisine tags
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        l10n.cuisineTagsLabel,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: _kCuisineTags.map((tag) {
+                        final selected = _cuisineTags.contains(tag);
+                        return FilterChip(
+                          label: Text(tag),
+                          selected: selected,
+                          onSelected: (on) => setState(() {
+                            if (on) {
+                              _cuisineTags = [..._cuisineTags, tag];
+                            } else {
+                              _cuisineTags = _cuisineTags
+                                  .where((t) => t != tag)
+                                  .toList();
+                            }
+                          }),
+                        );
+                      }).toList(),
+                    ),
+                  ],
 
                   if (_error != null) ...[
                     const SizedBox(height: 12),

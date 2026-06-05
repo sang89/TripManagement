@@ -740,6 +740,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => '세부 정보, 날짜 또는 위치 업데이트';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -752,7 +755,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => '최대 멤버 수 (선택)';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -773,13 +776,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get infoTab => '정보';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => '멤버';
 
   @override
-  String get noGuestsYet => '아직 게스트가 없습니다. + 를 눌러 추가하세요.';
+  String get noGuestsYet => '아직 멤버가 없습니다. +를 눌러 추가하세요.';
 
   @override
-  String get addGuest => '게스트 추가';
+  String get addGuest => '멤버 추가';
 
   @override
   String get photosTab => 'Photos';
@@ -856,7 +859,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => '멤버 간 분할';
 
   @override
   String get paidBy => '지불자';
@@ -921,6 +924,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get todoTab => '할 일';
+
+  @override
+  String get cravingsTab => '먹고싶은것';
 
   @override
   String get pollsTab => '투표';
@@ -993,12 +999,66 @@ class AppLocalizationsKo extends AppLocalizations {
   String get confirmRsvp => '확인';
 
   @override
+  String get foodMoodTitle => '얼마나 배가 고프세요?';
+
+  @override
+  String get foodMoodStarving => '배고파 죽겠어';
+
+  @override
+  String get foodMoodCouldEat => '먹을 수 있어';
+
+  @override
+  String get foodMoodDrinksOnly => '음료만';
+
+  @override
+  String get foodMoodNibble => '조금만 먹을게';
+
+  @override
+  String get foodMoodDDMode => '지정 운전자';
+
+  @override
+  String get cravingsPrompt => '뭐가 먹고 싶어요?';
+
+  @override
+  String get cravingsHint => '매운 라멘, 아늑한 분위기, 20,000원 이하...';
+
+  @override
+  String get cravingsPrivacyNote => '나만 볼 수 있어요';
+
+  @override
+  String get cravingsFindButton => '장소 찾기';
+
+  @override
+  String get cravingsEmpty => '결과가 없어요. 다른 키워드를 시도해보세요.';
+
+  @override
+  String get cravingsPitchButton => '그룹에 제안';
+
+  @override
+  String get cravingsPitched => '그룹 투표에 추가됐어요!';
+
+  @override
+  String get restaurantPollTitle => '장소 선택';
+
+  @override
+  String get addRestaurantOption => '식당 추가';
+
+  @override
+  String get restaurantSearchHint => '식당 검색...';
+
+  @override
+  String get setAsVenueButton => '장소로 설정';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => '이 이벤트를 영구적으로 삭제';
 
   @override
   String deleteEventMessage(String title) {
@@ -1016,6 +1076,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get eventTypeSocial => '소셜';
+
+  @override
+  String get eventTypeQuickBites => '퀵 바이츠';
 
   @override
   String get eventTypePicker => '이벤트 유형';
@@ -1111,4 +1174,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP & 기본 계획';
+
+  @override
+  String get budgetPerHeadLabel => '1인당 예산 (선택)';
+
+  @override
+  String get cuisineTagsLabel => '요리 종류';
+
+  @override
+  String get rsvpDeadlineLabel => 'RSVP 마감일';
+
+  @override
+  String get rsvpDeadlineClosed => 'RSVP 마감';
+
+  @override
+  String get vibePickerLabel => '분위기 (선택)';
 }

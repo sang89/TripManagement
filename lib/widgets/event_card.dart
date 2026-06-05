@@ -34,6 +34,7 @@ class EventCard extends StatelessWidget {
       EventType.birthday => Icons.cake_outlined,
       EventType.wedding => Icons.favorite_outline,
       EventType.social => Icons.celebration_outlined,
+      EventType.quickBites => Icons.restaurant_outlined,
     };
 
     final pendingCount =
@@ -120,7 +121,7 @@ class EventCard extends StatelessWidget {
                       size: 16, color: Colors.grey),
                   const SizedBox(width: 4),
                   Text(
-                    '${event.guests.length} guest${event.guests.length == 1 ? '' : 's'}',
+                    '${event.guests.length} member${event.guests.length == 1 ? '' : 's'}',
                     style:
                         TextStyle(color: Colors.grey[700], fontSize: 14),
                   ),
