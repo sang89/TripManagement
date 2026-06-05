@@ -228,6 +228,29 @@ https://tiles.stadiamaps.com/tiles/{style}/{z}/{x}/{y}.png?api_key={key}
 
 ---
 
+## Yelp Fusion API
+
+**Purpose:** Resolve a restaurant name + address to an exact Yelp business listing URL for the restaurant detail sheet.  
+**Config key:** `kYelpApiKey` (`lib/config/api_keys.dart`)  
+**Base URL:** `https://api.yelp.com/v3`  
+**Auth:** Bearer token (`Authorization: Bearer <key>`)  
+**Free tier:** 500 calls/day  
+**Sign-up:** https://docs.developer.yelp.com/docs/getting-started
+
+| Endpoint | Method | Used for |
+|----------|--------|---------|
+| `/v3/businesses/search` | GET | Match restaurant by name + address; extract direct `yelp.com/biz/...` URL |
+
+**Request params:** `term=<name>`, `location=<address>`, `limit=1`
+
+**Response path:** `businesses[0].url` → direct `yelp.com/biz/...` link
+
+**Implementation:** `_RestaurantDetailSheetState._fetchYelpUrl()` in `lib/screens/events/event_detail_screen.dart`. Called in `initState`; result stored in `_yelpUrl`. Button shows a spinner while loading.
+
+**Fallback:** If `kYelpApiKey` contains `'REPLACE_ME'`, or if the API call fails/returns no results, the "View on Yelp" button falls back to a Yelp search URL (`yelp.com/search?find_desc=name&find_loc=address`).
+
+---
+
 ## Adding a new external API
 
 1. Add the API key / base URL constant to `lib/config/api_keys.dart`.

@@ -46,7 +46,7 @@ class RestaurantSuggestion {
   final String address;
   final double? rating;
   final int? priceLevel;
-  final String? photoRef;
+  final List<String> photoRefs;
 
   const RestaurantSuggestion({
     required this.placeId,
@@ -54,8 +54,10 @@ class RestaurantSuggestion {
     required this.address,
     this.rating,
     this.priceLevel,
-    this.photoRef,
+    this.photoRefs = const [],
   });
+
+  String? get photoRef => photoRefs.firstOrNull;
 }
 
 class SuggestionsResult {
@@ -205,7 +207,7 @@ class TripPlacesService {
     try {
       final body = <String, dynamic>{
         'textQuery': query.trim(),
-        'maxResultCount': 5,
+        'maxResultCount': 10,
         'includedType': 'restaurant',
       };
       if (lat != null && lng != null) {
@@ -248,16 +250,19 @@ class TripPlacesService {
           _ => null,
         };
         final photos = map['photos'] as List?;
-        final photoRef = photos != null && photos.isNotEmpty
-            ? (photos.first as Map<String, dynamic>)['name'] as String?
-            : null;
+        final photoRefs = photos != null
+            ? photos
+                .take(10)
+                .map((p) => (p as Map<String, dynamic>)['name'] as String)
+                .toList()
+            : const <String>[];
         return RestaurantSuggestion(
           placeId: map['id'] as String? ?? '',
           name: name,
           address: address,
           rating: rating,
           priceLevel: priceLevel,
-          photoRef: photoRef,
+          photoRefs: photoRefs,
         );
       }).where((r) => r.placeId.isNotEmpty).toList();
     } catch (_) {
