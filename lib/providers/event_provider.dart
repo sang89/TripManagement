@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/event.dart';
+import '../models/event_bring_item.dart';
 import '../models/event_expense.dart';
+import '../models/event_poll.dart';
 import '../models/event_guest.dart';
 import '../models/event_photo.dart';
 import '../models/event_stop.dart';
@@ -34,6 +36,8 @@ class EventProvider extends ChangeNotifier {
   // Per-event caches for photos and expenses (fetched on demand).
   final Map<String, List<EventPhoto>> _photos = {};
   final Map<String, List<EventExpense>> _expenses = {};
+  final Map<String, List<EventBringItem>> _bringItems = {};
+  final Map<String, List<EventPoll>> _polls = {};
 
   final ConnectivityService? _connectivity;
   final OfflineQueue? _queue;
@@ -72,6 +76,9 @@ class EventProvider extends ChangeNotifier {
 
   List<EventPhoto> photosFor(String eventId) => _photos[eventId] ?? [];
   List<EventExpense> expensesFor(String eventId) => _expenses[eventId] ?? [];
+  List<EventBringItem> bringItemsFor(String eventId) =>
+      _bringItems[eventId] ?? [];
+  List<EventPoll> pollsFor(String eventId) => _polls[eventId] ?? [];
 
   // ─── Cache serialization ───────────────────────────────────────────────────
 
@@ -265,6 +272,8 @@ class EventProvider extends ChangeNotifier {
     _events = [];
     _photos.clear();
     _expenses.clear();
+    _bringItems.clear();
+    _polls.clear();
     _loaded = false;
     _loadError = null;
     if (_userId != null) {
@@ -650,6 +659,8 @@ class EventProvider extends ChangeNotifier {
     _events = _events.where((e) => e.id != eventId).toList();
     _photos.remove(eventId);
     _expenses.remove(eventId);
+    _bringItems.remove(eventId);
+    _polls.remove(eventId);
     notifyListeners();
     unawaited(_saveCache());
     unawaited(_saveOrder());
@@ -657,7 +668,7 @@ class EventProvider extends ChangeNotifier {
 
   // ─── RSVP (non-trip events) ────────────────────────────────────────────────
 
-  Future<void> rsvp(String eventId, String status) async {
+  Future<void> rsvp(String eventId, String status, {String? note}) async {
     final event = getById(eventId);
     if (event == null) return;
     final existingGuest = event.guests.firstWhere(
@@ -673,6 +684,9 @@ class EventProvider extends ChangeNotifier {
       ),
     );
 
+    final trimmedNote = note?.trim();
+    final noteValue = (trimmedNote != null && trimmedNote.isNotEmpty) ? trimmedNote : null;
+
     if (existingGuest.id.isEmpty) {
       await _db.from('event_guests').insert({
         'event_id': eventId,
@@ -680,17 +694,25 @@ class EventProvider extends ChangeNotifier {
         'display_name': existingGuest.displayName,
         'status': status,
         'rsvp_at': DateTime.now().toUtc().toIso8601String(),
+        'rsvp_note': noteValue,
       });
     } else {
       await _db.from('event_guests').update({
         'status': status,
         'rsvp_at': DateTime.now().toUtc().toIso8601String(),
+        'rsvp_note': noteValue,
       }).eq('id', existingGuest.id);
 
       final idx = _events.indexWhere((e) => e.id == eventId);
       if (idx >= 0) {
         final updatedGuests = _events[idx].guests.map((g) {
-          return g.id == existingGuest.id ? g.copyWith(status: status) : g;
+          return g.id == existingGuest.id
+              ? g.copyWith(
+                  status: status,
+                  rsvpNote: noteValue,
+                  clearRsvpNote: noteValue == null,
+                )
+              : g;
         }).toList();
         _events[idx] = _events[idx].copyWith(guests: updatedGuests);
         notifyListeners();
@@ -1203,5 +1225,224 @@ class EventProvider extends ChangeNotifier {
     }
 
     unawaited(fetchExpenses(eventId));
+  }
+
+  // ─── Bring list ────────────────────────────────────────────────────────────
+
+  Future<List<EventBringItem>> fetchBringList(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_bring_list_items')
+          .select()
+          .eq('event_id', eventId)
+          .order('created_at', ascending: true);
+      final rows = List<Map<String, dynamic>>.from(data as List);
+      final items = rows.map(EventBringItem.fromJson).toList();
+      _bringItems[eventId] = items;
+      notifyListeners();
+      return items;
+    } catch (e) {
+      debugPrint('EventProvider.fetchBringList error: $e');
+      return [];
+    }
+  }
+
+  Future<void> addBringItem({
+    required String eventId,
+    required String label,
+    String? note,
+    String? assignedToName,
+  }) async {
+    await _db.from('event_bring_list_items').insert({
+      'event_id': eventId,
+      'label': label.trim(),
+      'note': note?.trim().isEmpty == true ? null : note?.trim(),
+      'assigned_to_name': assignedToName,
+      'created_by': _userId,
+    });
+    unawaited(fetchBringList(eventId));
+  }
+
+  Future<void> updateBringItem({
+    required String itemId,
+    required String eventId,
+    required String label,
+    String? note,
+    String? assignedToName,
+    bool clearAssignedToName = false,
+  }) async {
+    await _db.from('event_bring_list_items').update({
+      'label': label.trim(),
+      'note': note?.trim().isEmpty == true ? null : note?.trim(),
+      'assigned_to_name': clearAssignedToName ? null : assignedToName,
+    }).eq('id', itemId);
+
+    final idx = _bringItems[eventId]?.indexWhere((i) => i.id == itemId) ?? -1;
+    if (idx >= 0) {
+      final existing = _bringItems[eventId]![idx];
+      _bringItems[eventId]![idx] = EventBringItem(
+        id: existing.id,
+        eventId: existing.eventId,
+        label: label.trim(),
+        note: note?.trim().isEmpty == true ? null : note?.trim(),
+        assignedToName: clearAssignedToName ? null : assignedToName,
+        isDone: existing.isDone,
+        createdBy: existing.createdBy,
+        createdAt: existing.createdAt,
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteBringItem(String itemId, String eventId) async {
+    await _db
+        .from('event_bring_list_items')
+        .delete()
+        .eq('id', itemId);
+    _bringItems[eventId]?.removeWhere((i) => i.id == itemId);
+    notifyListeners();
+  }
+
+  Future<void> assignBringItem(
+      String itemId, String eventId, String name) async {
+    await _db.from('event_bring_list_items').update({
+      'assigned_to_name': name,
+    }).eq('id', itemId);
+
+    final idx = _bringItems[eventId]?.indexWhere((i) => i.id == itemId) ?? -1;
+    if (idx >= 0) {
+      _bringItems[eventId]![idx] =
+          _bringItems[eventId]![idx].copyWith(assignedToName: name);
+      notifyListeners();
+    }
+  }
+
+  Future<void> unassignBringItem(String itemId, String eventId) async {
+    await _db.from('event_bring_list_items').update({
+      'assigned_to_name': null,
+    }).eq('id', itemId);
+
+    final idx = _bringItems[eventId]?.indexWhere((i) => i.id == itemId) ?? -1;
+    if (idx >= 0) {
+      _bringItems[eventId]![idx] = _bringItems[eventId]![idx]
+          .copyWith(clearAssignedToName: true);
+      notifyListeners();
+    }
+  }
+
+  Future<void> markBringItemDone(
+      String itemId, String eventId, bool done) async {
+    await _db.from('event_bring_list_items').update({
+      'is_done': done,
+    }).eq('id', itemId);
+
+    final idx = _bringItems[eventId]?.indexWhere((i) => i.id == itemId) ?? -1;
+    if (idx >= 0) {
+      _bringItems[eventId]![idx] =
+          _bringItems[eventId]![idx].copyWith(isDone: done);
+      notifyListeners();
+    }
+  }
+
+  // ─── Polls ─────────────────────────────────────────────────────────────────
+
+  Future<List<EventPoll>> fetchPolls(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_polls')
+          .select('*, event_poll_options(*), event_poll_votes(*)')
+          .eq('event_id', eventId)
+          .order('created_at', ascending: true);
+      final rows = List<Map<String, dynamic>>.from(data as List);
+      final polls = rows.map(EventPoll.fromJson).toList();
+      _polls[eventId] = polls;
+      notifyListeners();
+      return polls;
+    } catch (e) {
+      debugPrint('EventProvider.fetchPolls error: $e');
+      return [];
+    }
+  }
+
+  Future<void> createPoll(
+    String eventId,
+    String question,
+    List<String> options,
+  ) async {
+    final pollData = await _db
+        .from('event_polls')
+        .insert({
+          'event_id': eventId,
+          'question': question.trim(),
+          'created_by': _userId,
+        })
+        .select()
+        .single();
+    final pollId = pollData['id'] as String;
+    for (var i = 0; i < options.length; i++) {
+      await _db.from('event_poll_options').insert({
+        'poll_id': pollId,
+        'text': options[i].trim(),
+        'sort_order': i,
+      });
+    }
+    unawaited(fetchPolls(eventId));
+  }
+
+  Future<void> deletePoll(String pollId, String eventId) async {
+    await _db.from('event_polls').delete().eq('id', pollId);
+    _polls[eventId]?.removeWhere((p) => p.id == pollId);
+    notifyListeners();
+  }
+
+  void _applyOptimisticVote(
+      String eventId, String pollId, String optionId, String? replaceVoteId) {
+    final polls = _polls[eventId];
+    if (polls == null) return;
+    final idx = polls.indexWhere((p) => p.id == pollId);
+    if (idx < 0) return;
+    final poll = polls[idx];
+    final newVotes = [
+      ...poll.votes.where((v) => v.id != replaceVoteId),
+      EventPollVote(
+        id: replaceVoteId ?? _uuid.v4(),
+        pollId: pollId,
+        optionId: optionId,
+        userId: _userId!,
+        createdAt: DateTime.now(),
+      ),
+    ];
+    _polls[eventId]![idx] = poll.copyWithVotes(newVotes);
+    notifyListeners();
+  }
+
+  Future<void> vote(String pollId, String optionId, String eventId) async {
+    _applyOptimisticVote(eventId, pollId, optionId, null);
+    await _db.from('event_poll_votes').insert({
+      'poll_id': pollId,
+      'option_id': optionId,
+      'user_id': _userId,
+    });
+    unawaited(fetchPolls(eventId));
+  }
+
+  Future<void> changeVote(
+      String pollId, String newOptionId, String eventId) async {
+    final existingVoteId = _polls[eventId]
+        ?.firstWhere((p) => p.id == pollId,
+            orElse: () => throw StateError('poll not found'))
+        .myVoteId(_userId!);
+    _applyOptimisticVote(eventId, pollId, newOptionId, existingVoteId);
+    await _db
+        .from('event_poll_votes')
+        .delete()
+        .eq('poll_id', pollId)
+        .eq('user_id', _userId!);
+    await _db.from('event_poll_votes').insert({
+      'poll_id': pollId,
+      'option_id': newOptionId,
+      'user_id': _userId,
+    });
+    unawaited(fetchPolls(eventId));
   }
 }

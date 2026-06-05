@@ -43,11 +43,13 @@ lib/
 │   └── api_keys.dart       # Supabase URL/anon key, Google Places/Maps key, Gemini key (gitignored)
 ├── models/                 # Pure data classes — toJson/fromJson, no Flutter deps
 │   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng)
-│   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role
+│   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role, rsvpNote (nullable)
 │   ├── event_stop.dart     # EventStop — id, eventId, title, address, lat/lng, arriveAt, departAt, notes, sortOrder
 │   ├── event_message.dart  # EventMessage — id, eventId, userId, content, enriched senderName
 │   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, publicUrl (resolved at load)
 │   ├── event_expense.dart  # EventExpense + EventExpenseSplit for cost splitting
+│   ├── event_bring_item.dart # EventBringItem — id, eventId, label, quantity, claimedBy (nullable), claimedByName, claimedAt, createdBy, createdAt
+│   ├── event_poll.dart     # EventPoll + EventPollOption + EventPollVote; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId
 │   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
@@ -65,7 +67,7 @@ lib/
 │   ├── events/
 │   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type filter chips (All/Trip/Birthday/Wedding/Social)
 │   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; non-trip shows single location field
-│   │   ├── event_detail_screen.dart # Dynamic tabs: 7 for trips (Info, Route, Map, Guests, Chat, Photos, Expenses), 5 for others (Info, Guests, Chat, Photos, Expenses)
+│   │   ├── event_detail_screen.dart # Dynamic tabs: 8 for trips (Info, Route, Map, Guests, Chat, Photos, Expenses, Todo, Polls), 7 for others (Info, Guests, Chat, Photos, Expenses, Todo, Polls)
 │   │   └── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   ├── friends/
 │   │   ├── friends_screen.dart  # Friends tab (shell tab 1): accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
@@ -142,7 +144,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | Provider | Owns | Key methods |
 |---|---|---|
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
-| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status)`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); Realtime via `event_sync_<userId>` channel |
+| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; Realtime via `event_sync_<userId>` channel |
 | `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel; scoped to `/event/:id` route |
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
@@ -205,6 +207,7 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 | `invited_by` | uuid FK→auth.users nullable | userId of who sent the invite (trip-type) |
 | `block_reinvite` | bool default false | invitee opted out of future invites to this event |
 | `role` | text default 'member' | `organizer` \| `member` |
+| `rsvp_note` | text nullable | optional note shown to all members when RSVPing going/maybe |
 | `created_at` | timestamptz | |
 
 **Constraints:** Partial UNIQUE INDEX on `(event_id, user_id) WHERE user_id IS NOT NULL`  
@@ -235,6 +238,49 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 
 **REPLICA IDENTITY:** FULL; added to `supabase_realtime` publication  
 **RLS:** SELECT/INSERT/UPDATE/DELETE via `auth_user_is_event_member(event_id)`
+
+#### `event_bring_list_items`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `label` | text | item description e.g. "Wine", "Dessert" |
+| `quantity` | int default 1 | |
+| `claimed_by` | uuid FK→auth.users nullable | null = unclaimed |
+| `claimed_at` | timestamptz nullable | |
+| `created_by` | uuid FK→auth.users | organizer who added the item |
+| `created_at` | timestamptz | |
+
+**RLS:** members SELECT; organizer INSERT/DELETE; any member can UPDATE (`claimed_by`/`claimed_at`) when `claimed_by IS NULL` (claim) or when `claimed_by = auth.uid()` (unclaim).
+
+#### `event_polls`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `question` | text | |
+| `created_by` | uuid FK→auth.users | organizer only |
+| `created_at` | timestamptz | |
+
+#### `event_poll_options`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `poll_id` | uuid FK→event_polls | CASCADE delete |
+| `text` | text | option label |
+| `sort_order` | int default 0 | |
+
+#### `event_poll_votes`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `poll_id` | uuid FK→event_polls | CASCADE delete |
+| `option_id` | uuid FK→event_poll_options | CASCADE delete |
+| `user_id` | uuid FK→auth.users | |
+| `created_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (poll_id, user_id)` — one vote per user per poll. Changing vote = DELETE own vote + INSERT new.  
+**RLS:** members SELECT all; members INSERT own vote; organizer INSERT polls/options; DELETE own vote.
 
 #### `friendships`
 | Column | Type | Notes |
@@ -401,6 +447,20 @@ All event members (organizer or active guest) can SELECT/INSERT/UPDATE/DELETE st
 
 #### `event_photos`, `event_expenses`, `event_expense_splits`
 All gated by `auth_user_is_event_member(event_id)`.
+
+#### `event_bring_list_items`
+| Policy | Operation | Rule |
+|---|---|---|
+| `bring_select` | SELECT | `auth_user_is_event_member(event_id)` |
+| `bring_organiser_insert` | INSERT | organizer (`events.created_by = auth.uid()`) |
+| `bring_organiser_delete` | DELETE | organizer |
+| `bring_member_claim` | UPDATE | `claimed_by IS NULL` (claim) OR `claimed_by = auth.uid()` (unclaim) |
+
+#### `event_polls`, `event_poll_options`, `event_poll_votes`
+All SELECT gated by `auth_user_is_event_member(event_id)` (via join to `event_polls`).  
+INSERT polls/options: organizer only.  
+INSERT votes: `user_id = auth.uid() AND auth_user_is_event_member(event_id)`.  
+DELETE votes: `user_id = auth.uid()` (own vote only).
 
 #### `friendships`
 | Policy | Operation | Rule |

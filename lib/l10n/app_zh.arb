@@ -394,6 +394,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "添加备注（可选）",
+  "organizeTab": "组织",
+  "detailsTab": "详情",
+  "todoTab": "待办",
+  "pollsTab": "投票",
+  "pollsEmpty": "暂无投票。",
+  "pollsAddPoll": "添加投票",
+  "pollsQuestion": "问题",
+  "pollsOptionHint": "选项{n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ 添加选项",
+  "pollsVoteCount": "{count, plural, =1{1票} other{{count}票}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "删除投票",
+  "bringListTitle": "待办",
+  "bringListEmpty": "暂无任务。点击 + 添加。",
+  "bringListAddItem": "添加任务",
+  "bringListEditItem": "编辑任务",
+  "bringListItemLabel": "做什么",
+  "bringListNote": "备注（可选）",
+  "bringListAssignTo": "分配给成员",
+  "bringListNoAssignment": "未分配",
+  "bringListTake": "认领",
+  "bringListUnassign": "取消分配",
+  "rsvpNoteLabel": "您的备注",
+  "confirmRsvp": "确认",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

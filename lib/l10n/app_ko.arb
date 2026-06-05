@@ -394,6 +394,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "메모 추가 (선택사항)",
+  "organizeTab": "정리",
+  "detailsTab": "세부 정보",
+  "todoTab": "할 일",
+  "pollsTab": "투표",
+  "pollsEmpty": "아직 투표가 없습니다.",
+  "pollsAddPoll": "투표 추가",
+  "pollsQuestion": "질문",
+  "pollsOptionHint": "옵션 {n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ 옵션 추가",
+  "pollsVoteCount": "{count, plural, =1{1표} other{{count}표}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "투표 삭제",
+  "bringListTitle": "할 일",
+  "bringListEmpty": "할 일 없음. 추가하세요.",
+  "bringListAddItem": "할 일 추가",
+  "bringListEditItem": "작업 편집",
+  "bringListItemLabel": "무엇을 할지",
+  "bringListNote": "메모 (선택)",
+  "bringListAssignTo": "멤버에게 할당",
+  "bringListNoAssignment": "미할당",
+  "bringListTake": "맡기",
+  "bringListUnassign": "할당 취소",
+  "rsvpNoteLabel": "메모",
+  "confirmRsvp": "확인",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

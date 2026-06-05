@@ -917,6 +917,88 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => 'أضف ملاحظة (اختياري)';
+
+  @override
+  String get organizeTab => 'تنظيم';
+
+  @override
+  String get detailsTab => 'التفاصيل';
+
+  @override
+  String get todoTab => 'المهام';
+
+  @override
+  String get pollsTab => 'الاستطلاعات';
+
+  @override
+  String get pollsEmpty => 'لا توجد استطلاعات بعد.';
+
+  @override
+  String get pollsAddPoll => 'إضافة استطلاع';
+
+  @override
+  String get pollsQuestion => 'السؤال';
+
+  @override
+  String pollsOptionHint(int n) {
+    return 'الخيار $n';
+  }
+
+  @override
+  String get pollsAddOption => '+ إضافة خيار';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count أصوات',
+      one: 'صوت واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => 'حذف الاستطلاع';
+
+  @override
+  String get bringListTitle => 'المهام';
+
+  @override
+  String get bringListEmpty => 'لا توجد مهام بعد. اضغط + لإضافة واحدة.';
+
+  @override
+  String get bringListAddItem => 'إضافة مهمة';
+
+  @override
+  String get bringListEditItem => 'تعديل المهمة';
+
+  @override
+  String get bringListItemLabel => 'ماذا تفعل';
+
+  @override
+  String get bringListNote => 'ملاحظة (اختياري)';
+
+  @override
+  String get bringListAssignTo => 'تعيين لعضو';
+
+  @override
+  String get bringListNoAssignment => 'غير مخصص';
+
+  @override
+  String get bringListTake => 'خذ';
+
+  @override
+  String get bringListUnassign => 'إلغاء التعيين';
+
+  @override
+  String get rsvpNoteLabel => 'ملاحظتك';
+
+  @override
+  String get confirmRsvp => 'تأكيد';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

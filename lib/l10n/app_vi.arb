@@ -394,6 +394,44 @@
   "publicRsvpEmail": "Email (optional)",
   "publicRsvpPhone": "Phone (optional)",
   "rsvpSuccess": "Your RSVP was saved!",
+  "rsvpNoteHint": "Thêm ghi chú (tùy chọn)",
+  "organizeTab": "Tổ chức",
+  "detailsTab": "Chi tiết",
+  "todoTab": "Việc cần làm",
+  "pollsTab": "Bình chọn",
+  "pollsEmpty": "Chưa có bình chọn.",
+  "pollsAddPoll": "Thêm bình chọn",
+  "pollsQuestion": "Câu hỏi",
+  "pollsOptionHint": "Lựa chọn {n}",
+  "@pollsOptionHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsAddOption": "+ Thêm lựa chọn",
+  "pollsVoteCount": "{count, plural, =1{1 phiếu} other{{count} phiếu}}",
+  "@pollsVoteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pollsDeletePoll": "Xóa bình chọn",
+  "bringListTitle": "Cong viec",
+  "bringListEmpty": "Chua co cong viec. Nhan + de them.",
+  "bringListAddItem": "Them cong viec",
+  "bringListEditItem": "Chỉnh sửa nhiệm vụ",
+  "bringListItemLabel": "Phai lam gi",
+  "bringListNote": "Ghi chu (tuy chon)",
+  "bringListAssignTo": "Giao cho thanh vien",
+  "bringListNoAssignment": "Chua phan cong",
+  "bringListTake": "Nhan",
+  "bringListUnassign": "Bo phan cong",
+  "rsvpNoteLabel": "Ghi chú của bạn",
+  "confirmRsvp": "Xác nhận",
   "organizedBy": "Organised by {name}",
   "@organizedBy": {
     "placeholders": {

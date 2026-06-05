@@ -14,58 +14,113 @@ class ShellScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final current = navigationShell.currentIndex;
+
+    void go(int index) =>
+        navigationShell.goBranch(index, initialLocation: index == current);
+
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Colors.grey.shade200, width: 0.5),
+          ),
+          boxShadow: const [
+            BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
+          ],
         ),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.primary,
-        unselectedItemColor: Colors.grey,
-        items: [
-          BottomNavigationBarItem(
-            icon: Consumer<EventProvider>(
-              builder: (_, events, _) => Badge(
-                isLabelVisible: events.pendingInviteCount > 0,
-                label: Text('${events.pendingInviteCount}'),
-                child: const Icon(Icons.event_outlined),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              _NavItem(
+                icon: Consumer<EventProvider>(
+                  builder: (_, events, _) => Badge(
+                    isLabelVisible: events.pendingInviteCount > 0,
+                    label: Text('${events.pendingInviteCount}'),
+                    child: Icon(
+                      current == 0 ? Icons.event : Icons.event_outlined,
+                      size: 28,
+                      color: current == 0 ? AppTheme.primary : Colors.grey,
+                    ),
+                  ),
+                ),
+                label: l10n.navEvents,
+                selected: current == 0,
+                onTap: () => go(0),
               ),
-            ),
-            activeIcon: Consumer<EventProvider>(
-              builder: (_, events, _) => Badge(
-                isLabelVisible: events.pendingInviteCount > 0,
-                label: Text('${events.pendingInviteCount}'),
-                child: const Icon(Icons.event),
+              _NavItem(
+                icon: Consumer<FriendsProvider>(
+                  builder: (_, friends, _) => Badge(
+                    isLabelVisible: friends.incomingRequests.isNotEmpty,
+                    label: Text('${friends.incomingRequests.length}'),
+                    child: Icon(
+                      current == 1 ? Icons.people : Icons.people_outline,
+                      size: 28,
+                      color: current == 1 ? AppTheme.primary : Colors.grey,
+                    ),
+                  ),
+                ),
+                label: l10n.navFriends,
+                selected: current == 1,
+                onTap: () => go(1),
               ),
-            ),
-            label: l10n.navEvents,
+              _NavItem(
+                icon: Icon(
+                  current == 2 ? Icons.person : Icons.person_outline,
+                  size: 28,
+                  color: current == 2 ? AppTheme.primary : Colors.grey,
+                ),
+                label: l10n.navProfile,
+                selected: current == 2,
+                onTap: () => go(2),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Consumer<FriendsProvider>(
-              builder: (_, friends, _) => Badge(
-                isLabelVisible: friends.incomingRequests.isNotEmpty,
-                label: Text('${friends.incomingRequests.length}'),
-                child: const Icon(Icons.people_outline),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final Widget icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: AppTappable(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              icon,
+              const SizedBox(height: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: selected ? AppTheme.primary : Colors.grey,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
-            ),
-            activeIcon: Consumer<FriendsProvider>(
-              builder: (_, friends, _) => Badge(
-                isLabelVisible: friends.incomingRequests.isNotEmpty,
-                label: Text('${friends.incomingRequests.length}'),
-                child: const Icon(Icons.people),
-              ),
-            ),
-            label: l10n.navFriends,
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person_outline),
-            activeIcon: const Icon(Icons.person),
-            label: l10n.navProfile,
-          ),
-        ],
+        ),
       ),
     );
   }

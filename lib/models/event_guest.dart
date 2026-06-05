@@ -14,6 +14,8 @@ class EventGuest {
   final bool blockReinvite;
   final String role;
 
+  final String? rsvpNote;
+
   // Enriched in-memory.
   final String? avatarUrl;
 
@@ -30,6 +32,7 @@ class EventGuest {
     this.invitedBy,
     this.blockReinvite = false,
     this.role = 'member',
+    this.rsvpNote,
     this.avatarUrl,
   });
 
@@ -48,6 +51,7 @@ class EventGuest {
         invitedBy: json['invited_by'] as String?,
         blockReinvite: json['block_reinvite'] as bool? ?? false,
         role: json['role'] as String? ?? 'member',
+        rsvpNote: json['rsvp_note'] as String?,
         avatarUrl: json['avatar_url'] as String?,
       );
 
@@ -57,6 +61,8 @@ class EventGuest {
   EventGuest copyWith({
     String? status,
     String? displayName,
+    String? rsvpNote,
+    bool clearRsvpNote = false,
     String? avatarUrl,
     bool? blockReinvite,
     String? invitedBy,
@@ -74,6 +80,7 @@ class EventGuest {
         invitedBy: invitedBy ?? this.invitedBy,
         blockReinvite: blockReinvite ?? this.blockReinvite,
         role: role,
+        rsvpNote: clearRsvpNote ? null : (rsvpNote ?? this.rsvpNote),
         avatarUrl: avatarUrl ?? this.avatarUrl,
       );
 }

@@ -921,6 +921,88 @@ class AppLocalizationsVi extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => 'Thêm ghi chú (tùy chọn)';
+
+  @override
+  String get organizeTab => 'Tổ chức';
+
+  @override
+  String get detailsTab => 'Chi tiết';
+
+  @override
+  String get todoTab => 'Việc cần làm';
+
+  @override
+  String get pollsTab => 'Bình chọn';
+
+  @override
+  String get pollsEmpty => 'Chưa có bình chọn.';
+
+  @override
+  String get pollsAddPoll => 'Thêm bình chọn';
+
+  @override
+  String get pollsQuestion => 'Câu hỏi';
+
+  @override
+  String pollsOptionHint(int n) {
+    return 'Lựa chọn $n';
+  }
+
+  @override
+  String get pollsAddOption => '+ Thêm lựa chọn';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count phiếu',
+      one: '1 phiếu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => 'Xóa bình chọn';
+
+  @override
+  String get bringListTitle => 'Cong viec';
+
+  @override
+  String get bringListEmpty => 'Chua co cong viec. Nhan + de them.';
+
+  @override
+  String get bringListAddItem => 'Them cong viec';
+
+  @override
+  String get bringListEditItem => 'Chỉnh sửa nhiệm vụ';
+
+  @override
+  String get bringListItemLabel => 'Phai lam gi';
+
+  @override
+  String get bringListNote => 'Ghi chu (tuy chon)';
+
+  @override
+  String get bringListAssignTo => 'Giao cho thanh vien';
+
+  @override
+  String get bringListNoAssignment => 'Chua phan cong';
+
+  @override
+  String get bringListTake => 'Nhan';
+
+  @override
+  String get bringListUnassign => 'Bo phan cong';
+
+  @override
+  String get rsvpNoteLabel => 'Ghi chú của bạn';
+
+  @override
+  String get confirmRsvp => 'Xác nhận';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

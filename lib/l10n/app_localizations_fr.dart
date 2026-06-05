@@ -926,6 +926,88 @@ class AppLocalizationsFr extends AppLocalizations {
   String get rsvpSuccess => 'Your RSVP was saved!';
 
   @override
+  String get rsvpNoteHint => 'Ajouter une note (optionnel)';
+
+  @override
+  String get organizeTab => 'Organiser';
+
+  @override
+  String get detailsTab => 'Détails';
+
+  @override
+  String get todoTab => 'Tâches';
+
+  @override
+  String get pollsTab => 'Sondages';
+
+  @override
+  String get pollsEmpty => 'Aucun sondage.';
+
+  @override
+  String get pollsAddPoll => 'Ajouter un sondage';
+
+  @override
+  String get pollsQuestion => 'Question';
+
+  @override
+  String pollsOptionHint(int n) {
+    return 'Option $n';
+  }
+
+  @override
+  String get pollsAddOption => '+ Ajouter une option';
+
+  @override
+  String pollsVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count votes',
+      one: '1 vote',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pollsDeletePoll => 'Supprimer le sondage';
+
+  @override
+  String get bringListTitle => 'Taches';
+
+  @override
+  String get bringListEmpty => 'Aucune tache. Appuyez sur +.';
+
+  @override
+  String get bringListAddItem => 'Ajouter une tache';
+
+  @override
+  String get bringListEditItem => 'Modifier la tâche';
+
+  @override
+  String get bringListItemLabel => 'Quoi faire';
+
+  @override
+  String get bringListNote => 'Note (optionnel)';
+
+  @override
+  String get bringListAssignTo => 'Assigner a un membre';
+
+  @override
+  String get bringListNoAssignment => 'Non assigne';
+
+  @override
+  String get bringListTake => 'Prendre';
+
+  @override
+  String get bringListUnassign => 'Desassigner';
+
+  @override
+  String get rsvpNoteLabel => 'Votre note';
+
+  @override
+  String get confirmRsvp => 'Confirmer';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }

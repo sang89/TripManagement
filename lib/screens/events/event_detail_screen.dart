@@ -20,7 +20,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
+import '../../models/event_bring_item.dart';
 import '../../models/event_expense.dart';
+import '../../models/event_poll.dart';
 import '../../models/event_guest.dart';
 import '../../models/event_message.dart';
 import '../../models/event_photo.dart';
@@ -47,51 +49,22 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  void _rebuildTabController(bool isTrip) {
-    final needed = isTrip ? 6 : 5;
-    if (_tabController.length == needed) return;
-    final prevIdx = _tabController.index;
-    _tabController.dispose();
-    _tabController = TabController(
-      length: needed,
-      vsync: this,
-      initialIndex: prevIdx.clamp(0, needed - 1),
-    );
-  }
 
   @override
   void initState() {
     super.initState();
-    final event = context.read<EventProvider>().getById(widget.eventId);
-    _tabController = TabController(
-        length: event?.isTrip == true ? 6 : 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final eventId = widget.eventId;
       context.read<EventProvider>()
         ..fetchPhotos(eventId)
-        ..fetchExpenses(eventId);
+        ..fetchExpenses(eventId)
+        ..fetchBringList(eventId)
+        ..fetchPolls(eventId);
     });
-  }
-
-  @override
-  void reassemble() {
-    super.reassemble();
-    // Hot reload may preserve stale tab controller — recreate if count changed.
-    final event = context.read<EventProvider>().getById(widget.eventId);
-    final needed = event?.isTrip == true ? 6 : 5;
-    if (_tabController.length != needed) {
-      final prevIdx = _tabController.index;
-      _tabController.dispose();
-      _tabController = TabController(
-        length: needed,
-        vsync: this,
-        initialIndex: prevIdx.clamp(0, needed - 1),
-      );
-    }
   }
 
   @override
@@ -145,20 +118,6 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           );
         }
 
-        // If the controller length doesn't match the tab count, fix it next frame
-        // and show a placeholder this frame to avoid a TabBar range crash.
-        if (_tabController.length != (event.isTrip ? 6 : 5)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            setState(() => _rebuildTabController(event.isTrip));
-          });
-          return Scaffold(
-            appBar: AppBar(
-                title: Text(event.title, overflow: TextOverflow.ellipsis)),
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
         final authUid = context.read<AuthProvider>().userId;
         final isOrganizer = event.createdBy == authUid;
         final canInvite = event.isTrip &&
@@ -166,58 +125,29 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 event.guests.any(
                     (g) => g.userId == authUid && g.status == 'accepted'));
 
-        final tabs = event.isTrip
-            ? [
-                Tab(
-                    icon: const Icon(Icons.info_outline_rounded, size: 20),
-                    text: l10n.infoTab),
-                Tab(
-                    icon: const Icon(Icons.route_outlined, size: 20),
-                    text: l10n.routeTab),
-                Tab(
-                    icon: const Icon(Icons.people_outline, size: 20),
-                    text: l10n.guestsTab),
-                Tab(
-                    icon:
-                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-                    text: l10n.chatTabLabel),
-                Tab(
-                    icon: const Icon(Icons.photo_library_outlined, size: 20),
-                    text: l10n.photosTab),
-                Tab(
-                    icon: const Icon(Icons.receipt_outlined, size: 20),
-                    text: l10n.expensesTab),
-              ]
-            : [
-                Tab(
-                    icon: const Icon(Icons.info_outline_rounded, size: 20),
-                    text: l10n.infoTab),
-                Tab(
-                    icon: const Icon(Icons.people_outline, size: 20),
-                    text: l10n.guestsTab),
-                Tab(
-                    icon:
-                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-                    text: l10n.chatTabLabel),
-                Tab(
-                    icon: const Icon(Icons.photo_library_outlined, size: 20),
-                    text: l10n.photosTab),
-                Tab(
-                    icon: const Icon(Icons.receipt_outlined, size: 20),
-                    text: l10n.expensesTab),
-              ];
-
         return Scaffold(
           appBar: AppBar(
             title: Text(event.title, overflow: TextOverflow.ellipsis),
             bottom: TabBar(
               controller: _tabController,
-              isScrollable: event.isTrip,
-              tabAlignment:
-                  event.isTrip ? TabAlignment.start : TabAlignment.fill,
+              tabAlignment: TabAlignment.fill,
               labelStyle: const TextStyle(
                   fontSize: 11, fontWeight: FontWeight.w600),
-              tabs: tabs,
+              tabs: [
+                Tab(
+                    icon: const Icon(Icons.info_outline_rounded, size: 20),
+                    text: l10n.infoTab),
+                Tab(
+                    icon:
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                    text: l10n.chatTabLabel),
+                Tab(
+                    icon: const Icon(Icons.photo_library_outlined, size: 20),
+                    text: l10n.photosTab),
+                Tab(
+                    icon: const Icon(Icons.grid_view_outlined, size: 20),
+                    text: l10n.organizeTab),
+              ],
             ),
             actions: [
               IconButton(
@@ -267,51 +197,30 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           ),
           body: TabBarView(
             controller: _tabController,
-            children: event.isTrip
-                ? [
-                    _InfoTab(event: event, authUid: authUid),
-                    _RouteTab(
-                        event: event, pins: _buildMapPins(event)),
-                    _GuestsTab(
-                        event: event,
-                        isOrganizer: isOrganizer,
-                        canInvite: canInvite,
-                        authUid: authUid),
-                    _ChatTab(eventId: event.id),
-                    _PhotosTab(
-                      event: event,
-                      photos: provider.photosFor(event.id),
-                      authUid: authUid,
-                      isOrganizer: isOrganizer,
-                    ),
-                    _ExpensesTab(
-                      event: event,
-                      expenses: provider.expensesFor(event.id),
-                      authUid: authUid,
-                      isOrganizer: isOrganizer,
-                    ),
-                  ]
-                : [
-                    _InfoTab(event: event, authUid: authUid),
-                    _GuestsTab(
-                        event: event,
-                        isOrganizer: isOrganizer,
-                        canInvite: false,
-                        authUid: authUid),
-                    _ChatTab(eventId: event.id),
-                    _PhotosTab(
-                      event: event,
-                      photos: provider.photosFor(event.id),
-                      authUid: authUid,
-                      isOrganizer: isOrganizer,
-                    ),
-                    _ExpensesTab(
-                      event: event,
-                      expenses: provider.expensesFor(event.id),
-                      authUid: authUid,
-                      isOrganizer: isOrganizer,
-                    ),
-                  ],
+            children: [
+              _InfoTabGroup(
+                event: event,
+                authUid: authUid,
+                isOrganizer: isOrganizer,
+                canInvite: canInvite,
+                pins: _buildMapPins(event),
+              ),
+              _ChatTab(eventId: event.id),
+              _PhotosTab(
+                event: event,
+                photos: provider.photosFor(event.id),
+                authUid: authUid,
+                isOrganizer: isOrganizer,
+              ),
+              _OrganizeTabGroup(
+                event: event,
+                authUid: authUid,
+                isOrganizer: isOrganizer,
+                items: provider.bringItemsFor(event.id),
+                expenses: provider.expensesFor(event.id),
+                polls: provider.pollsFor(event.id),
+              ),
+            ],
           ),
         );
       },
@@ -402,6 +311,188 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 }
 
 enum _EventAction { edit, delete }
+
+// ── Info tab group (Details | Route | Guests inner tabs) ─────────────────────
+
+class _InfoTabGroup extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final bool canInvite;
+  final List<EventMapPin> pins;
+
+  const _InfoTabGroup({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.canInvite,
+    required this.pins,
+  });
+
+  @override
+  State<_InfoTabGroup> createState() => _InfoTabGroupState();
+}
+
+class _InfoTabGroupState extends State<_InfoTabGroup>
+    with SingleTickerProviderStateMixin {
+  late TabController _ctrl;
+
+  int get _tabCount => widget.event.isTrip ? 3 : 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TabController(length: _tabCount, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final event = widget.event;
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Material(
+          color: colorScheme.surfaceContainerLow,
+          child: TabBar(
+            controller: _ctrl,
+            tabAlignment: TabAlignment.fill,
+            labelColor: AppTheme.primary,
+            unselectedLabelColor: colorScheme.onSurfaceVariant,
+            indicatorColor: AppTheme.primary,
+            dividerColor: colorScheme.outlineVariant,
+            labelStyle: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 13),
+            tabs: [
+              Tab(icon: const Icon(Icons.info_outline_rounded, size: 18), text: l10n.detailsTab),
+              if (event.isTrip) Tab(icon: const Icon(Icons.route_outlined, size: 18), text: l10n.routeTab),
+              Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.guestsTab),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _ctrl,
+            children: [
+              _InfoTab(event: event, authUid: widget.authUid),
+              if (event.isTrip)
+                _RouteTab(event: event, pins: widget.pins),
+              _GuestsTab(
+                event: event,
+                isOrganizer: widget.isOrganizer,
+                canInvite: widget.canInvite,
+                authUid: widget.authUid,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Organize tab group (Todo | Expenses | Polls inner tabs) ──────────────────
+
+class _OrganizeTabGroup extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventBringItem> items;
+  final List<EventExpense> expenses;
+  final List<EventPoll> polls;
+
+  const _OrganizeTabGroup({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.items,
+    required this.expenses,
+    required this.polls,
+  });
+
+  @override
+  State<_OrganizeTabGroup> createState() => _OrganizeTabGroupState();
+}
+
+class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
+    with SingleTickerProviderStateMixin {
+  late TabController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Material(
+          color: colorScheme.surfaceContainerLow,
+          child: TabBar(
+            controller: _ctrl,
+            tabAlignment: TabAlignment.fill,
+            labelColor: AppTheme.primary,
+            unselectedLabelColor: colorScheme.onSurfaceVariant,
+            indicatorColor: AppTheme.primary,
+            dividerColor: colorScheme.outlineVariant,
+            labelStyle: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 13),
+            tabs: [
+              Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
+              Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
+              Tab(icon: const Icon(Icons.poll_outlined, size: 18), text: l10n.pollsTab),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _ctrl,
+            children: [
+              _TodoTab(
+                event: widget.event,
+                authUid: widget.authUid,
+                items: widget.items,
+                isOrganizer: widget.isOrganizer,
+              ),
+              _ExpensesTab(
+                event: widget.event,
+                expenses: widget.expenses,
+                authUid: widget.authUid,
+                isOrganizer: widget.isOrganizer,
+              ),
+              _PollsTab(
+                event: widget.event,
+                authUid: widget.authUid,
+                polls: widget.polls,
+                isOrganizer: widget.isOrganizer,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 // ── Info tab ─────────────────────────────────────────────────────────────────
 
@@ -562,6 +653,820 @@ class _InfoTab extends StatelessWidget {
   }
 }
 
+// ── Todo tab ──────────────────────────────────────────────────────────────────
+
+class _TodoTab extends StatelessWidget {
+  final Event event;
+  final String? authUid;
+  final List<EventBringItem> items;
+  final bool isOrganizer;
+
+  const _TodoTab({
+    required this.event,
+    required this.authUid,
+    required this.items,
+    required this.isOrganizer,
+  });
+
+  String get _myName {
+    final me = event.guests.where((g) => g.userId == authUid).firstOrNull;
+    return me?.displayName ?? 'Me';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Stack(
+      children: [
+        items.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.checklist_outlined,
+                        size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Text(l10n.bringListEmpty,
+                        style: TextStyle(color: Colors.grey[500])),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                itemCount: items.length,
+                itemBuilder: (_, i) {
+                  final item = items[i];
+                  final row = _BringItemRow(
+                    item: item,
+                    isOrganizer: isOrganizer,
+                    myName: _myName,
+                    l10n: l10n,
+                    eventId: event.id,
+                  );
+                  if (!isOrganizer) return row;
+                  return Slidable(
+                    key: ValueKey(item.id),
+                    endActionPane: ActionPane(
+                      motion: const DrawerMotion(),
+                      extentRatio: 0.44,
+                      children: [
+                        SlidableAction(
+                          onPressed: (_) => showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            builder: (_) => _AddBringItemSheet(
+                              l10n: l10n,
+                              guests: event.guests,
+                              existingItem: item,
+                              onAdd: (label, note, assignedToName) =>
+                                  context.read<EventProvider>().updateBringItem(
+                                        itemId: item.id,
+                                        eventId: event.id,
+                                        label: label,
+                                        note: note,
+                                        assignedToName: assignedToName,
+                                        clearAssignedToName:
+                                            assignedToName == null,
+                                      ),
+                              onDelete: () => context
+                                  .read<EventProvider>()
+                                  .deleteBringItem(item.id, event.id),
+                            ),
+                          ),
+                          backgroundColor: Colors.blueGrey,
+                          foregroundColor: Colors.white,
+                          icon: Icons.edit_outlined,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        SlidableAction(
+                          onPressed: (_) => context
+                              .read<EventProvider>()
+                              .deleteBringItem(item.id, event.id),
+                          backgroundColor: AppTheme.danger,
+                          foregroundColor: Colors.white,
+                          icon: Icons.delete_outline,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ],
+                    ),
+                    child: row,
+                  );
+                },
+              ),
+        if (isOrganizer)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: AppFab(
+              icon: Icons.add,
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => _AddBringItemSheet(
+                  l10n: l10n,
+                  guests: event.guests,
+                  onAdd: (label, note, assignedToName) =>
+                      context.read<EventProvider>().addBringItem(
+                            eventId: event.id,
+                            label: label,
+                            note: note,
+                            assignedToName: assignedToName,
+                          ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BringItemRow extends StatelessWidget {
+  final EventBringItem item;
+  final bool isOrganizer;
+  final String myName;
+  final AppLocalizations l10n;
+  final String eventId;
+
+  const _BringItemRow({
+    required this.item,
+    required this.isOrganizer,
+    required this.myName,
+    required this.l10n,
+    required this.eventId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Done checkbox ──────────────────────────────────────────
+          AppTappable(
+            onTap: () => context
+                .read<EventProvider>()
+                .markBringItemDone(item.id, eventId, !item.isDone),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 4, 12, 4),
+              child: Icon(
+                item.isDone
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                size: 26,
+                color: item.isDone ? Colors.green[600] : Colors.grey[400],
+              ),
+            ),
+          ),
+
+          // ── Label + note + assignees ───────────────────────────────
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    decoration:
+                        item.isDone ? TextDecoration.lineThrough : null,
+                    color: item.isDone ? Colors.grey[400] : null,
+                  ),
+                ),
+                if (item.note != null && item.note!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    item.note!,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ],
+                if (item.isAssigned) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline,
+                          size: 13, color: Colors.grey[500]),
+                      const SizedBox(width: 3),
+                      Text(
+                        item.assignedToName!,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // ── Actions ────────────────────────────────────────────────
+          if (!item.isDone && !item.isAssigned) ...[
+            AppTappable(
+              onTap: () => context
+                  .read<EventProvider>()
+                  .assignBringItem(item.id, eventId, myName),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  l10n.bringListTake,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AddBringItemSheet extends StatefulWidget {
+  final AppLocalizations l10n;
+  final List<EventGuest> guests;
+  final EventBringItem? existingItem;
+  final Future<void> Function(String label, String? note, String? assignedToName)
+      onAdd;
+  final VoidCallback? onDelete;
+
+  const _AddBringItemSheet({
+    required this.l10n,
+    required this.guests,
+    this.existingItem,
+    required this.onAdd,
+    this.onDelete,
+  });
+
+  @override
+  State<_AddBringItemSheet> createState() => _AddBringItemSheetState();
+}
+
+class _AddBringItemSheetState extends State<_AddBringItemSheet> {
+  late final TextEditingController _labelCtrl;
+  late final TextEditingController _noteCtrl;
+  final Set<String> _assignedGuestIds = {};
+
+  bool get _isEdit => widget.existingItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existingItem;
+    _labelCtrl = TextEditingController(text: existing?.label ?? '');
+    _noteCtrl = TextEditingController(text: existing?.note ?? '');
+    if (existing != null && existing.isAssigned) {
+      final assignedNames = existing.assignedToNames.toSet();
+      for (final g in widget.guests) {
+        if (assignedNames.contains(g.displayName)) {
+          _assignedGuestIds.add(g.id);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _labelCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  List<EventGuest> get _assignableGuests => widget.guests
+      .where((g) =>
+          g.status == 'going' ||
+          g.status == 'maybe' ||
+          g.status == 'accepted')
+      .toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    final assignable = _assignableGuests;
+    final allSelected =
+        assignable.isNotEmpty && assignable.every((g) => _assignedGuestIds.contains(g.id));
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header drag handle ──────────────────────────────────────
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isEdit ? l10n.bringListEditItem : l10n.bringListAddItem,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (_isEdit && widget.onDelete != null)
+                  AppTappable(
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onDelete!();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+                      child: Icon(Icons.delete_outline,
+                          size: 22, color: AppTheme.danger),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 16),
+
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _labelCtrl,
+                    autofocus: !_isEdit,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      label: Text.rich(
+                        TextSpan(
+                          text: l10n.bringListItemLabel,
+                          children: const [
+                            TextSpan(
+                              text: ' *',
+                              style: TextStyle(color: AppTheme.danger),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _noteCtrl,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration:
+                        InputDecoration(labelText: l10n.bringListNote),
+                  ),
+                  if (assignable.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(l10n.bringListAssignTo,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold)),
+                        ),
+                        AppTappable(
+                          onTap: () => setState(() {
+                            if (allSelected) {
+                              _assignedGuestIds.clear();
+                            } else {
+                              _assignedGuestIds.addAll(assignable.map((g) => g.id));
+                            }
+                          }),
+                          child: Text(
+                            allSelected ? l10n.deselectAll : l10n.selectAll,
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.primary),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...assignable.map((g) => _GuestSelectRow(
+                          guest: g,
+                          selected: _assignedGuestIds.contains(g.id),
+                          onTap: () => setState(() {
+                            if (_assignedGuestIds.contains(g.id)) {
+                              _assignedGuestIds.remove(g.id);
+                            } else {
+                              _assignedGuestIds.add(g.id);
+                            }
+                          }),
+                        )),
+                  ],
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: AppButton(
+              label: _isEdit ? l10n.save : l10n.bringListAddItem,
+              onPressed: () {
+                final text = _labelCtrl.text.trim();
+                if (text.isEmpty) return;
+                final note = _noteCtrl.text.trim();
+                final assigned = _assignableGuests
+                    .where((g) => _assignedGuestIds.contains(g.id))
+                    .map((g) => g.displayName)
+                    .join(', ');
+                Navigator.pop(context);
+                widget.onAdd(
+                  text,
+                  note.isEmpty ? null : note,
+                  assigned.isEmpty ? null : assigned,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Polls tab ─────────────────────────────────────────────────────────────────
+
+class _PollsTab extends StatelessWidget {
+  final Event event;
+  final String? authUid;
+  final List<EventPoll> polls;
+  final bool isOrganizer;
+
+  const _PollsTab({
+    required this.event,
+    required this.authUid,
+    required this.polls,
+    required this.isOrganizer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Stack(
+      children: [
+        polls.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.poll_outlined,
+                        size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Text(l10n.pollsEmpty,
+                        style: TextStyle(color: Colors.grey[500])),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                itemCount: polls.length,
+                itemBuilder: (_, i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _PollCard(
+                    poll: polls[i],
+                    authUid: authUid,
+                    isOrganizer: isOrganizer,
+                    eventId: event.id,
+                    l10n: l10n,
+                  ),
+                ),
+              ),
+        if (isOrganizer)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: AppFab(
+              icon: Icons.add,
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => _CreatePollSheet(
+                  l10n: l10n,
+                  onCreate: (question, options) =>
+                      context.read<EventProvider>().createPoll(
+                            event.id,
+                            question,
+                            options,
+                          ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PollCard extends StatelessWidget {
+  final EventPoll poll;
+  final String? authUid;
+  final bool isOrganizer;
+  final String eventId;
+  final AppLocalizations l10n;
+
+  const _PollCard({
+    required this.poll,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.eventId,
+    required this.l10n,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final myVoteOptionId =
+        authUid != null ? poll.myVoteOptionId(authUid!) : null;
+    final total = poll.totalVotes;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    poll.question,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ),
+                if (isOrganizer)
+                  AppTappable(
+                    onTap: () => context
+                        .read<EventProvider>()
+                        .deletePoll(poll.id, eventId),
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Icon(Icons.delete_outline,
+                          size: 18, color: AppTheme.danger),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final option in poll.options) ...[
+              _PollOptionRow(
+                option: option,
+                votes: poll.votesFor(option.id),
+                total: total,
+                isSelected: myVoteOptionId == option.id,
+                onTap: authUid == null
+                    ? null
+                    : () {
+                        final provider = context.read<EventProvider>();
+                        if (myVoteOptionId == null) {
+                          provider.vote(poll.id, option.id, eventId);
+                        } else if (myVoteOptionId != option.id) {
+                          provider.changeVote(poll.id, option.id, eventId);
+                        }
+                      },
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 4),
+            Text(
+              l10n.pollsVoteCount(total),
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PollOptionRow extends StatelessWidget {
+  final EventPollOption option;
+  final int votes;
+  final int total;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  const _PollOptionRow({
+    required this.option,
+    required this.votes,
+    required this.total,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total > 0 ? votes / total : 0.0;
+
+    return AppTappable(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+        children: [
+          Icon(
+            isSelected
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
+            size: 20,
+            color: isSelected ? AppTheme.primary : Colors.grey[400],
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  option.text,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: isSelected ? AppTheme.primary : null,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 5,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isSelected
+                          ? AppTheme.primary
+                          : AppTheme.primary.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 36,
+            child: Text(
+              '${(pct * 100).round()}%',
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected ? AppTheme.primary : Colors.grey[600],
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreatePollSheet extends StatefulWidget {
+  final AppLocalizations l10n;
+  final Future<void> Function(String question, List<String> options) onCreate;
+
+  const _CreatePollSheet({required this.l10n, required this.onCreate});
+
+  @override
+  State<_CreatePollSheet> createState() => _CreatePollSheetState();
+}
+
+class _CreatePollSheetState extends State<_CreatePollSheet> {
+  final _questionCtrl = TextEditingController();
+  final List<TextEditingController> _optionCtrls = [
+    TextEditingController(),
+    TextEditingController(),
+  ];
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _questionCtrl.dispose();
+    for (final c in _optionCtrls) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addOption() {
+    if (_optionCtrls.length >= 5) return;
+    setState(() => _optionCtrls.add(TextEditingController()));
+  }
+
+  Future<void> _submit() async {
+    final question = _questionCtrl.text.trim();
+    if (question.isEmpty) return;
+    final options =
+        _optionCtrls.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
+    if (options.length < 2) return;
+    setState(() => _submitting = true);
+    Navigator.pop(context);
+    await widget.onCreate(question, options);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _questionCtrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                label: Text.rich(
+                  TextSpan(
+                    text: l10n.pollsQuestion,
+                    children: const [
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(color: AppTheme.danger),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            for (var i = 0; i < _optionCtrls.length; i++) ...[
+              TextField(
+                controller: _optionCtrls[i],
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                    labelText: l10n.pollsOptionHint(i + 1)),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (_optionCtrls.length < 5)
+              AppTappable(
+                onTap: _addOption,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    l10n.pollsAddOption,
+                    style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            AppButton(
+              label: l10n.pollsAddPoll,
+              loading: _submitting,
+              onPressed: _submit,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final Widget child;
@@ -615,15 +1520,39 @@ class _RsvpButtonsState extends State<_RsvpButtons> {
   bool _loading = false;
 
   Future<void> _rsvp(String status) async {
+    final l10n = AppLocalizations.of(context);
     if (widget.event.isFull && status == 'going') {
-      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.eventFull)),
       );
       return;
     }
+    // Declined needs no note — apply immediately.
+    if (status == 'declined') {
+      setState(() => _loading = true);
+      await context.read<EventProvider>().rsvp(widget.event.id, status);
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    // Going / Maybe: show optional note sheet.
+    final existingNote = widget.myGuest?.rsvpNote ?? '';
+    final note = await showModalBottomSheet<String?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetCtx) => _RsvpNoteSheet(
+        initialNote: existingNote,
+        l10n: l10n,
+      ),
+    );
+    if (!mounted) return;
+    // note == null means sheet was dismissed without confirming.
+    if (note == null) return;
     setState(() => _loading = true);
-    await context.read<EventProvider>().rsvp(widget.event.id, status);
+    await context.read<EventProvider>().rsvp(
+          widget.event.id,
+          status,
+          note: note,
+        );
     if (mounted) setState(() => _loading = false);
   }
 
@@ -1103,12 +2032,19 @@ class _GuestsTabState extends State<_GuestsTab> {
             ? Center(
                 child: Text(l10n.noGuestsYet,
                     style: TextStyle(color: Colors.grey[500])))
-            : ListView.builder(
+            : Builder(builder: (context) {
+                final sortedGuests = [...event.guests]
+                  ..sort((a, b) {
+                    if (a.role == 'organizer') return -1;
+                    if (b.role == 'organizer') return 1;
+                    return 0;
+                  });
+                return ListView.builder(
                 padding:
                     const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                itemCount: event.guests.length,
+                itemCount: sortedGuests.length,
                 itemBuilder: (_, i) {
-                  final g = event.guests[i];
+                  final g = sortedGuests[i];
                   final isMe = g.userId != null &&
                       g.userId == widget.authUid;
                   final canResend = g.status == 'pending' &&
@@ -1229,7 +2165,8 @@ class _GuestsTabState extends State<_GuestsTab> {
                     isThreeLine: hasEmail || inviterLabel != null,
                   );
                 },
-              ),
+              );
+              }),
         if (widget.canInvite)
           Positioned(
             bottom: 16,
@@ -1296,6 +2233,45 @@ class _GuestTile extends StatelessWidget {
       if (guest.phone != null) guest.phone!,
     ].join(' · ');
 
+    final hasNote =
+        guest.rsvpNote != null && guest.rsvpNote!.isNotEmpty;
+
+    Widget? subtitle;
+    if (hasNote && contact.isNotEmpty) {
+      subtitle = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            guest.rsvpNote!,
+            style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey[700]),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(contact,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12)),
+        ],
+      );
+    } else if (hasNote) {
+      subtitle = Text(
+        guest.rsvpNote!,
+        style: TextStyle(
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+            color: Colors.grey[700]),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      );
+    } else if (contact.isNotEmpty) {
+      subtitle =
+          Text(contact, maxLines: 1, overflow: TextOverflow.ellipsis);
+    }
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: Colors.grey[200],
@@ -1311,10 +2287,7 @@ class _GuestTile extends StatelessWidget {
               ),
       ),
       title: Text(guest.displayName),
-      subtitle: contact.isNotEmpty
-          ? Text(contact,
-              maxLines: 1, overflow: TextOverflow.ellipsis)
-          : null,
+      subtitle: subtitle,
       trailing: isOrganizer
           ? IconButton(
               icon: const Icon(Icons.remove_circle_outline,
@@ -1339,6 +2312,71 @@ class _GuestTile extends StatelessWidget {
         );
       }
     }
+  }
+}
+
+// ── RSVP note sheet ───────────────────────────────────────────────────────────
+
+class _RsvpNoteSheet extends StatefulWidget {
+  final String initialNote;
+  final AppLocalizations l10n;
+
+  const _RsvpNoteSheet({required this.initialNote, required this.l10n});
+
+  @override
+  State<_RsvpNoteSheet> createState() => _RsvpNoteSheetState();
+}
+
+class _RsvpNoteSheetState extends State<_RsvpNoteSheet> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialNote);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            maxLength: 200,
+            maxLines: 3,
+            minLines: 1,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: l10n.rsvpNoteLabel,
+              hintText: l10n.rsvpNoteHint,
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppButton(
+            label: l10n.confirmRsvp,
+            onPressed: () => Navigator.pop(context, _ctrl.text),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
   }
 }
 
