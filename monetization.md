@@ -160,6 +160,7 @@ Tracks every billable API call with per-call pricing, trigger conditions, and mo
 | Stadia Maps | **200,000 tiles/month** | Independent from Google credit |
 | Supabase | Free tier: 500 MB DB, 2 GB bandwidth, 500K Edge Function invocations/month | Shared with PropertyManagement |
 | Google Gemini (direct) | Free tier varies by model | Debug builds only — not billed in production (Edge Function used instead) |
+| Yelp Fusion API | **500 calls/day** (Base plan, free) | 1 call per restaurant detail sheet open; falls back to Yelp search URL if limit hit or key missing |
 
 ---
 
@@ -202,9 +203,11 @@ One "Find me a spot" session = 1 text search + up to 5 photo fetches (one per re
 
 | Action | Calls | Cost |
 |---|---|---|
-| Search that returns 5 results | 1 text search + 5 photos | $0.032 + $0.035 = **$0.067** |
+| Search that returns 10 results | 1 text search + 10 photos | $0.032 + $0.070 = **$0.102** |
 | Viewing Polls tab with 5 pitched restaurants | 5 photo fetches (one per poll option row) | **$0.035** |
 | Pitching a restaurant (no extra API call) | 0 — uses data already fetched in the search | **$0.000** |
+| Viewing restaurant detail sheet (up to 4 extra photos) | 0–4 photo fetches | **$0–$0.028** |
+| Tapping "View on Yelp" (resolves exact listing) | 1 Yelp Fusion Business Search call | **$0** (free tier; 500/day cap) |
 
 > **Photo caching note:** `Image.network` caches images in memory for the session and on disk via the platform HTTP cache. A user who searches, then opens the Polls tab, will NOT re-fetch the same photos — the platform cache serves them. Cost above is the worst case (cold cache).
 

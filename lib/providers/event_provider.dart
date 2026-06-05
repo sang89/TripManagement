@@ -1694,23 +1694,4 @@ class EventProvider extends ChangeNotifier {
     unawaited(fetchPolls(eventId));
   }
 
-  Future<void> changeVote(
-      String pollId, String newOptionId, String eventId) async {
-    final existingVoteId = _polls[eventId]
-        ?.firstWhere((p) => p.id == pollId,
-            orElse: () => throw StateError('poll not found'))
-        .myVoteId(_userId!);
-    _applyOptimisticVote(eventId, pollId, newOptionId, existingVoteId);
-    await _db
-        .from('event_poll_votes')
-        .delete()
-        .eq('poll_id', pollId)
-        .eq('user_id', _userId!);
-    await _db.from('event_poll_votes').insert({
-      'poll_id': pollId,
-      'option_id': newOptionId,
-      'user_id': _userId,
-    });
-    unawaited(fetchPolls(eventId));
-  }
 }

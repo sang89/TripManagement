@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/event_provider.dart';
 import '../../services/trip_places_service.dart';
+import '../../widgets/event_type_banner.dart';
 import '../../widgets/places_autocomplete_field.dart';
 
 class EventFormScreen extends StatefulWidget {
@@ -300,11 +301,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Event type picker
-                  AppPickerField<EventType>(
-                    label: l10n.eventTypePicker,
-                    value: _eventType,
-                    items: EventType.values,
+                  // Event type card grid
+                  _EventTypePicker(
+                    selected: _eventType,
                     labelOf: (t) => _eventTypeLabel(t, l10n),
                     onChanged: (t) => setState(() => _eventType = t),
                   ),
@@ -540,4 +539,126 @@ class _DateTimeTile extends StatelessWidget {
           ),
         ),
       );
+}
+
+// ── Event type card grid ─────────────────────────────────────────────────────
+
+class _EventTypePicker extends StatelessWidget {
+  final EventType selected;
+  final String Function(EventType) labelOf;
+  final ValueChanged<EventType> onChanged;
+
+  const _EventTypePicker({
+    required this.selected,
+    required this.labelOf,
+    required this.onChanged,
+  });
+
+  static final _icons = {
+    EventType.trip: Icons.luggage_rounded,
+    EventType.birthday: Icons.cake_rounded,
+    EventType.wedding: Icons.favorite_rounded,
+    EventType.social: Icons.celebration_rounded,
+    EventType.quickBites: Icons.restaurant_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.1,
+      children: EventType.values.map((type) {
+        final theme = bannerThemeFor(type);
+        final isSelected = type == selected;
+        return AppTappable(
+          onTap: () => onChanged(type),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: theme.gradientColors,
+              ),
+              border: isSelected
+                  ? Border.all(color: Colors.white, width: 3)
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: theme.gradientColors.last.withValues(alpha: 0.5),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Stack(
+                children: [
+                  // subtle icon pattern
+                  CustomPaint(
+                    painter: EventIconPatternPainter(
+                      icons: theme.icons,
+                      color: Colors.white.withValues(alpha: 0.10),
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                  // content
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_icons[type]!, size: 40, color: Colors.white),
+                        const SizedBox(height: 10),
+                        Text(
+                          labelOf(type),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // selected check
+                  if (isSelected)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: theme.gradientColors.first,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }

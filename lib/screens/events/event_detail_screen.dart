@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'dart:math' show min;
 
 import 'package:flutter/foundation.dart';
@@ -17,6 +19,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_keys.dart';
 import '../../l10n/app_localizations.dart';
@@ -38,6 +41,7 @@ import '../../services/connectivity_service.dart';
 import '../../services/trip_places_service.dart';
 import '../../services/user_lookup_service.dart';
 import '../../utils/avatar_utils.dart';
+import '../../widgets/event_type_banner.dart';
 import '../../widgets/add_member_sheet.dart';
 import '../../widgets/ai_itinerary_sheet.dart';
 import '../../widgets/event_map_widget.dart';
@@ -146,14 +150,22 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 event.guests.any(
                     (g) => g.userId == authUid && g.status == 'accepted'));
 
+        final eventBannerTheme = bannerThemeFor(event.eventType);
+
         return Scaffold(
           appBar: AppBar(
             title: Text(event.title, overflow: TextOverflow.ellipsis),
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            flexibleSpace: EventTypeBanner(theme: eventBannerTheme, height: double.infinity),
             bottom: TabBar(
               controller: _tabController,
               tabAlignment: TabAlignment.fill,
               labelStyle: const TextStyle(
                   fontSize: 11, fontWeight: FontWeight.w600),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
               tabs: [
                 Tab(
                     icon: const Icon(Icons.info_outline_rounded, size: 20),
@@ -183,35 +195,15 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 onPressed: () => _shareEvent(context, event),
               ),
               if (isOrganizer)
-                PopupMenuButton<_EventAction>(
-                  onSelected: (action) async {
-                    if (action == _EventAction.edit) {
-                      context.push('/event/${event.id}/edit');
-                    } else {
-                      await _confirmDelete(context, event, provider);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: _EventAction.edit,
-                      child: Row(children: [
-                        const Icon(Icons.edit_outlined, size: 18),
-                        const SizedBox(width: 10),
-                        Text(l10n.editEvent),
-                      ]),
-                    ),
-                    PopupMenuItem(
-                      value: _EventAction.delete,
-                      child: Row(children: [
-                        const Icon(Icons.delete_outline,
-                            size: 18, color: AppTheme.danger),
-                        const SizedBox(width: 10),
-                        Text(l10n.deleteEventTitle,
-                            style:
-                                const TextStyle(color: AppTheme.danger)),
-                      ]),
-                    ),
-                  ],
+                IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  onPressed: () => _showEventActions(
+                    context,
+                    event,
+                    l10n,
+                    onDelete: () =>
+                        _confirmDelete(context, event, provider),
+                  ),
                 )
               else if (event.isTrip)
                 IconButton(
@@ -338,7 +330,190 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   }
 }
 
-enum _EventAction { edit, delete }
+void _showEventActions(
+  BuildContext context,
+  Event event,
+  AppLocalizations l10n, {
+  required VoidCallback onDelete,
+}) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (sheetCtx) {
+      final surface = Theme.of(sheetCtx).colorScheme.surface;
+      final onSurface = Theme.of(sheetCtx).colorScheme.onSurface;
+      final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+      final cancelBg = isDark
+          ? onSurface.withValues(alpha: 0.06)
+          : onSurface.withValues(alpha: 0.04);
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // drag handle
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // single unified panel
+              Container(
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: [
+                    // header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                      child: Text(
+                        event.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    _ActionSheetTile(
+                      iconWidget: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.edit_rounded,
+                            size: 18, color: AppTheme.primary),
+                      ),
+                      label: l10n.editEvent,
+                      subtitle: l10n.editEventSubtitle,
+                      labelColor: onSurface,
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        context.push('/event/${event.id}/edit');
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    _ActionSheetTile(
+                      iconWidget: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.danger.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.delete_rounded,
+                            size: 18, color: AppTheme.danger),
+                      ),
+                      label: l10n.deleteEventTitle,
+                      subtitle: l10n.deleteEventSubtitle,
+                      labelColor: AppTheme.danger,
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        onDelete();
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    // cancel — subtle tinted strip at bottom
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(16)),
+                      child: AppTappable(
+                        onTap: () => Navigator.pop(sheetCtx),
+                        child: Container(
+                          width: double.infinity,
+                          color: cancelBg,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            l10n.cancel,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                              color: onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _ActionSheetTile extends StatelessWidget {
+  final Widget iconWidget;
+  final String label;
+  final String subtitle;
+  final Color labelColor;
+  final VoidCallback onTap;
+
+  const _ActionSheetTile({
+    required this.iconWidget,
+    required this.label,
+    required this.subtitle,
+    required this.labelColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTappable(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            iconWidget,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                          color: labelColor)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.45))),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                size: 18,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.25)),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // ── Info tab group (Details | Route | Guests inner tabs) ─────────────────────
 
@@ -1260,10 +1435,8 @@ class _PollCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRestaurant = poll.isRestaurantPoll;
-    final myVoteOptionId =
-        authUid != null && !isRestaurant ? poll.myVoteOptionId(authUid!) : null;
     final myVotedIds =
-        authUid != null && isRestaurant ? poll.myVotedOptionIds(authUid!) : const <String>{};
+        authUid != null ? poll.myVotedOptionIds(authUid!) : const <String>{};
     final total = poll.totalVotes;
     final uniqueVoterCount = poll.votes.map((v) => v.userId).toSet().length;
 
@@ -1318,15 +1491,15 @@ class _PollCard extends StatelessWidget {
                   option: option,
                   votes: poll.votesFor(option.id),
                   total: total,
-                  isSelected: myVoteOptionId == option.id,
+                  isSelected: myVotedIds.contains(option.id),
                   onTap: authUid == null
                       ? null
                       : () {
                           final provider = context.read<EventProvider>();
-                          if (myVoteOptionId == null) {
+                          if (myVotedIds.contains(option.id)) {
+                            provider.unvote(poll.id, option.id, eventId);
+                          } else {
                             provider.vote(poll.id, option.id, eventId);
-                          } else if (myVoteOptionId != option.id) {
-                            provider.changeVote(poll.id, option.id, eventId);
                           }
                         },
                 ),
@@ -1456,90 +1629,112 @@ class _RestaurantPollOptionRow extends StatelessWidget {
     final address = meta?['address'] as String?;
     final rating = (meta?['rating'] as num?)?.toDouble();
 
-    return AppTappable(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        decoration: BoxDecoration(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? AppTheme.primary.withValues(alpha: 0.06)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
           color: isSelected
-              ? AppTheme.primary.withValues(alpha: 0.06)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected
-                ? AppTheme.primary.withValues(alpha: 0.45)
-                : Colors.grey.shade200,
-            width: isSelected ? 1.5 : 1,
-          ),
+              ? AppTheme.primary.withValues(alpha: 0.45)
+              : Colors.grey.shade200,
+          width: isSelected ? 1.5 : 1,
         ),
-        child: Row(
-          children: [
-            // Thumbnail.
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: photoUrl != null
-                    ? Image.network(
-                        photoUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          color: Colors.grey[100],
-                          child: const Icon(Icons.restaurant, size: 24, color: Colors.black12),
-                        ),
-                      )
-                    : Container(
-                        color: Colors.grey[100],
-                        child: const Icon(Icons.restaurant, size: 24, color: Colors.black12),
-                      ),
+      ),
+      child: Row(
+        children: [
+          // Left: thumbnail + info → opens detail sheet.
+          Expanded(
+            child: AppTappable(
+              onTap: () => _showRestaurantDetail(
+                context,
+                name: option.text,
+                address: address ?? '',
+                rating: rating,
+                priceLevel: meta?['price_level'] as int?,
+                photoRefs: _photoRefsFromMetadata(meta),
               ),
-            ),
-            const SizedBox(width: 10),
-            // Name + address + rating.
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      option.text,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? AppTheme.primary : null,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius:
+                        const BorderRadius.horizontal(left: Radius.circular(9)),
+                    child: SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: photoUrl != null
+                          ? Image.network(
+                              photoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: Colors.grey[100],
+                                child: const Icon(Icons.restaurant,
+                                    size: 24, color: Colors.black12),
+                              ),
+                            )
+                          : Container(
+                              color: Colors.grey[100],
+                              child: const Icon(Icons.restaurant,
+                                  size: 24, color: Colors.black12),
+                            ),
                     ),
-                    if (address != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        address,
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (rating != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.star_rounded, size: 12, color: Colors.amber),
-                          const SizedBox(width: 2),
-                          Text(rating.toStringAsFixed(1),
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                          Text(
+                            option.text,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? AppTheme.primary : null,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (address != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              address,
+                              style:
+                                  TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          if (rating != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.star_rounded,
+                                    size: 12, color: Colors.amber),
+                                const SizedBox(width: 2),
+                                Text(rating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            // Vote count + check.
-            Padding(
+          ),
+          // Right: vote toggle.
+          AppTappable(
+            onTap: onTap,
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1565,8 +1760,8 @@ class _RestaurantPollOptionRow extends StatelessWidget {
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1930,6 +2125,7 @@ class _CravingsTabState extends State<_CravingsTab> {
   Future<void> _search() async {
     final q = _keywordCtrl.text.trim();
     if (q.isEmpty) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() { _loading = true; _error = null; });
     try {
       final svc = TripPlacesService(kGooglePlacesApiKey);
@@ -1966,7 +2162,8 @@ class _CravingsTabState extends State<_CravingsTab> {
       'address': r.address,
       if (r.rating != null) 'rating': r.rating,
       if (r.priceLevel != null) 'price_level': r.priceLevel,
-      if (r.photoRef != null) 'photo_ref': r.photoRef,
+      if (r.photoRefs.isNotEmpty) 'photo_ref': r.photoRefs.first,
+      if (r.photoRefs.isNotEmpty) 'photo_refs': r.photoRefs,
     };
     try {
       _restaurantPollId = await provider.pitchRestaurantOption(
@@ -2143,7 +2340,18 @@ class _CravingResultCardState extends State<_CravingResultCard> {
             '?maxWidthPx=600&key=$kGooglePlacesApiKey'
         : null;
 
-    return Card(
+    return AppTappable(
+      onTap: () => _showRestaurantDetail(
+        context,
+        name: r.name,
+        address: r.address,
+        rating: r.rating,
+        priceLevel: r.priceLevel,
+        photoRefs: r.photoRefs,
+        isPitched: widget.isPitched,
+        onPitch: widget.isPitched ? null : widget.onPitch,
+      ),
+      child: Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
@@ -2228,6 +2436,338 @@ class _CravingResultCardState extends State<_CravingResultCard> {
             ),
           ),
         ],
+      ),
+    ), // Card
+    ); // AppTappable
+  }
+}
+
+// ── Restaurant detail sheet ───────────────────────────────────────────────────
+
+List<String> _photoRefsFromMetadata(Map<String, dynamic>? meta) {
+  if (meta == null) return const [];
+  final refs = meta['photo_refs'];
+  if (refs is List) return refs.cast<String>();
+  final single = meta['photo_ref'] as String?;
+  return single != null ? [single] : const [];
+}
+
+void _showRestaurantDetail(
+  BuildContext context, {
+  required String name,
+  required String address,
+  required double? rating,
+  required int? priceLevel,
+  required List<String> photoRefs,
+  VoidCallback? onPitch,
+  bool isPitched = false,
+}) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => _RestaurantDetailSheet(
+      name: name,
+      address: address,
+      rating: rating,
+      priceLevel: priceLevel,
+      photoRefs: photoRefs,
+      onPitch: onPitch,
+      isPitched: isPitched,
+    ),
+  );
+}
+
+class _RestaurantDetailSheet extends StatefulWidget {
+  final String name;
+  final String address;
+  final double? rating;
+  final int? priceLevel;
+  final List<String> photoRefs;
+  final VoidCallback? onPitch;
+  final bool isPitched;
+
+  const _RestaurantDetailSheet({
+    required this.name,
+    required this.address,
+    required this.rating,
+    required this.priceLevel,
+    required this.photoRefs,
+    required this.onPitch,
+    required this.isPitched,
+  });
+
+  @override
+  State<_RestaurantDetailSheet> createState() => _RestaurantDetailSheetState();
+}
+
+class _RestaurantDetailSheetState extends State<_RestaurantDetailSheet> {
+  final _pageCtrl = PageController();
+  int _page = 0;
+  String? _yelpUrl;
+  bool _yelpLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchYelpUrl();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchYelpUrl() async {
+    if (kYelpApiKey.contains('REPLACE_ME')) {
+      if (mounted) setState(() => _yelpLoading = false);
+      return;
+    }
+    try {
+      final uri = Uri.https('api.yelp.com', '/v3/businesses/search', {
+        'term': widget.name,
+        'location': widget.address,
+        'limit': '1',
+      });
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $kYelpApiKey'},
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final businesses = data['businesses'] as List?;
+        if (businesses != null && businesses.isNotEmpty) {
+          _yelpUrl = (businesses.first as Map<String, dynamic>)['url'] as String?;
+        }
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _yelpLoading = false);
+  }
+
+  Future<void> _openYelp() async {
+    final raw = _yelpUrl;
+    final uri = raw != null
+        ? Uri.parse(raw)
+        : Uri.https('www.yelp.com', '/search', {
+            'find_desc': widget.name,
+            'find_loc': widget.address,
+          });
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  String _photoUrl(String ref) =>
+      'https://places.googleapis.com/v1/$ref/media'
+      '?maxWidthPx=800&key=$kGooglePlacesApiKey';
+
+  String _priceLabel(int? level) =>
+      level != null ? '\$' * level : '';
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhotos = widget.photoRefs.isNotEmpty;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return SafeArea(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // drag handle
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: onSurface.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // photo carousel
+            if (hasPhotos) ...[
+              SizedBox(
+                height: 220,
+                child: PageView.builder(
+                  controller: _pageCtrl,
+                  itemCount: widget.photoRefs.length,
+                  onPageChanged: (i) => setState(() => _page = i),
+                  itemBuilder: (_, i) => Image.network(
+                    _photoUrl(widget.photoRefs[i]),
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, p) => p == null
+                        ? child
+                        : Container(
+                            color: Colors.grey[100],
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                    errorBuilder: (_, _, _) => Container(
+                      color: Colors.grey[100],
+                      child: const Icon(Icons.restaurant,
+                          size: 48, color: Colors.black12),
+                    ),
+                  ),
+                ),
+              ),
+              if (widget.photoRefs.length > 1) ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.photoRefs.length,
+                    (i) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: _page == i ? 16 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: _page == i
+                            ? AppTheme.primary
+                            : onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ] else
+              Container(
+                height: 120,
+                color: Colors.grey[100],
+                child: const Center(
+                  child: Icon(Icons.restaurant, size: 48, color: Colors.black12),
+                ),
+              ),
+            // info
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.name,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (widget.rating != null) ...[
+                        ...List.generate(
+                          5,
+                          (i) => Icon(
+                            i < widget.rating!.round()
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.rating!.toStringAsFixed(1),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      if (widget.priceLevel != null)
+                        Text(
+                          _priceLabel(widget.priceLevel),
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.w600),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.location_on_outlined,
+                          size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          widget.address,
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey[600]),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // action buttons
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _yelpLoading ? null : _openYelp,
+                      icon: _yelpLoading
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.open_in_new_rounded, size: 16),
+                      label: Text(_yelpLoading ? 'Finding on Yelp…' : 'View on Yelp'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  if (widget.onPitch != null) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: widget.isPitched
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                widget.onPitch!();
+                              },
+                        icon: widget.isPitched
+                            ? const Icon(Icons.check_circle, size: 16)
+                            : const Icon(Icons.send_outlined, size: 16),
+                        label: Text(widget.isPitched
+                            ? 'Added to group vote!'
+                            : 'Pitch to group'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: widget.isPitched
+                              ? Colors.green[600]
+                              : AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
