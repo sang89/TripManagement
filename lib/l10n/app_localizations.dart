@@ -1488,6 +1488,12 @@ abstract class AppLocalizations {
   /// **'Edit event'**
   String get editEvent;
 
+  /// No description provided for @editEventSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update details, date, or location'**
+  String get editEventSubtitle;
+
   /// No description provided for @saveEvent.
   ///
   /// In en, this message translates to:
@@ -1515,7 +1521,7 @@ abstract class AppLocalizations {
   /// No description provided for @eventCapacity.
   ///
   /// In en, this message translates to:
-  /// **'Max guests (optional)'**
+  /// **'Max members (optional)'**
   String get eventCapacity;
 
   /// No description provided for @eventStartDateTime.
@@ -1557,19 +1563,19 @@ abstract class AppLocalizations {
   /// No description provided for @guestsTab.
   ///
   /// In en, this message translates to:
-  /// **'Guests'**
+  /// **'Members'**
   String get guestsTab;
 
   /// No description provided for @noGuestsYet.
   ///
   /// In en, this message translates to:
-  /// **'No guests yet. Tap + to add one.'**
+  /// **'No members yet. Tap + to add one.'**
   String get noGuestsYet;
 
   /// No description provided for @addGuest.
   ///
   /// In en, this message translates to:
-  /// **'Add guest'**
+  /// **'Add member'**
   String get addGuest;
 
   /// No description provided for @photosTab.
@@ -1707,7 +1713,7 @@ abstract class AppLocalizations {
   /// No description provided for @splitAmong.
   ///
   /// In en, this message translates to:
-  /// **'Split among guests'**
+  /// **'Split among members'**
   String get splitAmong;
 
   /// No description provided for @paidBy.
@@ -1830,6 +1836,12 @@ abstract class AppLocalizations {
   /// **'Todo'**
   String get todoTab;
 
+  /// No description provided for @cravingsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Cravings'**
+  String get cravingsTab;
+
   /// No description provided for @pollsTab.
   ///
   /// In en, this message translates to:
@@ -1950,6 +1962,108 @@ abstract class AppLocalizations {
   /// **'Confirm'**
   String get confirmRsvp;
 
+  /// No description provided for @foodMoodTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How hungry are you?'**
+  String get foodMoodTitle;
+
+  /// No description provided for @foodMoodStarving.
+  ///
+  /// In en, this message translates to:
+  /// **'Starving'**
+  String get foodMoodStarving;
+
+  /// No description provided for @foodMoodCouldEat.
+  ///
+  /// In en, this message translates to:
+  /// **'Could eat'**
+  String get foodMoodCouldEat;
+
+  /// No description provided for @foodMoodDrinksOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Just for drinks'**
+  String get foodMoodDrinksOnly;
+
+  /// No description provided for @foodMoodNibble.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ll nibble'**
+  String get foodMoodNibble;
+
+  /// No description provided for @foodMoodDDMode.
+  ///
+  /// In en, this message translates to:
+  /// **'DD mode'**
+  String get foodMoodDDMode;
+
+  /// No description provided for @cravingsPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you craving?'**
+  String get cravingsPrompt;
+
+  /// No description provided for @cravingsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'spicy ramen, cozy vibes, under \$20...'**
+  String get cravingsHint;
+
+  /// No description provided for @cravingsPrivacyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you can see this'**
+  String get cravingsPrivacyNote;
+
+  /// No description provided for @cravingsFindButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Find me a spot'**
+  String get cravingsFindButton;
+
+  /// No description provided for @cravingsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No results found. Try different keywords.'**
+  String get cravingsEmpty;
+
+  /// No description provided for @cravingsPitchButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch to group'**
+  String get cravingsPitchButton;
+
+  /// No description provided for @cravingsPitched.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to group vote!'**
+  String get cravingsPitched;
+
+  /// No description provided for @restaurantPollTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a Spot'**
+  String get restaurantPollTitle;
+
+  /// No description provided for @addRestaurantOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Add restaurant'**
+  String get addRestaurantOption;
+
+  /// No description provided for @restaurantSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search restaurants...'**
+  String get restaurantSearchHint;
+
+  /// No description provided for @setAsVenueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as venue'**
+  String get setAsVenueButton;
+
   /// No description provided for @organizedBy.
   ///
   /// In en, this message translates to:
@@ -1961,6 +2075,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete event'**
   String get deleteEventTitle;
+
+  /// No description provided for @deleteEventSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently remove this event'**
+  String get deleteEventSubtitle;
 
   /// No description provided for @deleteEventMessage.
   ///
@@ -1991,6 +2111,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Social'**
   String get eventTypeSocial;
+
+  /// No description provided for @eventTypeQuickBites.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Bites'**
+  String get eventTypeQuickBites;
 
   /// No description provided for @eventTypePicker.
   ///
@@ -2171,6 +2297,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'RSVP & basic planning'**
   String get freeBasicPlanning;
+
+  /// No description provided for @budgetPerHeadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget per person (optional)'**
+  String get budgetPerHeadLabel;
+
+  /// No description provided for @cuisineTagsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cuisine'**
+  String get cuisineTagsLabel;
+
+  /// No description provided for @rsvpDeadlineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'RSVP deadline'**
+  String get rsvpDeadlineLabel;
+
+  /// No description provided for @rsvpDeadlineClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'RSVP closed'**
+  String get rsvpDeadlineClosed;
+
+  /// No description provided for @vibePickerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibe (optional)'**
+  String get vibePickerLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -27,12 +27,15 @@ class EventPollOption {
   final String pollId;
   final String text;
   final int sortOrder;
+  // Non-null for restaurant-vote options — stores Places API metadata.
+  final Map<String, dynamic>? placeMetadata;
 
   const EventPollOption({
     required this.id,
     required this.pollId,
     required this.text,
     this.sortOrder = 0,
+    this.placeMetadata,
   });
 
   factory EventPollOption.fromJson(Map<String, dynamic> json) =>
@@ -41,6 +44,9 @@ class EventPollOption {
         pollId: json['poll_id'] as String,
         text: json['text'] as String,
         sortOrder: json['sort_order'] as int? ?? 0,
+        placeMetadata: json['place_metadata'] != null
+            ? Map<String, dynamic>.from(json['place_metadata'] as Map)
+            : null,
       );
 }
 
@@ -48,6 +54,7 @@ class EventPoll {
   final String id;
   final String eventId;
   final String question;
+  final String pollType;
   final String createdBy;
   final DateTime createdAt;
   final List<EventPollOption> options;
@@ -57,11 +64,14 @@ class EventPoll {
     required this.id,
     required this.eventId,
     required this.question,
+    this.pollType = 'general',
     required this.createdBy,
     required this.createdAt,
     this.options = const [],
     this.votes = const [],
   });
+
+  bool get isRestaurantPoll => pollType == 'restaurant';
 
   int get totalVotes => votes.length;
 
@@ -71,6 +81,9 @@ class EventPoll {
   String? myVoteOptionId(String userId) =>
       votes.where((v) => v.userId == userId).firstOrNull?.optionId;
 
+  Set<String> myVotedOptionIds(String userId) =>
+      votes.where((v) => v.userId == userId).map((v) => v.optionId).toSet();
+
   String? myVoteId(String userId) =>
       votes.where((v) => v.userId == userId).firstOrNull?.id;
 
@@ -78,6 +91,7 @@ class EventPoll {
         id: id,
         eventId: eventId,
         question: question,
+        pollType: pollType,
         createdBy: createdBy,
         createdAt: createdAt,
         options: options,
@@ -98,6 +112,7 @@ class EventPoll {
       id: json['id'] as String,
       eventId: json['event_id'] as String,
       question: json['question'] as String,
+      pollType: json['poll_type'] as String? ?? 'general',
       createdBy: json['created_by'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       options: options,

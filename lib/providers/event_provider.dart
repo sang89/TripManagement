@@ -100,6 +100,10 @@ class EventProvider extends ChangeNotifier {
         'start_location': e.startLocation,
         'start_lat': e.startLat,
         'start_lng': e.startLng,
+        'budget_per_head': e.budgetPerHead,
+        'cuisine_tags': e.cuisineTags,
+        'rsvp_deadline': e.rsvpDeadline?.toUtc().toIso8601String(),
+        'vibe': e.vibe,
         'event_guests': e.guests
             .map((g) => {
                   'id': g.id,
@@ -342,6 +346,13 @@ class EventProvider extends ChangeNotifier {
 
   // ─── Realtime ──────────────────────────────────────────────────────────────
 
+  String? _eventIdForPoll(String pollId) {
+    for (final entry in _polls.entries) {
+      if (entry.value.any((p) => p.id == pollId)) return entry.key;
+    }
+    return null;
+  }
+
   void _subscribeRealtime() {
     if (_userId == null) return;
     _realtimeChannel?.unsubscribe();
@@ -401,6 +412,22 @@ class EventProvider extends ChangeNotifier {
               startLng: row.containsKey('start_lng')
                   ? (row['start_lng'] as num?)?.toDouble()
                   : existing.startLng,
+              budgetPerHead: row.containsKey('budget_per_head')
+                  ? (row['budget_per_head'] as num?)?.toDouble()
+                  : existing.budgetPerHead,
+              cuisineTags: row.containsKey('cuisine_tags')
+                  ? (row['cuisine_tags'] as List<dynamic>? ?? [])
+                      .map((t) => t as String)
+                      .toList()
+                  : existing.cuisineTags,
+              rsvpDeadline: row.containsKey('rsvp_deadline')
+                  ? (row['rsvp_deadline'] != null
+                      ? DateTime.parse(row['rsvp_deadline'] as String)
+                      : null)
+                  : existing.rsvpDeadline,
+              vibe: row.containsKey('vibe')
+                  ? row['vibe'] as String?
+                  : existing.vibe,
               guests: existing.guests,
               stops: existing.stops,
               organizerName: existing.organizerName,
@@ -548,6 +575,83 @@ class EventProvider extends ChangeNotifier {
           },
         )
 
+        // ── event_polls INSERT ──────────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_polls',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            if (eventId != null) unawaited(fetchPolls(eventId));
+          },
+        )
+
+        // ── event_polls DELETE ──────────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_polls',
+          callback: (payload) {
+            final row = payload.oldRecord;
+            final pollId = row['id'] as String?;
+            final eventId = row['event_id'] as String?;
+            if (pollId == null) return;
+            if (eventId != null) {
+              _polls[eventId]?.removeWhere((p) => p.id == pollId);
+              notifyListeners();
+            } else {
+              for (final entry in _polls.entries) {
+                if (entry.value.any((p) => p.id == pollId)) {
+                  entry.value.removeWhere((p) => p.id == pollId);
+                  notifyListeners();
+                  break;
+                }
+              }
+            }
+          },
+        )
+
+        // ── event_poll_options INSERT ───────────────────────────────────────
+        // Fires when any member pitches a restaurant via the Cravings tab.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_poll_options',
+          callback: (payload) {
+            final pollId = payload.newRecord['poll_id'] as String?;
+            if (pollId == null) return;
+            final eventId = _eventIdForPoll(pollId);
+            if (eventId != null) unawaited(fetchPolls(eventId));
+          },
+        )
+
+        // ── event_poll_votes INSERT ─────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_poll_votes',
+          callback: (payload) {
+            final pollId = payload.newRecord['poll_id'] as String?;
+            if (pollId == null) return;
+            final eventId = _eventIdForPoll(pollId);
+            if (eventId != null) unawaited(fetchPolls(eventId));
+          },
+        )
+
+        // ── event_poll_votes DELETE ─────────────────────────────────────────
+        // REPLICA IDENTITY FULL ensures poll_id is present in the old record.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_poll_votes',
+          callback: (payload) {
+            final pollId = payload.oldRecord['poll_id'] as String?;
+            if (pollId == null) return;
+            final eventId = _eventIdForPoll(pollId);
+            if (eventId != null) unawaited(fetchPolls(eventId));
+          },
+        )
+
         .subscribe();
   }
 
@@ -587,6 +691,10 @@ class EventProvider extends ChangeNotifier {
     String? startLocation,
     double? startLat,
     double? startLng,
+    double? budgetPerHead,
+    List<String> cuisineTags = const [],
+    DateTime? rsvpDeadline,
+    String? vibe,
   }) async {
     final session = _db.auth.currentSession;
     if (session == null) throw Exception('Not authenticated');
@@ -615,10 +723,20 @@ class EventProvider extends ChangeNotifier {
       'p_start_location': ?startLocation,
       'p_start_lat': ?startLat,
       'p_start_lng': ?startLng,
+      'p_budget_per_head': ?budgetPerHead,
+      'p_cuisine_tags': cuisineTags,
+      'p_rsvp_deadline': ?rsvpDeadline?.toUtc().toIso8601String(),
+      'p_vibe': ?vibe,
     }) as List<dynamic>;
     if (rows.isEmpty) throw Exception('Event creation returned no data.');
+    final eventId = (rows.first as Map)['id'] as String;
+    final guestsData = await _db
+        .from('event_guests')
+        .select()
+        .eq('event_id', eventId);
+
     final row = Map<String, dynamic>.from(rows.first as Map)
-      ..['event_guests'] = <dynamic>[]
+      ..['event_guests'] = guestsData
       ..['event_stops'] = <dynamic>[];
 
     final event = Event.fromJson(row);
@@ -643,6 +761,10 @@ class EventProvider extends ChangeNotifier {
       'start_location': updated.startLocation,
       'start_lat': updated.startLat,
       'start_lng': updated.startLng,
+      'budget_per_head': updated.budgetPerHead,
+      'cuisine_tags': updated.cuisineTags,
+      'rsvp_deadline': updated.rsvpDeadline?.toUtc().toIso8601String(),
+      'vibe': updated.vibe,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', updated.id);
 
@@ -1375,6 +1497,7 @@ class EventProvider extends ChangeNotifier {
           'event_id': eventId,
           'question': question.trim(),
           'created_by': _userId,
+          'poll_type': 'general',
         })
         .select()
         .single();
@@ -1387,6 +1510,151 @@ class EventProvider extends ChangeNotifier {
       });
     }
     unawaited(fetchPolls(eventId));
+  }
+
+  Future<void> createRestaurantPoll(
+    String eventId,
+    String question,
+    List<Map<String, dynamic>> options,
+  ) async {
+    final pollData = await _db
+        .from('event_polls')
+        .insert({
+          'event_id': eventId,
+          'question': question.trim(),
+          'created_by': _userId,
+          'poll_type': 'restaurant',
+        })
+        .select()
+        .single();
+    final pollId = pollData['id'] as String;
+    for (var i = 0; i < options.length; i++) {
+      await _db.from('event_poll_options').insert({
+        'poll_id': pollId,
+        'text': (options[i]['text'] as String).trim(),
+        'sort_order': i,
+        'place_metadata': options[i]['placeMetadata'],
+      });
+    }
+    unawaited(fetchPolls(eventId));
+  }
+
+  /// Adds a restaurant option to the shared restaurant poll for [eventId],
+  /// creating the poll if [existingPollId] is null, then auto-votes for the option.
+  /// Returns the poll ID so callers can pass it back on the next pitch.
+  Future<String> pitchRestaurantOption(
+    String eventId,
+    String optionText,
+    Map<String, dynamic> placeMetadata,
+    String pollQuestion, {
+    String? existingPollId,
+  }) async {
+    String pollId;
+    if (existingPollId != null) {
+      pollId = existingPollId;
+    } else {
+      // Check local cache first (covers rapid sequential pitches).
+      final cached = (_polls[eventId] ?? [])
+          .where((p) => p.isRestaurantPoll)
+          .firstOrNull;
+      if (cached != null) {
+        pollId = cached.id;
+      } else {
+        try {
+          final pollData = await _db
+              .from('event_polls')
+              .insert({
+                'event_id': eventId,
+                'question': pollQuestion,
+                'created_by': _userId,
+                'poll_type': 'restaurant',
+              })
+              .select()
+              .single();
+          pollId = pollData['id'] as String;
+        } on PostgrestException catch (e) {
+          if (e.code == '23505') {
+            // Race: another member just created the restaurant poll simultaneously.
+            final existing = await _db
+                .from('event_polls')
+                .select('id')
+                .eq('event_id', eventId)
+                .eq('poll_type', 'restaurant')
+                .single();
+            pollId = existing['id'] as String;
+          } else {
+            rethrow;
+          }
+        }
+      }
+    }
+
+    // Guard against duplicate restaurant options (same place_id already in poll).
+    final existingPlaceIds = (_polls[eventId] ?? [])
+        .where((p) => p.id == pollId)
+        .firstOrNull
+        ?.options
+        .map((o) => o.placeMetadata?['place_id'] as String?)
+        .whereType<String>()
+        .toSet() ?? {};
+    if (placeMetadata['place_id'] != null &&
+        existingPlaceIds.contains(placeMetadata['place_id'])) {
+      // Already pitched — return poll ID without inserting a duplicate.
+      return pollId;
+    }
+
+    final currentOptions = (_polls[eventId] ?? [])
+        .where((p) => p.id == pollId)
+        .firstOrNull
+        ?.options
+        .length ?? 0;
+
+    final optionData = await _db
+        .from('event_poll_options')
+        .insert({
+          'poll_id': pollId,
+          'text': optionText.trim(),
+          'sort_order': currentOptions,
+          'place_metadata': placeMetadata,
+        })
+        .select()
+        .single();
+    final optionId = optionData['id'] as String;
+
+    // With UNIQUE(poll_id, option_id, user_id), each pitch auto-votes for its own option.
+    await _db.from('event_poll_votes').insert({
+      'poll_id': pollId,
+      'option_id': optionId,
+      'user_id': _userId,
+    });
+
+    unawaited(fetchPolls(eventId));
+    return pollId;
+  }
+
+  Future<void> unvote(String pollId, String optionId, String eventId) async {
+    _applyOptimisticUnvote(eventId, pollId, optionId);
+    await _db
+        .from('event_poll_votes')
+        .delete()
+        .eq('poll_id', pollId)
+        .eq('option_id', optionId)
+        .eq('user_id', _userId!);
+    unawaited(fetchPolls(eventId));
+  }
+
+  void _applyOptimisticUnvote(
+      String eventId, String pollId, String optionId) {
+    final polls = _polls[eventId];
+    if (polls == null) return;
+    final idx = polls.indexWhere((p) => p.id == pollId);
+    if (idx < 0) return;
+    final poll = polls[idx];
+    final newVotes = poll.votes
+        .where((v) => !(v.optionId == optionId && v.userId == _userId))
+        .toList();
+    _polls[eventId]![idx] = poll.copyWithVotes(newVotes);
+    notifyListeners();
   }
 
   Future<void> deletePoll(String pollId, String eventId) async {

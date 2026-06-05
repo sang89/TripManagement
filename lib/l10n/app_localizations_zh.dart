@@ -737,6 +737,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => '更新详情、日期或地点';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -749,7 +752,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => '最多成员数（可选）';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -770,13 +773,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get infoTab => '信息';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => '成员';
 
   @override
-  String get noGuestsYet => '暂无嘉宾。点击 + 添加。';
+  String get noGuestsYet => '还没有成员。点击+添加。';
 
   @override
-  String get addGuest => '添加嘉宾';
+  String get addGuest => '添加成员';
 
   @override
   String get photosTab => 'Photos';
@@ -853,7 +856,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => '在成员之间分摊';
 
   @override
   String get paidBy => '由...支付';
@@ -918,6 +921,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get todoTab => '待办';
+
+  @override
+  String get cravingsTab => '我的馋意';
 
   @override
   String get pollsTab => '投票';
@@ -990,12 +996,66 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirmRsvp => '确认';
 
   @override
+  String get foodMoodTitle => '你有多饿？';
+
+  @override
+  String get foodMoodStarving => '饿极了';
+
+  @override
+  String get foodMoodCouldEat => '可以吃';
+
+  @override
+  String get foodMoodDrinksOnly => '只喝饮料';
+
+  @override
+  String get foodMoodNibble => '随便吃点';
+
+  @override
+  String get foodMoodDDMode => '代驾模式';
+
+  @override
+  String get cravingsPrompt => '你想吃什么？';
+
+  @override
+  String get cravingsHint => '麻辣拉面，温馨氛围，不超过20元...';
+
+  @override
+  String get cravingsPrivacyNote => '只有你能看到这个';
+
+  @override
+  String get cravingsFindButton => '帮我找个地方';
+
+  @override
+  String get cravingsEmpty => '未找到结果，请尝试不同关键词。';
+
+  @override
+  String get cravingsPitchButton => '推荐给群组';
+
+  @override
+  String get cravingsPitched => '已添加到群组投票！';
+
+  @override
+  String get restaurantPollTitle => '选个地方';
+
+  @override
+  String get addRestaurantOption => '添加餐厅';
+
+  @override
+  String get restaurantSearchHint => '搜索餐厅...';
+
+  @override
+  String get setAsVenueButton => '设为场地';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => '永久删除此活动';
 
   @override
   String deleteEventMessage(String title) {
@@ -1013,6 +1073,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get eventTypeSocial => '社交';
+
+  @override
+  String get eventTypeQuickBites => '快捷美食';
 
   @override
   String get eventTypePicker => '活动类型';
@@ -1107,4 +1170,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP和基本规划';
+
+  @override
+  String get budgetPerHeadLabel => '每人预算（可选）';
+
+  @override
+  String get cuisineTagsLabel => '菜系';
+
+  @override
+  String get rsvpDeadlineLabel => 'RSVP截止日期';
+
+  @override
+  String get rsvpDeadlineClosed => 'RSVP已截止';
+
+  @override
+  String get vibePickerLabel => '氛围（可选）';
 }

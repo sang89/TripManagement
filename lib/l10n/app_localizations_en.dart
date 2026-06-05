@@ -747,6 +747,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => 'Update details, date, or location';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -759,7 +762,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => 'Max members (optional)';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -780,13 +783,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get infoTab => 'Info';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => 'Members';
 
   @override
-  String get noGuestsYet => 'No guests yet. Tap + to add one.';
+  String get noGuestsYet => 'No members yet. Tap + to add one.';
 
   @override
-  String get addGuest => 'Add guest';
+  String get addGuest => 'Add member';
 
   @override
   String get photosTab => 'Photos';
@@ -863,7 +866,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => 'Split among members';
 
   @override
   String get paidBy => 'Paid by';
@@ -928,6 +931,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todoTab => 'Todo';
+
+  @override
+  String get cravingsTab => 'Cravings';
 
   @override
   String get pollsTab => 'Polls';
@@ -1000,12 +1006,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmRsvp => 'Confirm';
 
   @override
+  String get foodMoodTitle => 'How hungry are you?';
+
+  @override
+  String get foodMoodStarving => 'Starving';
+
+  @override
+  String get foodMoodCouldEat => 'Could eat';
+
+  @override
+  String get foodMoodDrinksOnly => 'Just for drinks';
+
+  @override
+  String get foodMoodNibble => 'I\'ll nibble';
+
+  @override
+  String get foodMoodDDMode => 'DD mode';
+
+  @override
+  String get cravingsPrompt => 'What are you craving?';
+
+  @override
+  String get cravingsHint => 'spicy ramen, cozy vibes, under \$20...';
+
+  @override
+  String get cravingsPrivacyNote => 'Only you can see this';
+
+  @override
+  String get cravingsFindButton => 'Find me a spot';
+
+  @override
+  String get cravingsEmpty => 'No results found. Try different keywords.';
+
+  @override
+  String get cravingsPitchButton => 'Pitch to group';
+
+  @override
+  String get cravingsPitched => 'Added to group vote!';
+
+  @override
+  String get restaurantPollTitle => 'Pick a Spot';
+
+  @override
+  String get addRestaurantOption => 'Add restaurant';
+
+  @override
+  String get restaurantSearchHint => 'Search restaurants...';
+
+  @override
+  String get setAsVenueButton => 'Set as venue';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => 'Permanently remove this event';
 
   @override
   String deleteEventMessage(String title) {
@@ -1023,6 +1083,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventTypeSocial => 'Social';
+
+  @override
+  String get eventTypeQuickBites => 'Quick Bites';
 
   @override
   String get eventTypePicker => 'Event type';
@@ -1120,4 +1183,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP & basic planning';
+
+  @override
+  String get budgetPerHeadLabel => 'Budget per person (optional)';
+
+  @override
+  String get cuisineTagsLabel => 'Cuisine';
+
+  @override
+  String get rsvpDeadlineLabel => 'RSVP deadline';
+
+  @override
+  String get rsvpDeadlineClosed => 'RSVP closed';
+
+  @override
+  String get vibePickerLabel => 'Vibe (optional)';
 }

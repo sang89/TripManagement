@@ -32,6 +32,32 @@ class TripPlaceDetails {
   });
 }
 
+class RestaurantDetails {
+  final double? rating;
+  final int? priceLevel;
+  final String? photoRef;
+
+  const RestaurantDetails({this.rating, this.priceLevel, this.photoRef});
+}
+
+class RestaurantSuggestion {
+  final String placeId;
+  final String name;
+  final String address;
+  final double? rating;
+  final int? priceLevel;
+  final String? photoRef;
+
+  const RestaurantSuggestion({
+    required this.placeId,
+    required this.name,
+    required this.address,
+    this.rating,
+    this.priceLevel,
+    this.photoRef,
+  });
+}
+
 class SuggestionsResult {
   final List<PlacePrediction> predictions;
   final String? errorMessage;
@@ -168,5 +194,109 @@ class TripPlacesService {
 
     if (details != null) _detailsCache[placeId] = details;
     return details;
+  }
+
+  Future<List<RestaurantSuggestion>> searchRestaurants(
+    String query, {
+    double? lat,
+    double? lng,
+  }) async {
+    if (!isConfigured || query.trim().isEmpty) return [];
+    try {
+      final body = <String, dynamic>{
+        'textQuery': query.trim(),
+        'maxResultCount': 5,
+        'includedType': 'restaurant',
+      };
+      if (lat != null && lng != null) {
+        body['locationBias'] = {
+          'circle': {
+            'center': {'latitude': lat, 'longitude': lng},
+            'radius': 3000.0,
+          },
+        };
+      }
+      final response = await _client
+          .post(
+            Uri.parse(
+                'https://places.googleapis.com/v1/places:searchText'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask':
+                  'places.id,places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return [];
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final places = data['places'] as List? ?? [];
+      return places.map((p) {
+        final map = p as Map<String, dynamic>;
+        final name =
+            (map['displayName'] as Map<String, dynamic>?)?['text'] as String? ??
+                '';
+        final address = map['formattedAddress'] as String? ?? '';
+        final rating = (map['rating'] as num?)?.toDouble();
+        final priceLevelStr = map['priceLevel'] as String?;
+        final priceLevel = switch (priceLevelStr) {
+          'PRICE_LEVEL_INEXPENSIVE' => 1,
+          'PRICE_LEVEL_MODERATE' => 2,
+          'PRICE_LEVEL_EXPENSIVE' => 3,
+          'PRICE_LEVEL_VERY_EXPENSIVE' => 4,
+          _ => null,
+        };
+        final photos = map['photos'] as List?;
+        final photoRef = photos != null && photos.isNotEmpty
+            ? (photos.first as Map<String, dynamic>)['name'] as String?
+            : null;
+        return RestaurantSuggestion(
+          placeId: map['id'] as String? ?? '',
+          name: name,
+          address: address,
+          rating: rating,
+          priceLevel: priceLevel,
+          photoRef: photoRef,
+        );
+      }).where((r) => r.placeId.isNotEmpty).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<RestaurantDetails?> fetchRestaurantDetails(
+      String placeId, String fallbackName) async {
+    if (!isConfigured) return null;
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('https://places.googleapis.com/v1/places/$placeId'),
+            headers: {
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask': 'rating,priceLevel,photos',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final rating = (data['rating'] as num?)?.toDouble();
+      final priceLevelStr = data['priceLevel'] as String?;
+      final priceLevel = switch (priceLevelStr) {
+        'PRICE_LEVEL_INEXPENSIVE' => 1,
+        'PRICE_LEVEL_MODERATE' => 2,
+        'PRICE_LEVEL_EXPENSIVE' => 3,
+        'PRICE_LEVEL_VERY_EXPENSIVE' => 4,
+        _ => null,
+      };
+      final photos = data['photos'] as List?;
+      final photoRef = photos != null && photos.isNotEmpty
+          ? (photos.first as Map<String, dynamic>)['name'] as String?
+          : null;
+      return RestaurantDetails(
+          rating: rating, priceLevel: priceLevel, photoRef: photoRef);
+    } catch (_) {
+      return null;
+    }
   }
 }

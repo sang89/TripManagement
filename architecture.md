@@ -42,14 +42,14 @@ lib/
 ├── config/
 │   └── api_keys.dart       # Supabase URL/anon key, Google Places/Maps key, Gemini key (gitignored)
 ├── models/                 # Pure data classes — toJson/fromJson, no Flutter deps
-│   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng)
+│   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social/quickBites); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng); quick-bites fields (budgetPerHead, cuisineTags, rsvpDeadline, vibe)
 │   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role, rsvpNote (nullable)
 │   ├── event_stop.dart     # EventStop — id, eventId, title, address, lat/lng, arriveAt, departAt, notes, sortOrder
 │   ├── event_message.dart  # EventMessage — id, eventId, userId, content, enriched senderName
 │   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, publicUrl (resolved at load)
 │   ├── event_expense.dart  # EventExpense + EventExpenseSplit for cost splitting
 │   ├── event_bring_item.dart # EventBringItem — id, eventId, label, quantity, claimedBy (nullable), claimedByName, claimedAt, createdBy, createdAt
-│   ├── event_poll.dart     # EventPoll + EventPollOption + EventPollVote; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId
+│   ├── event_poll.dart     # EventPoll + EventPollOption (+ optional placeMetadata for restaurant-vote) + EventPollVote; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId
 │   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
@@ -65,9 +65,9 @@ lib/
 │   │   ├── login_screen.dart
 │   │   └── register_screen.dart
 │   ├── events/
-│   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type filter chips (All/Trip/Birthday/Wedding/Social)
+│   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type tiles grid (Trip/Birthday/Wedding/Social/Quick Bites)
 │   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; non-trip shows single location field
-│   │   ├── event_detail_screen.dart # Dynamic tabs: 8 for trips (Info, Route, Map, Guests, Chat, Photos, Expenses, Todo, Polls), 7 for others (Info, Guests, Chat, Photos, Expenses, Todo, Polls)
+│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize. Organize inner tabs: Todo/Expenses/Polls (+ Orders for quickBites). Quick Bites extras: _QuickBitesHeroCard (gradient card with vibe/budget/cuisine/RSVP), _FoodMoodSheet (emoji RSVP tiles stored as mood:<value> in rsvp_note), _FoodMoodRow, _RestaurantPollOptionRow (renders place_metadata as restaurant card), _AddRestaurantPollSheet (Places search → createRestaurantPoll), _OrdersTab/_AddOrderSheet (dish claims in bring_list_items with [order:tags] prefix)
 │   │   └── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   ├── friends/
 │   │   ├── friends_screen.dart  # Friends tab (shell tab 1): accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
@@ -186,7 +186,7 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 | `created_by` | uuid FK→auth.users | organizer |
 | `title` | text | |
 | `description` | text | default '' |
-| `event_type` | event_type enum | `trip` \| `birthday` \| `wedding` \| `social`; default `social` |
+| `event_type` | event_type enum | `trip` \| `birthday` \| `wedding` \| `social` \| `quick_bites`; default `social` |
 | `location` | text | destination for trips; venue for others |
 | `location_lat/lng` | float8 nullable | |
 | `start_location` | text nullable | trip-only — departure point |
@@ -195,6 +195,10 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 | `end_at` | timestamptz nullable | |
 | `capacity` | integer nullable | null = unlimited |
 | `invite_code` | uuid UNIQUE | auto-generated; used for public share link |
+| `budget_per_head` | numeric(10,2) nullable | quick_bites-only — expected spend per person |
+| `cuisine_tags` | text[] default '{}' | quick_bites-only — e.g. Japanese, Italian, BBQ |
+| `rsvp_deadline` | timestamptz nullable | quick_bites-only — RSVP cutoff time |
+| `vibe` | text nullable | quick_bites-only — preset mood label |
 | `created_at / updated_at` | timestamptz | |
 
 #### `event_guests`
@@ -272,6 +276,7 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 | `poll_id` | uuid FK→event_polls | CASCADE delete |
 | `text` | text | option label |
 | `sort_order` | int default 0 | |
+| `place_metadata` | jsonb nullable | non-null for restaurant-vote options — stores Places API data (place_id, name, rating, price_level, cuisine, lat/lng) |
 
 #### `event_poll_votes`
 | Column | Type | Notes |
@@ -401,7 +406,7 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 **RLS helper:** `auth_user_is_event_member(p_event_id uuid)` — `SECURITY DEFINER` function; returns true if caller is event creator OR has a guest row with `status IN ('going','maybe','accepted','pending')` for that event. `declined`/`left` do not grant access.
 
 **Authenticated RPCs (`authenticated` role only):**
-- `create_event(p_title, p_description, p_location, p_start_at, [p_location_lat, p_location_lng, p_end_at, p_capacity, p_event_type, p_start_location, p_start_lat, p_start_lng])` — `SECURITY DEFINER`; inserts an event row with `created_by = auth.uid()`, bypassing the RLS INSERT check. Used by `EventProvider.addEvent()` to avoid 42501 errors.
+- `create_event(p_title, p_description, p_location, p_start_at, [p_location_lat, p_location_lng, p_end_at, p_capacity, p_event_type, p_start_location, p_start_lat, p_start_lng, p_budget_per_head, p_cuisine_tags, p_rsvp_deadline, p_vibe])` — `SECURITY DEFINER`; inserts an event row with `created_by = auth.uid()`, bypassing the RLS INSERT check. Used by `EventProvider.addEvent()` to avoid 42501 errors. The last four params are Quick Bites-only fields with safe defaults.
 - `resend_event_invite(p_guest_id uuid)` — resets `status = 'pending'` for a guest row; triggers `on_invite_inserted` for re-notification.
 - `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone, avatar_url)` for a list of user IDs, bypassing `user_profiles` RLS. Called by `EventProvider._enrichGuestNames()`, `FriendsProvider._enrichNames()`, and `BlockedUsersProvider.load()`.
 - `search_users(p_query text)` — returns `(user_id, full_name, email)` for users matching the query by name, email, or phone, excluding the caller and existing friends. Limit 20.

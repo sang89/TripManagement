@@ -5,16 +5,21 @@ enum EventType {
   trip,
   birthday,
   wedding,
-  social;
+  social,
+  quickBites;
 
   static EventType fromString(String? s) => switch (s) {
-        'trip'     => EventType.trip,
-        'birthday' => EventType.birthday,
-        'wedding'  => EventType.wedding,
-        _          => EventType.social,
+        'trip'        => EventType.trip,
+        'birthday'    => EventType.birthday,
+        'wedding'     => EventType.wedding,
+        'quick_bites' => EventType.quickBites,
+        _             => EventType.social,
       };
 
-  String get dbValue => name; // 'trip' | 'birthday' | 'wedding' | 'social'
+  String get dbValue => switch (this) {
+        EventType.quickBites => 'quick_bites',
+        _ => name,
+      };
 }
 
 class Event {
@@ -37,6 +42,12 @@ class Event {
   final String? startLocation;
   final double? startLat;
   final double? startLng;
+
+  // Quick Bites fields (only populated when eventType == EventType.quickBites).
+  final double? budgetPerHead;
+  final List<String> cuisineTags;
+  final DateTime? rsvpDeadline;
+  final String? vibe;
 
   final List<EventGuest> guests;
   final List<EventStop> stops;
@@ -62,12 +73,17 @@ class Event {
     this.startLocation,
     this.startLat,
     this.startLng,
+    this.budgetPerHead,
+    this.cuisineTags = const [],
+    this.rsvpDeadline,
+    this.vibe,
     required this.guests,
     this.stops = const [],
     this.organizerName,
   });
 
   bool get isTrip => eventType == EventType.trip;
+  bool get isQuickBites => eventType == EventType.quickBites;
 
   factory Event.fromJson(Map<String, dynamic> json) {
     final rawStops = (json['event_stops'] as List<dynamic>? ?? [])
@@ -95,6 +111,14 @@ class Event {
       startLocation: json['start_location'] as String?,
       startLat: (json['start_lat'] as num?)?.toDouble(),
       startLng: (json['start_lng'] as num?)?.toDouble(),
+      budgetPerHead: (json['budget_per_head'] as num?)?.toDouble(),
+      cuisineTags: (json['cuisine_tags'] as List<dynamic>? ?? [])
+          .map((t) => t as String)
+          .toList(),
+      rsvpDeadline: json['rsvp_deadline'] != null
+          ? DateTime.parse(json['rsvp_deadline'] as String)
+          : null,
+      vibe: json['vibe'] as String?,
       guests: (json['event_guests'] as List<dynamic>? ?? [])
           .map((g) => EventGuest.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -115,6 +139,10 @@ class Event {
         if (startLocation != null) 'start_location': startLocation,
         if (startLat != null) 'start_lat': startLat,
         if (startLng != null) 'start_lng': startLng,
+        if (budgetPerHead != null) 'budget_per_head': budgetPerHead,
+        'cuisine_tags': cuisineTags,
+        if (rsvpDeadline != null) 'rsvp_deadline': rsvpDeadline!.toUtc().toIso8601String(),
+        if (vibe != null) 'vibe': vibe,
       };
 
   Event copyWith({
@@ -137,6 +165,13 @@ class Event {
     bool clearStartLat = false,
     double? startLng,
     bool clearStartLng = false,
+    double? budgetPerHead,
+    bool clearBudgetPerHead = false,
+    List<String>? cuisineTags,
+    DateTime? rsvpDeadline,
+    bool clearRsvpDeadline = false,
+    String? vibe,
+    bool clearVibe = false,
     List<EventGuest>? guests,
     List<EventStop>? stops,
     String? organizerName,
@@ -159,6 +194,10 @@ class Event {
         startLocation: clearStartLocation ? null : (startLocation ?? this.startLocation),
         startLat: clearStartLat ? null : (startLat ?? this.startLat),
         startLng: clearStartLng ? null : (startLng ?? this.startLng),
+        budgetPerHead: clearBudgetPerHead ? null : (budgetPerHead ?? this.budgetPerHead),
+        cuisineTags: cuisineTags ?? this.cuisineTags,
+        rsvpDeadline: clearRsvpDeadline ? null : (rsvpDeadline ?? this.rsvpDeadline),
+        vibe: clearVibe ? null : (vibe ?? this.vibe),
         guests: guests ?? this.guests,
         stops: stops ?? this.stops,
         organizerName: organizerName ?? this.organizerName,

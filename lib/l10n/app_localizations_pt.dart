@@ -750,6 +750,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => 'Atualizar detalhes, data ou localização';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -762,7 +765,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => 'Máx. de membros (opcional)';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -783,14 +786,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get infoTab => 'Info';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => 'Membros';
 
   @override
-  String get noGuestsYet =>
-      'Nenhum convidado ainda. Toque em + para adicionar um.';
+  String get noGuestsYet => 'Sem membros ainda. Toque em + para adicionar um.';
 
   @override
-  String get addGuest => 'Adicionar convidado';
+  String get addGuest => 'Adicionar membro';
 
   @override
   String get photosTab => 'Photos';
@@ -867,7 +869,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => 'Dividir entre membros';
 
   @override
   String get paidBy => 'Pago por';
@@ -932,6 +934,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get todoTab => 'Tarefas';
+
+  @override
+  String get cravingsTab => 'Desejos';
 
   @override
   String get pollsTab => 'Enquetes';
@@ -1004,12 +1009,68 @@ class AppLocalizationsPt extends AppLocalizations {
   String get confirmRsvp => 'Confirmar';
 
   @override
+  String get foodMoodTitle => 'Com quanta fome você está?';
+
+  @override
+  String get foodMoodStarving => 'Morrendo de fome';
+
+  @override
+  String get foodMoodCouldEat => 'Poderia comer';
+
+  @override
+  String get foodMoodDrinksOnly => 'Só para beber';
+
+  @override
+  String get foodMoodNibble => 'Vou beliscar';
+
+  @override
+  String get foodMoodDDMode => 'Motorista designado';
+
+  @override
+  String get cravingsPrompt => 'O que você está com vontade?';
+
+  @override
+  String get cravingsHint =>
+      'ramen picante, ambiente aconchegante, menos de R\$20...';
+
+  @override
+  String get cravingsPrivacyNote => 'Só você pode ver isso';
+
+  @override
+  String get cravingsFindButton => 'Encontre um lugar para mim';
+
+  @override
+  String get cravingsEmpty =>
+      'Sem resultados. Tente palavras-chave diferentes.';
+
+  @override
+  String get cravingsPitchButton => 'Propor ao grupo';
+
+  @override
+  String get cravingsPitched => 'Adicionado à votação do grupo!';
+
+  @override
+  String get restaurantPollTitle => 'Escolher um lugar';
+
+  @override
+  String get addRestaurantOption => 'Adicionar restaurante';
+
+  @override
+  String get restaurantSearchHint => 'Pesquisar restaurantes...';
+
+  @override
+  String get setAsVenueButton => 'Definir como local';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => 'Remover permanentemente este evento';
 
   @override
   String deleteEventMessage(String title) {
@@ -1027,6 +1088,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get eventTypeSocial => 'Social';
+
+  @override
+  String get eventTypeQuickBites => 'Petiscos Rápidos';
 
   @override
   String get eventTypePicker => 'Tipo de evento';
@@ -1125,4 +1189,19 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP e planejamento básico';
+
+  @override
+  String get budgetPerHeadLabel => 'Orçamento por pessoa (opcional)';
+
+  @override
+  String get cuisineTagsLabel => 'Cozinha';
+
+  @override
+  String get rsvpDeadlineLabel => 'Prazo de confirmação';
+
+  @override
+  String get rsvpDeadlineClosed => 'Confirmação encerrada';
+
+  @override
+  String get vibePickerLabel => 'Clima (opcional)';
 }

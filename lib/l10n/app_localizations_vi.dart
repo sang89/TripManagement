@@ -750,6 +750,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get editEvent => 'Edit event';
 
   @override
+  String get editEventSubtitle => 'Cập nhật chi tiết, ngày hoặc địa điểm';
+
+  @override
   String get saveEvent => 'Save event';
 
   @override
@@ -762,7 +765,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get eventLocation => 'Location';
 
   @override
-  String get eventCapacity => 'Max guests (optional)';
+  String get eventCapacity => 'Tối đa thành viên (tuỳ chọn)';
 
   @override
   String get eventStartDateTime => 'Start date & time';
@@ -783,13 +786,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get infoTab => 'Thông tin';
 
   @override
-  String get guestsTab => 'Guests';
+  String get guestsTab => 'Thành viên';
 
   @override
-  String get noGuestsYet => 'Chưa có khách. Nhấn + để thêm khách.';
+  String get noGuestsYet => 'Chưa có thành viên. Nhấn + để thêm.';
 
   @override
-  String get addGuest => 'Thêm khách';
+  String get addGuest => 'Thêm thành viên';
 
   @override
   String get photosTab => 'Photos';
@@ -866,7 +869,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get expenseAmount => 'Amount';
 
   @override
-  String get splitAmong => 'Split among guests';
+  String get splitAmong => 'Chia đều cho thành viên';
 
   @override
   String get paidBy => 'Người trả';
@@ -931,6 +934,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get todoTab => 'Việc cần làm';
+
+  @override
+  String get cravingsTab => 'Thèm ăn';
 
   @override
   String get pollsTab => 'Bình chọn';
@@ -1003,12 +1009,66 @@ class AppLocalizationsVi extends AppLocalizations {
   String get confirmRsvp => 'Xác nhận';
 
   @override
+  String get foodMoodTitle => 'Bạn đói bao nhiêu?';
+
+  @override
+  String get foodMoodStarving => 'Đói lắm rồi';
+
+  @override
+  String get foodMoodCouldEat => 'Có thể ăn';
+
+  @override
+  String get foodMoodDrinksOnly => 'Chỉ uống thôi';
+
+  @override
+  String get foodMoodNibble => 'Nhấm nháp thôi';
+
+  @override
+  String get foodMoodDDMode => 'Tài xế hôm nay';
+
+  @override
+  String get cravingsPrompt => 'Bạn đang thèm gì?';
+
+  @override
+  String get cravingsHint => 'ramen cay, không khí ấm cúng, dưới 200k...';
+
+  @override
+  String get cravingsPrivacyNote => 'Chỉ bạn mới thấy điều này';
+
+  @override
+  String get cravingsFindButton => 'Tìm chỗ cho tôi';
+
+  @override
+  String get cravingsEmpty => 'Không tìm thấy kết quả. Thử từ khóa khác.';
+
+  @override
+  String get cravingsPitchButton => 'Đề xuất với nhóm';
+
+  @override
+  String get cravingsPitched => 'Đã thêm vào bình chọn nhóm!';
+
+  @override
+  String get restaurantPollTitle => 'Chọn địa điểm';
+
+  @override
+  String get addRestaurantOption => 'Thêm nhà hàng';
+
+  @override
+  String get restaurantSearchHint => 'Tìm nhà hàng...';
+
+  @override
+  String get setAsVenueButton => 'Đặt làm địa điểm';
+
+  @override
   String organizedBy(String name) {
     return 'Organised by $name';
   }
 
   @override
   String get deleteEventTitle => 'Delete event';
+
+  @override
+  String get deleteEventSubtitle => 'Xóa vĩnh viễn sự kiện này';
 
   @override
   String deleteEventMessage(String title) {
@@ -1026,6 +1086,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get eventTypeSocial => 'Xã hội';
+
+  @override
+  String get eventTypeQuickBites => 'Bữa Ăn Nhanh';
 
   @override
   String get eventTypePicker => 'Loại sự kiện';
@@ -1123,4 +1186,19 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get freeBasicPlanning => 'RSVP & lập kế hoạch cơ bản';
+
+  @override
+  String get budgetPerHeadLabel => 'Ngân sách mỗi người (tuỳ chọn)';
+
+  @override
+  String get cuisineTagsLabel => 'Ẩm thực';
+
+  @override
+  String get rsvpDeadlineLabel => 'Hạn phản hồi';
+
+  @override
+  String get rsvpDeadlineClosed => 'Đã đóng phản hồi';
+
+  @override
+  String get vibePickerLabel => 'Không khí (tuỳ chọn)';
 }

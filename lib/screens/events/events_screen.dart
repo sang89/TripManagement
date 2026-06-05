@@ -120,6 +120,11 @@ class _TypeTile extends StatelessWidget {
           [const Color(0xFFE65100), const Color(0xFFFF8A65)],
           l10n.eventTypeSocial,
         ),
+      EventType.quickBites => (
+          Icons.restaurant_outlined,
+          [const Color(0xFF558B2F), const Color(0xFF9CCC65)],
+          l10n.eventTypeQuickBites,
+        ),
     };
 
     return AppTappable(
