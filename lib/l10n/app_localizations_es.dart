@@ -1041,4 +1041,88 @@ class AppLocalizationsEs extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return 'Serás eliminado de $eventTitle y perderás el acceso.';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle =>
+      'Haz preguntas sobre tu destino o describe tu estilo para añadir paradas al itinerario.';
+
+  @override
+  String get aiChatHint => 'Pregunta lo que quieras sobre tu viaje...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => 'Pro';
+
+  @override
+  String tierProTrial(String date) {
+    return 'Prueba Pro · Termina el $date';
+  }
+
+  @override
+  String get cancelTrial => 'Cancelar prueba';
+
+  @override
+  String get cancelTrialConfirmTitle => '¿Cancelar tu prueba gratuita?';
+
+  @override
+  String get cancelTrialConfirmMessage =>
+      'Perderás acceso inmediato a las funciones Pro. Puedes actualizar a Pro más tarde.';
+
+  @override
+  String get cancelTrialSuccess =>
+      'Tu prueba ha sido cancelada. Ahora estás en el plan Básico.';
+
+  @override
+  String get cancelTrialError =>
+      'No se pudo cancelar la prueba. Inténtalo de nuevo.';
+
+  @override
+  String get upgradeToPro => 'Actualizar a Pro';
+
+  @override
+  String get upgradeNow => 'Actualizar ahora';
+
+  @override
+  String get proAnnualPrice => '\$39.99 / año';
+
+  @override
+  String get proMonthlyPrice => '\$4.99 / mes';
+
+  @override
+  String get proAnnualSavings => 'Ahorra 33%';
+
+  @override
+  String get comparePlans => 'Comparar planes';
+
+  @override
+  String get restorePurchases => 'Restaurar compras';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => 'Eventos e invitados ilimitados';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => 'Acceso sin conexión';
+
+  @override
+  String get proFeatureTemplates => 'Plantillas de eventos';
+
+  @override
+  String get freeEventsLimit => 'Eventos (máx. 3)';
+
+  @override
+  String get freeGuestsLimit => 'Invitados (máx. 10)';
+
+  @override
+  String get freeBasicPlanning => 'RSVP y planificación básica';
 }

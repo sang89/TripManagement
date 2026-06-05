@@ -1036,4 +1036,86 @@ class AppLocalizationsAr extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return 'ستتم إزالتك من $eventTitle وستفقد الوصول.';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle =>
+      'اطرح أسئلة حول وجهتك، أو صف أسلوبك لإضافة محطات إلى خط سيرك.';
+
+  @override
+  String get aiChatHint => 'اسأل أي شيء عن رحلتك...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => 'برو';
+
+  @override
+  String tierProTrial(String date) {
+    return 'تجربة برو · تنتهي $date';
+  }
+
+  @override
+  String get cancelTrial => 'إلغاء التجربة';
+
+  @override
+  String get cancelTrialConfirmTitle => 'إلغاء تجربتك المجانية؟';
+
+  @override
+  String get cancelTrialConfirmMessage =>
+      'ستفقد الوصول إلى ميزات Pro فوراً. يمكنك الترقية لاحقاً.';
+
+  @override
+  String get cancelTrialSuccess => 'تم إلغاء تجربتك. أنت الآن على خطة Basic.';
+
+  @override
+  String get cancelTrialError => 'فشل إلغاء التجربة. حاول مرة أخرى.';
+
+  @override
+  String get upgradeToPro => 'ترقية إلى برو';
+
+  @override
+  String get upgradeNow => 'الترقية الآن';
+
+  @override
+  String get proAnnualPrice => '39.99 دولار / سنة';
+
+  @override
+  String get proMonthlyPrice => '4.99 دولار / شهر';
+
+  @override
+  String get proAnnualSavings => 'وفر 33%';
+
+  @override
+  String get comparePlans => 'قارن الخطط';
+
+  @override
+  String get restorePurchases => 'استعادة المشتريات';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => 'فعاليات وضيوف غير محدودين';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => 'الوصول دون اتصال';
+
+  @override
+  String get proFeatureTemplates => 'قوالب الفعاليات';
+
+  @override
+  String get freeEventsLimit => 'الفعاليات (3 كحد أقصى)';
+
+  @override
+  String get freeGuestsLimit => 'الضيوف (10 كحد أقصى)';
+
+  @override
+  String get freeBasicPlanning => 'التسجيل والتخطيط الأساسي';
 }

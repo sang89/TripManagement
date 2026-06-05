@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart' show GoRouterHelper;
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/subscription_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../utils/avatar_utils.dart';
 import '../../utils/formatters.dart';
@@ -190,6 +192,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _cancelTrial() async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.cancelTrialConfirmTitle),
+        content: Text(l10n.cancelTrialConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.cancelTrial,
+                style: TextStyle(color: Colors.grey[700])),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<SubscriptionProvider>().cancelTrial();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.cancelTrialSuccess)));
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.cancelTrialError),
+        backgroundColor: AppTheme.danger,
+      ));
+    }
+  }
+
   Future<void> _logout() async {
     final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
@@ -219,6 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<UserProfileProvider>();
+    final sub = context.watch<SubscriptionProvider>();
     final auth = context.read<AuthProvider>();
     final l10n = AppLocalizations.of(context);
 
@@ -283,18 +321,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: Column(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
           children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
                   _ProfileHeader(
                     displayName: displayName,
                     email: auth.userEmail,
                     avatarUrl: profile.avatarUrl,
                     updatedAt: profile.updatedAt,
                     uploading: _uploading,
+                    isPro: sub.isPro,
+                    isInTrial: sub.isInTrial,
+                    trialEndsAt: sub.trialEndsAt,
                     onAvatarTap: () => _showAvatarOptions(profile),
                   ),
                   const SizedBox(height: 20),
@@ -386,26 +424,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _AccountCard(
                     l10n: l10n,
                     memberSince: memberSinceText,
+                    editing: _editing,
+                    saving: _saving,
+                    isInTrial: sub.isInTrial,
+                    onSave: () => _save(profile),
                     onLogout: _logout,
+                    onCancelTrial: _cancelTrial,
+                    onUpgrade: () => context.push('/paywall'),
                   ),
                 ],
-              ),
-            ),
-            if (_editing)
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: AppButton(
-                    label: l10n.saveChanges,
-                    onPressed: () => _save(profile),
-                    loading: _saving,
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
-      ),
     );
   }
 }
@@ -418,6 +447,9 @@ class _ProfileHeader extends StatelessWidget {
   final String avatarUrl;
   final DateTime updatedAt;
   final bool uploading;
+  final bool isPro;
+  final bool isInTrial;
+  final DateTime? trialEndsAt;
   final VoidCallback onAvatarTap;
 
   const _ProfileHeader({
@@ -426,6 +458,9 @@ class _ProfileHeader extends StatelessWidget {
     required this.avatarUrl,
     required this.updatedAt,
     required this.uploading,
+    required this.isPro,
+    required this.isInTrial,
+    required this.trialEndsAt,
     required this.onAvatarTap,
   });
 
@@ -550,7 +585,123 @@ class _ProfileHeader extends StatelessWidget {
             style: const TextStyle(color: Colors.white70, fontSize: 14),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 12),
+          _TierBadge(isPro: isPro, isInTrial: isInTrial, trialEndsAt: trialEndsAt),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Tier Badge ────────────────────────────────────────────────────────────────
+
+class _TierBadge extends StatelessWidget {
+  final bool isPro;
+  final bool isInTrial;
+  final DateTime? trialEndsAt;
+
+  const _TierBadge({
+    required this.isPro,
+    required this.isInTrial,
+    required this.trialEndsAt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    if (isPro) {
+      final label = isInTrial && trialEndsAt != null
+          ? l10n.tierProTrial('${trialEndsAt!.month}/${trialEndsAt!.day}/${trialEndsAt!.year}')
+          : l10n.tierPro;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppTheme.accent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.workspace_premium_rounded,
+                size: 13, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Free tier — two-part upgrade badge
+    return AppTappable(
+      onTap: () => context.push('/paywall'),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white24, width: 0.5),
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.shield_outlined,
+                      size: 13, color: Colors.white60),
+                  const SizedBox(width: 5),
+                  Text(
+                    l10n.tierFree,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(width: 0.5, height: 18, color: Colors.white24),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                ),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(22),
+                  bottomRight: Radius.circular(22),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'Upgrade',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -692,12 +843,24 @@ class _ViewRow extends StatelessWidget {
 class _AccountCard extends StatelessWidget {
   final AppLocalizations l10n;
   final String memberSince;
+  final bool editing;
+  final bool saving;
+  final bool isInTrial;
+  final VoidCallback onSave;
   final VoidCallback onLogout;
+  final VoidCallback onCancelTrial;
+  final VoidCallback onUpgrade;
 
   const _AccountCard({
     required this.l10n,
     required this.memberSince,
+    required this.editing,
+    required this.saving,
+    required this.isInTrial,
+    required this.onSave,
     required this.onLogout,
+    required this.onCancelTrial,
+    required this.onUpgrade,
   });
 
   @override
@@ -729,6 +892,62 @@ class _AccountCard extends StatelessWidget {
             const SizedBox(height: 12),
             _ViewRow(label: l10n.memberSince, value: memberSince),
             const SizedBox(height: 16),
+            if (editing) ...[
+              AppButton(
+                label: l10n.saveChanges,
+                onPressed: onSave,
+                loading: saving,
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (isInTrial) ...[
+              AppTappable(
+                onTap: onUpgrade,
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1D4ED8), Color(0xFF7C3AED)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.workspace_premium_rounded,
+                          size: 16, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.upgradeNow,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: onCancelTrial,
+                icon: Icon(Icons.cancel_outlined, color: Colors.grey[600]),
+                label: Text(l10n.cancelTrial,
+                    style: TextStyle(color: Colors.grey[600])),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  side: BorderSide(color: Colors.grey[400]!),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             OutlinedButton.icon(
               onPressed: onLogout,
               icon: const Icon(Icons.logout, color: AppTheme.danger),

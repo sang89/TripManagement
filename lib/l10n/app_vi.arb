@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "Hỏi về điểm đến hoặc mô tả phong cách của bạn để thêm điểm dừng vào lịch trình.",
+  "aiChatHint": "Hỏi bất cứ điều gì về chuyến đi của bạn..."
+,  "tierFree": "Basic",
+  "tierProTrial": "Dùng thử Pro · Kết thúc {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "Hủy dùng thử",
+  "cancelTrialConfirmTitle": "Hủy bản dùng thử miễn phí?",
+  "cancelTrialConfirmMessage": "Bạn sẽ mất quyền truy cập các tính năng Pro ngay lập tức. Bạn có thể nâng cấp Pro sau.",
+  "cancelTrialSuccess": "Bản dùng thử đã bị hủy. Bạn đang dùng gói Basic.",
+  "cancelTrialError": "Không thể hủy dùng thử. Vui lòng thử lại.",
+  "tierPro": "Pro",
+  "upgradeToPro": "Nâng cấp lên Pro",
+  "upgradeNow": "Nâng cấp ngay",
+  "proAnnualPrice": "$39.99 / năm",
+  "proMonthlyPrice": "$4.99 / tháng",
+  "proAnnualSavings": "Tiết kiệm 33%",
+  "comparePlans": "So sánh gói",
+  "restorePurchases": "Khôi phục giao dịch",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "Sự kiện & khách không giới hạn",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "Truy cập ngoại tuyến",
+  "proFeatureTemplates": "Mẫu sự kiện",
+  "freeEventsLimit": "Sự kiện (tối đa 3)",
+  "freeGuestsLimit": "Khách (tối đa 10)",
+  "freeBasicPlanning": "RSVP & lập kế hoạch cơ bản"
 }

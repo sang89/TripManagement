@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "Faça perguntas sobre seu destino ou descreva seu estilo para adicionar paradas ao roteiro.",
+  "aiChatHint": "Pergunte qualquer coisa sobre sua viagem..."
+,  "tierFree": "Basic",
+  "tierProTrial": "Teste Pro · Termina em {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "Cancelar teste",
+  "cancelTrialConfirmTitle": "Cancelar seu teste gratuito?",
+  "cancelTrialConfirmMessage": "Você perderá acesso imediato aos recursos Pro. Você pode fazer upgrade para Pro mais tarde.",
+  "cancelTrialSuccess": "Seu teste foi cancelado. Agora você está no plano Basic.",
+  "cancelTrialError": "Falha ao cancelar o teste. Por favor, tente novamente.",
+  "tierPro": "Pro",
+  "upgradeToPro": "Atualizar para Pro",
+  "upgradeNow": "Atualizar agora",
+  "proAnnualPrice": "$39,99 / ano",
+  "proMonthlyPrice": "$4,99 / mês",
+  "proAnnualSavings": "Economize 33%",
+  "comparePlans": "Comparar planos",
+  "restorePurchases": "Restaurar compras",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "Eventos e convidados ilimitados",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "Acesso offline",
+  "proFeatureTemplates": "Modelos de eventos",
+  "freeEventsLimit": "Eventos (máx. 3)",
+  "freeGuestsLimit": "Convidados (máx. 10)",
+  "freeBasicPlanning": "RSVP e planejamento básico"
 }

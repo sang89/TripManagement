@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "询问目的地相关问题，或描述您的风格以添加行程站点。",
+  "aiChatHint": "询问任何关于您旅行的问题..."
+,  "tierFree": "Basic",
+  "tierProTrial": "Pro 试用 · 结束于 {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "取消试用",
+  "cancelTrialConfirmTitle": "取消您的免费试用？",
+  "cancelTrialConfirmMessage": "您将立即失去对Pro功能的访问权限。您可以稍后升级到Pro。",
+  "cancelTrialSuccess": "您的试用已取消。您现在使用的是Basic计划。",
+  "cancelTrialError": "取消试用失败，请重试。",
+  "tierPro": "专业版",
+  "upgradeToPro": "升级到专业版",
+  "upgradeNow": "立即升级",
+  "proAnnualPrice": "$39.99 / 年",
+  "proMonthlyPrice": "$4.99 / 月",
+  "proAnnualSavings": "节省33%",
+  "comparePlans": "比较方案",
+  "restorePurchases": "恢复购买",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "无限活动和嘉宾",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "离线访问",
+  "proFeatureTemplates": "活动模板",
+  "freeEventsLimit": "活动（最多3个）",
+  "freeGuestsLimit": "嘉宾（最多10人）",
+  "freeBasicPlanning": "RSVP和基本规划"
 }

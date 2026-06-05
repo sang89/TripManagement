@@ -2015,6 +2015,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You will be removed from {eventTitle} and lose access.'**
   String leaveEventMessage(String eventTitle);
+
+  /// No description provided for @generateWithAi.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get generateWithAi;
+
+  /// No description provided for @aiTripPlannerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask anything about your event — plan activities, explore ideas, or get smart suggestions tailored to your group.'**
+  String get aiTripPlannerSubtitle;
+
+  /// No description provided for @aiChatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask me anything...'**
+  String get aiChatHint;
+
+  /// No description provided for @tierFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get tierFree;
+
+  /// No description provided for @tierPro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pro'**
+  String get tierPro;
+
+  /// No description provided for @tierProTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Pro Trial · Ends {date}'**
+  String tierProTrial(String date);
+
+  /// No description provided for @cancelTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Trial'**
+  String get cancelTrial;
+
+  /// No description provided for @cancelTrialConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel your free trial?'**
+  String get cancelTrialConfirmTitle;
+
+  /// No description provided for @cancelTrialConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You will lose access to Pro features immediately. You can upgrade to Pro later.'**
+  String get cancelTrialConfirmMessage;
+
+  /// No description provided for @cancelTrialSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your trial has been cancelled. You are now on the Basic plan.'**
+  String get cancelTrialSuccess;
+
+  /// No description provided for @cancelTrialError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel trial. Please try again.'**
+  String get cancelTrialError;
+
+  /// No description provided for @upgradeToPro.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Pro'**
+  String get upgradeToPro;
+
+  /// No description provided for @upgradeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade Now'**
+  String get upgradeNow;
+
+  /// No description provided for @proAnnualPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'\$39.99 / year'**
+  String get proAnnualPrice;
+
+  /// No description provided for @proMonthlyPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'\$4.99 / month'**
+  String get proMonthlyPrice;
+
+  /// No description provided for @proAnnualSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Save 33%'**
+  String get proAnnualSavings;
+
+  /// No description provided for @comparePlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare plans'**
+  String get comparePlans;
+
+  /// No description provided for @restorePurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get restorePurchases;
+
+  /// No description provided for @proFeatureAIPlanner.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Event Assistant'**
+  String get proFeatureAIPlanner;
+
+  /// No description provided for @proFeatureUnlimitedEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited events & guests'**
+  String get proFeatureUnlimitedEvents;
+
+  /// No description provided for @proFeatureExpenseExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense export'**
+  String get proFeatureExpenseExport;
+
+  /// No description provided for @proFeatureOfflineAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline access'**
+  String get proFeatureOfflineAccess;
+
+  /// No description provided for @proFeatureTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Event templates'**
+  String get proFeatureTemplates;
+
+  /// No description provided for @freeEventsLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Events (3 max)'**
+  String get freeEventsLimit;
+
+  /// No description provided for @freeGuestsLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Guests (10 max)'**
+  String get freeGuestsLimit;
+
+  /// No description provided for @freeBasicPlanning.
+  ///
+  /// In en, this message translates to:
+  /// **'RSVP & basic planning'**
+  String get freeBasicPlanning;
 }
 
 class _AppLocalizationsDelegate

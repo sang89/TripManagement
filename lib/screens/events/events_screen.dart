@@ -1,13 +1,51 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/event_provider.dart';
+import '../../providers/subscription_provider.dart';
 
-class EventsScreen extends StatelessWidget {
+class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
+
+  @override
+  State<EventsScreen> createState() => _EventsScreenState();
+}
+
+class _EventsScreenState extends State<EventsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // On web, Stripe redirects back to /events?stripe_success=true after payment.
+    // Reload subscription so isPro updates without requiring a restart.
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final uri = Uri.base;
+        if (uri.queryParameters['stripe_success'] == 'true') {
+          final uid = context.read<AuthProvider>().userId;
+          if (uid != null) {
+            context.read<SubscriptionProvider>().load(uid);
+          }
+          // Clean the query param from the URL
+          context.go('/events');
+        }
+      });
+    }
+  }
+
+  void _onFabTap() {
+    final events = context.read<EventProvider>();
+    final sub = context.read<SubscriptionProvider>();
+    if (!sub.isPro && events.myEvents.length >= 3) {
+      context.push('/paywall');
+      return;
+    }
+    context.push('/event/new');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +53,7 @@ class EventsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.navEvents)),
-      floatingActionButton: AppFab(onPressed: () => context.push('/event/new')),
+      floatingActionButton: AppFab(onPressed: _onFabTap),
       body: Consumer<EventProvider>(
         builder: (_, provider, _) {
           final all = [...provider.myEvents, ...provider.invitedEvents];

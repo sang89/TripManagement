@@ -1040,4 +1040,87 @@ class AppLocalizationsVi extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return 'Bạn sẽ bị xóa khỏi $eventTitle và mất quyền truy cập.';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle =>
+      'Hỏi về điểm đến hoặc mô tả phong cách của bạn để thêm điểm dừng vào lịch trình.';
+
+  @override
+  String get aiChatHint => 'Hỏi bất cứ điều gì về chuyến đi của bạn...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => 'Pro';
+
+  @override
+  String tierProTrial(String date) {
+    return 'Dùng thử Pro · Kết thúc $date';
+  }
+
+  @override
+  String get cancelTrial => 'Hủy dùng thử';
+
+  @override
+  String get cancelTrialConfirmTitle => 'Hủy bản dùng thử miễn phí?';
+
+  @override
+  String get cancelTrialConfirmMessage =>
+      'Bạn sẽ mất quyền truy cập các tính năng Pro ngay lập tức. Bạn có thể nâng cấp Pro sau.';
+
+  @override
+  String get cancelTrialSuccess =>
+      'Bản dùng thử đã bị hủy. Bạn đang dùng gói Basic.';
+
+  @override
+  String get cancelTrialError => 'Không thể hủy dùng thử. Vui lòng thử lại.';
+
+  @override
+  String get upgradeToPro => 'Nâng cấp lên Pro';
+
+  @override
+  String get upgradeNow => 'Nâng cấp ngay';
+
+  @override
+  String get proAnnualPrice => '\$39.99 / năm';
+
+  @override
+  String get proMonthlyPrice => '\$4.99 / tháng';
+
+  @override
+  String get proAnnualSavings => 'Tiết kiệm 33%';
+
+  @override
+  String get comparePlans => 'So sánh gói';
+
+  @override
+  String get restorePurchases => 'Khôi phục giao dịch';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => 'Sự kiện & khách không giới hạn';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => 'Truy cập ngoại tuyến';
+
+  @override
+  String get proFeatureTemplates => 'Mẫu sự kiện';
+
+  @override
+  String get freeEventsLimit => 'Sự kiện (tối đa 3)';
+
+  @override
+  String get freeGuestsLimit => 'Khách (tối đa 10)';
+
+  @override
+  String get freeBasicPlanning => 'RSVP & lập kế hoạch cơ bản';
 }

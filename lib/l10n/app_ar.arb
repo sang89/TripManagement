@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "اطرح أسئلة حول وجهتك، أو صف أسلوبك لإضافة محطات إلى خط سيرك.",
+  "aiChatHint": "اسأل أي شيء عن رحلتك..."
+,  "tierFree": "Basic",
+  "tierProTrial": "تجربة برو · تنتهي {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "إلغاء التجربة",
+  "cancelTrialConfirmTitle": "إلغاء تجربتك المجانية؟",
+  "cancelTrialConfirmMessage": "ستفقد الوصول إلى ميزات Pro فوراً. يمكنك الترقية لاحقاً.",
+  "cancelTrialSuccess": "تم إلغاء تجربتك. أنت الآن على خطة Basic.",
+  "cancelTrialError": "فشل إلغاء التجربة. حاول مرة أخرى.",
+  "tierPro": "برو",
+  "upgradeToPro": "ترقية إلى برو",
+  "upgradeNow": "الترقية الآن",
+  "proAnnualPrice": "39.99 دولار / سنة",
+  "proMonthlyPrice": "4.99 دولار / شهر",
+  "proAnnualSavings": "وفر 33%",
+  "comparePlans": "قارن الخطط",
+  "restorePurchases": "استعادة المشتريات",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "فعاليات وضيوف غير محدودين",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "الوصول دون اتصال",
+  "proFeatureTemplates": "قوالب الفعاليات",
+  "freeEventsLimit": "الفعاليات (3 كحد أقصى)",
+  "freeGuestsLimit": "الضيوف (10 كحد أقصى)",
+  "freeBasicPlanning": "التسجيل والتخطيط الأساسي"
 }

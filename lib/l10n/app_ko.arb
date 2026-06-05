@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "목적지에 대해 질문하거나 스타일을 설명해 일정에 장소를 추가하세요.",
+  "aiChatHint": "여행에 대해 무엇이든 물어보세요..."
+,  "tierFree": "Basic",
+  "tierProTrial": "Pro 체험 · {date} 종료",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "체험 취소",
+  "cancelTrialConfirmTitle": "무료 체험을 취소하시겠어요?",
+  "cancelTrialConfirmMessage": "Pro 기능에 대한 접근이 즉시 중단됩니다. 나중에 Pro로 업그레이드할 수 있습니다.",
+  "cancelTrialSuccess": "체험이 취소되었습니다. 현재 Basic 플랜입니다.",
+  "cancelTrialError": "체험 취소에 실패했습니다. 다시 시도해 주세요.",
+  "tierPro": "프로",
+  "upgradeToPro": "프로로 업그레이드",
+  "upgradeNow": "지금 업그레이드",
+  "proAnnualPrice": "$39.99 / 년",
+  "proMonthlyPrice": "$4.99 / 월",
+  "proAnnualSavings": "33% 절약",
+  "comparePlans": "플랜 비교",
+  "restorePurchases": "구매 복원",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "무제한 이벤트 & 게스트",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "오프라인 액세스",
+  "proFeatureTemplates": "이벤트 템플릿",
+  "freeEventsLimit": "이벤트 (최대 3개)",
+  "freeGuestsLimit": "게스트 (최대 10명)",
+  "freeBasicPlanning": "RSVP & 기본 계획"
 }

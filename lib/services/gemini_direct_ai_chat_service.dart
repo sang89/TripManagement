@@ -16,6 +16,7 @@ class GeminiDirectAIChatService implements AIChatService {
       String name,
       Map<String, dynamic> args,
     ) onToolCall,
+    List<Map<String, dynamic>>? tools,
   }) async {
     final result = await GeminiService.send(
       apiKey: kGeminiApiKey,
@@ -23,6 +24,7 @@ class GeminiDirectAIChatService implements AIChatService {
       history: history,
       userMessage: userMessage,
       onToolCall: onToolCall,
+      tools: tools,
     );
     return AIChatResult(
       text: result.text,
