@@ -32,10 +32,12 @@ import '../../providers/auth_provider.dart';
 import '../../providers/event_chat_provider.dart';
 import '../../providers/event_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../providers/subscription_provider.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/user_lookup_service.dart';
 import '../../utils/avatar_utils.dart';
 import '../../widgets/add_member_sheet.dart';
+import '../../widgets/ai_itinerary_sheet.dart';
 import '../../widgets/event_map_widget.dart';
 import '../../widgets/event_stop_form_sheet.dart';
 
@@ -51,6 +53,7 @@ class EventDetailScreen extends StatefulWidget {
 class _EventDetailScreenState extends State<EventDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _aiChatSession = AiChatSession();
 
   @override
   void initState() {
@@ -71,6 +74,22 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _openAiSheet(BuildContext context, Event event, bool isOrganizer) {
+    final sub = context.read<SubscriptionProvider>();
+    if (!sub.isPro) {
+      context.push('/paywall');
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => AiItinerarySheet(event: event, session: _aiChatSession),
+    );
   }
 
   List<EventMapPin> _buildMapPins(Event event) {
@@ -150,6 +169,12 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               ],
             ),
             actions: [
+              if (event.isTrip)
+                IconButton(
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  tooltip: l10n.generateWithAi,
+                  onPressed: () => _openAiSheet(context, event, isOrganizer),
+                ),
               IconButton(
                 icon: const Icon(Icons.share_outlined),
                 tooltip: l10n.shareEvent,
@@ -2181,6 +2206,11 @@ class _GuestsTabState extends State<_GuestsTab> {
   }
 
   Future<void> _showAddGuest() async {
+    final sub = context.read<SubscriptionProvider>();
+    if (!sub.isPro && widget.event.guests.length >= 10) {
+      context.push('/paywall');
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -4064,6 +4094,10 @@ class _SettlementSheetState extends State<_SettlementSheet> {
   }
 
   void _showExportOptions(BuildContext context) {
+    if (!context.read<SubscriptionProvider>().isPro) {
+      context.push('/paywall');
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(

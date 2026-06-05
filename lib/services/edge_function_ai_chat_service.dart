@@ -19,6 +19,7 @@ class EdgeFunctionAIChatService implements AIChatService {
       String name,
       Map<String, dynamic> args,
     ) onToolCall,
+    List<Map<String, dynamic>>? tools,
   }) async {
     final contents = <Map<String, dynamic>>[
       ...history,
@@ -37,6 +38,7 @@ class EdgeFunctionAIChatService implements AIChatService {
       final round = await _callEdgeFunction(
         systemContext: systemContext,
         contents: contents,
+        tools: tools,
       );
 
       final type = round['type'] as String;
@@ -83,6 +85,7 @@ class EdgeFunctionAIChatService implements AIChatService {
   Future<Map<String, dynamic>> _callEdgeFunction({
     required String systemContext,
     required List<Map<String, dynamic>> contents,
+    List<Map<String, dynamic>>? tools,
   }) async {
     try {
       final response = await _supabase.functions.invoke(
@@ -90,7 +93,7 @@ class EdgeFunctionAIChatService implements AIChatService {
         body: {
           'systemContext': systemContext,
           'contents': contents,
-          'tools': kGeminiTools,
+          'tools': tools ?? kGeminiTools,
         },
       );
       return response.data as Map<String, dynamic>;

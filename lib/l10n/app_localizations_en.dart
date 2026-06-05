@@ -1037,4 +1037,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return 'You will be removed from $eventTitle and lose access.';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle =>
+      'Ask anything about your event — plan activities, explore ideas, or get smart suggestions tailored to your group.';
+
+  @override
+  String get aiChatHint => 'Ask me anything...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => 'Pro';
+
+  @override
+  String tierProTrial(String date) {
+    return 'Pro Trial · Ends $date';
+  }
+
+  @override
+  String get cancelTrial => 'Cancel Trial';
+
+  @override
+  String get cancelTrialConfirmTitle => 'Cancel your free trial?';
+
+  @override
+  String get cancelTrialConfirmMessage =>
+      'You will lose access to Pro features immediately. You can upgrade to Pro later.';
+
+  @override
+  String get cancelTrialSuccess =>
+      'Your trial has been cancelled. You are now on the Basic plan.';
+
+  @override
+  String get cancelTrialError => 'Failed to cancel trial. Please try again.';
+
+  @override
+  String get upgradeToPro => 'Upgrade to Pro';
+
+  @override
+  String get upgradeNow => 'Upgrade Now';
+
+  @override
+  String get proAnnualPrice => '\$39.99 / year';
+
+  @override
+  String get proMonthlyPrice => '\$4.99 / month';
+
+  @override
+  String get proAnnualSavings => 'Save 33%';
+
+  @override
+  String get comparePlans => 'Compare plans';
+
+  @override
+  String get restorePurchases => 'Restore purchases';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => 'Unlimited events & guests';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => 'Offline access';
+
+  @override
+  String get proFeatureTemplates => 'Event templates';
+
+  @override
+  String get freeEventsLimit => 'Events (3 max)';
+
+  @override
+  String get freeGuestsLimit => 'Guests (10 max)';
+
+  @override
+  String get freeBasicPlanning => 'RSVP & basic planning';
 }

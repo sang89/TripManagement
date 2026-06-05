@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "Stellen Sie Fragen zu Ihrem Reiseziel oder beschreiben Sie Ihren Stil, um Stopps hinzuzufügen.",
+  "aiChatHint": "Stellen Sie beliebige Fragen zu Ihrer Reise..."
+,  "tierFree": "Basic",
+  "tierProTrial": "Pro Testphase · Endet {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "Testphase kündigen",
+  "cancelTrialConfirmTitle": "Kostenlose Testphase kündigen?",
+  "cancelTrialConfirmMessage": "Sie verlieren sofort den Zugriff auf Pro-Funktionen. Sie können später auf Pro upgraden.",
+  "cancelTrialSuccess": "Ihre Testphase wurde gekündigt. Sie befinden sich jetzt im Basic-Tarif.",
+  "cancelTrialError": "Testphase konnte nicht gekündigt werden. Bitte versuchen Sie es erneut.",
+  "tierPro": "Pro",
+  "upgradeToPro": "Auf Pro upgraden",
+  "upgradeNow": "Jetzt upgraden",
+  "proAnnualPrice": "39,99 $ / Jahr",
+  "proMonthlyPrice": "4,99 $ / Monat",
+  "proAnnualSavings": "33% sparen",
+  "comparePlans": "Pläne vergleichen",
+  "restorePurchases": "Käufe wiederherstellen",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "Unbegrenzte Veranstaltungen & Gäste",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "Offline-Zugang",
+  "proFeatureTemplates": "Veranstaltungsvorlagen",
+  "freeEventsLimit": "Veranstaltungen (max. 3)",
+  "freeGuestsLimit": "Gäste (max. 10)",
+  "freeBasicPlanning": "RSVP & Grundplanung"
 }

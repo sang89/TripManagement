@@ -1029,4 +1029,85 @@ class AppLocalizationsJa extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return '$eventTitleから削除され、アクセスできなくなります。';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle => '目的地について質問したり、スタイルを説明してスポットを追加できます。';
+
+  @override
+  String get aiChatHint => '旅行について何でも聞いてください...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => 'プロ';
+
+  @override
+  String tierProTrial(String date) {
+    return 'Proトライアル · 終了日: $date';
+  }
+
+  @override
+  String get cancelTrial => 'トライアルをキャンセル';
+
+  @override
+  String get cancelTrialConfirmTitle => '無料トライアルをキャンセルしますか？';
+
+  @override
+  String get cancelTrialConfirmMessage =>
+      'Proの機能へのアクセスが即座に失われます。後でProにアップグレードできます。';
+
+  @override
+  String get cancelTrialSuccess => 'トライアルがキャンセルされました。現在Basicプランです。';
+
+  @override
+  String get cancelTrialError => 'トライアルのキャンセルに失敗しました。もう一度お試しください。';
+
+  @override
+  String get upgradeToPro => 'プロにアップグレード';
+
+  @override
+  String get upgradeNow => '今すぐアップグレード';
+
+  @override
+  String get proAnnualPrice => '\$39.99 / 年';
+
+  @override
+  String get proMonthlyPrice => '\$4.99 / 月';
+
+  @override
+  String get proAnnualSavings => '33%お得';
+
+  @override
+  String get comparePlans => 'プランを比較';
+
+  @override
+  String get restorePurchases => '購入を復元';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => '無制限のイベントとゲスト';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => 'オフラインアクセス';
+
+  @override
+  String get proFeatureTemplates => 'イベントテンプレート';
+
+  @override
+  String get freeEventsLimit => 'イベント（最大3件）';
+
+  @override
+  String get freeGuestsLimit => 'ゲスト（最大10人）';
+
+  @override
+  String get freeBasicPlanning => 'RSVP・基本プランニング';
 }

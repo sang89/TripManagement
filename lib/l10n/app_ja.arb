@@ -463,5 +463,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "目的地について質問したり、スタイルを説明してスポットを追加できます。",
+  "aiChatHint": "旅行について何でも聞いてください..."
+,  "tierFree": "Basic",
+  "tierProTrial": "Proトライアル · 終了日: {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "トライアルをキャンセル",
+  "cancelTrialConfirmTitle": "無料トライアルをキャンセルしますか？",
+  "cancelTrialConfirmMessage": "Proの機能へのアクセスが即座に失われます。後でProにアップグレードできます。",
+  "cancelTrialSuccess": "トライアルがキャンセルされました。現在Basicプランです。",
+  "cancelTrialError": "トライアルのキャンセルに失敗しました。もう一度お試しください。",
+  "tierPro": "プロ",
+  "upgradeToPro": "プロにアップグレード",
+  "upgradeNow": "今すぐアップグレード",
+  "proAnnualPrice": "$39.99 / 年",
+  "proMonthlyPrice": "$4.99 / 月",
+  "proAnnualSavings": "33%お得",
+  "comparePlans": "プランを比較",
+  "restorePurchases": "購入を復元",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "無制限のイベントとゲスト",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "オフラインアクセス",
+  "proFeatureTemplates": "イベントテンプレート",
+  "freeEventsLimit": "イベント（最大3件）",
+  "freeGuestsLimit": "ゲスト（最大10人）",
+  "freeBasicPlanning": "RSVP・基本プランニング"
 }

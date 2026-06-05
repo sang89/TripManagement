@@ -14,6 +14,7 @@ implementing any feature in its domain:
 | `invite_flow.md` | Complete invite lifecycle — add member, accept, decline, leave, block reinvite, re-invite, RLS policy table, DB objects reference |
 | `api.md` | Every external API — Supabase, Gemini, Google Places, Maps SDK, Directions API |
 | `Supabase_migration.md` | Migration workflow, how to add/push migrations, syncing with PropertyManagement |
+| `monetization.md` | Freemium model, pricing (monthly $4.99 / annual $39.99), Free vs Pro feature matrix, platform split (RevenueCat mobile / Stripe web), gate enforcement, `user_subscriptions` schema |
 
 **Rule:** When adding a new external API, add an entry to `api.md` first. When changing the DB schema, follow `Supabase_migration.md` — never run SQL in the Supabase dashboard.
 

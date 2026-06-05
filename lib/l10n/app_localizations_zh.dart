@@ -1027,4 +1027,84 @@ class AppLocalizationsZh extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return '您将从 $eventTitle 中被移除并失去访问权限。';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle => '询问目的地相关问题，或描述您的风格以添加行程站点。';
+
+  @override
+  String get aiChatHint => '询问任何关于您旅行的问题...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => '专业版';
+
+  @override
+  String tierProTrial(String date) {
+    return 'Pro 试用 · 结束于 $date';
+  }
+
+  @override
+  String get cancelTrial => '取消试用';
+
+  @override
+  String get cancelTrialConfirmTitle => '取消您的免费试用？';
+
+  @override
+  String get cancelTrialConfirmMessage => '您将立即失去对Pro功能的访问权限。您可以稍后升级到Pro。';
+
+  @override
+  String get cancelTrialSuccess => '您的试用已取消。您现在使用的是Basic计划。';
+
+  @override
+  String get cancelTrialError => '取消试用失败，请重试。';
+
+  @override
+  String get upgradeToPro => '升级到专业版';
+
+  @override
+  String get upgradeNow => '立即升级';
+
+  @override
+  String get proAnnualPrice => '\$39.99 / 年';
+
+  @override
+  String get proMonthlyPrice => '\$4.99 / 月';
+
+  @override
+  String get proAnnualSavings => '节省33%';
+
+  @override
+  String get comparePlans => '比较方案';
+
+  @override
+  String get restorePurchases => '恢复购买';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => '无限活动和嘉宾';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => '离线访问';
+
+  @override
+  String get proFeatureTemplates => '活动模板';
+
+  @override
+  String get freeEventsLimit => '活动（最多3个）';
+
+  @override
+  String get freeGuestsLimit => '嘉宾（最多10人）';
+
+  @override
+  String get freeBasicPlanning => 'RSVP和基本规划';
 }

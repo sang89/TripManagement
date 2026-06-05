@@ -519,5 +519,36 @@
         "type": "String"
       }
     }
-  }
+  },
+  "generateWithAi": "AI Assistant",
+  "aiTripPlannerSubtitle": "Ask anything about your event — plan activities, explore ideas, or get smart suggestions tailored to your group.",
+  "aiChatHint": "Ask me anything...",
+  "tierFree": "Basic",
+  "tierPro": "Pro",
+  "tierProTrial": "Pro Trial · Ends {date}",
+  "@tierProTrial": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "cancelTrial": "Cancel Trial",
+  "cancelTrialConfirmTitle": "Cancel your free trial?",
+  "cancelTrialConfirmMessage": "You will lose access to Pro features immediately. You can upgrade to Pro later.",
+  "cancelTrialSuccess": "Your trial has been cancelled. You are now on the Basic plan.",
+  "cancelTrialError": "Failed to cancel trial. Please try again.",
+  "upgradeToPro": "Upgrade to Pro",
+  "upgradeNow": "Upgrade Now",
+  "proAnnualPrice": "$39.99 / year",
+  "proMonthlyPrice": "$4.99 / month",
+  "proAnnualSavings": "Save 33%",
+  "comparePlans": "Compare plans",
+  "restorePurchases": "Restore purchases",
+  "proFeatureAIPlanner": "AI Event Assistant",
+  "proFeatureUnlimitedEvents": "Unlimited events & guests",
+  "proFeatureExpenseExport": "Expense export",
+  "proFeatureOfflineAccess": "Offline access",
+  "proFeatureTemplates": "Event templates",
+  "freeEventsLimit": "Events (3 max)",
+  "freeGuestsLimit": "Guests (10 max)",
+  "freeBasicPlanning": "RSVP & basic planning"
 }

@@ -43,6 +43,7 @@ class GeminiService {
     required Future<Map<String, dynamic>> Function(
             String name, Map<String, dynamic> args)
         onToolCall,
+    List<Map<String, dynamic>>? tools,
   }) async {
     final uri = Uri.parse('$_base/models/$_model:generateContent?key=$apiKey');
 
@@ -60,13 +61,14 @@ class GeminiService {
     var toolRounds = 0;
 
     while (true) {
+      final effectiveTools = tools ?? kGeminiTools;
       final body = jsonEncode({
         'system_instruction': {
           'parts': [
             {'text': systemContext}
           ],
         },
-        'tools': kGeminiTools,
+        if (effectiveTools.isNotEmpty) 'tools': effectiveTools,
         'contents': contents,
       });
 

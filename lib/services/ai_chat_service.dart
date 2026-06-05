@@ -30,5 +30,6 @@ abstract interface class AIChatService {
       String name,
       Map<String, dynamic> args,
     ) onToolCall,
+    List<Map<String, dynamic>>? tools,
   });
 }

@@ -73,7 +73,7 @@ lib/
 │   │   ├── friends_screen.dart  # Friends tab (shell tab 1): accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
 │   │   └── contacts_screen.dart # Batch-match device contacts against registered users; "Add to Trip" (opens trip-event picker) + share-sheet invite
 │   ├── profile/
-│   │   └── profile_screen.dart     # Edit display name, avatar; sign-out (shell tab 2)
+│   │   └── profile_screen.dart     # Gradient header with avatar + _TierBadge (Free = two-part amber upgrade pill; Pro = accent workspace_premium pill); InfoCards for personal/contact info; _AccountCard with save (when editing) + sign-out (shell tab 2)
 │   ├── settings/
 │   │   ├── settings_screen.dart      # Theme, language, account, notifications, privacy sections
 │   │   └── blocked_users_screen.dart # List of globally blocked users with Unblock action
@@ -84,7 +84,8 @@ lib/
 │   ├── edge_function_ai_chat_service.dart   # Release — proxies through Supabase Edge Function
 │   ├── gemini_direct_ai_chat_service.dart   # Dev — calls Gemini directly
 │   ├── gemini_service.dart             # Raw Gemini HTTP client, retry/backoff logic
-│   ├── gemini_tools.dart               # Tool declarations (empty — add event tools here)
+│   ├── gemini_tools.dart               # Tool declarations: kGeminiTools (general chat), kItineraryTools (create_stop + clear_stops)
+│   ├── ai_itinerary_service.dart       # Conversational AI service — AiItineraryService.chat() sends message + history to Gemini with no tools; returns AiTripChatResult (text + updatedHistory); system prompt includes trip name/dates/guests/stops
 │   ├── push_notification_service.dart  # FCM token registration + permission handling
 │   ├── trip_places_service.dart        # Google Places autocomplete + details (mobile + web)
 │   ├── trip_places_web.dart            # Web impl via Google Maps JS SDK + dart:js_interop
@@ -98,6 +99,7 @@ lib/
 │   ├── event_card.dart                 # Event summary card (type icon, title, date, location, member/going count, pending badge for trips)
 │   ├── event_map_widget.dart           # flutter_map (Stadia Maps tiles) with start + numbered stop + destination markers + real road polyline; exports LatLng
 │   ├── event_stop_form_sheet.dart      # Add / edit stop bottom sheet (trip-type events)
+│   ├── ai_itinerary_sheet.dart         # AI chat bottom sheet (75% screen height): AiChatSession (messages + history) lifted to EventDetailScreen for persistence; _ChatBubble (MarkdownBody for AI, plain Text for user), _TypingBubble (animated 3-dot), _InputBar (pill TextField + send), _EmptyState
 │   ├── add_member_sheet.dart           # Add member bottom sheet — friends quick-add chips + account lookup; calls EventProvider.addMember()
 │   ├── places_autocomplete_field.dart  # Text field with Places suggestions dropdown
 │   └── destination_search_dialog.dart  # Full-screen Places search dialog
@@ -149,6 +151,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
 | `BlockedUsersProvider` | Global block list | `load()`, `clear()`, `blockUser(userId)`, `unblockUser(userId)`, `isBlocked(userId)`; optimistic unblock with revert on error; loaded on login, cleared on logout |
+| `SubscriptionProvider` | Pro entitlement state | `load(userId)`, `clear()`, `purchaseMobile(packageId)`, `restore()`; computed `isPro`, `currentPeriodEnd`; web reads Supabase `user_subscriptions`; mobile reads RevenueCat entitlement `'pro'` |
 | `SettingsProvider` | Theme mode + language preference | `load()`, `setThemeMode()`, `setLocale()` |
 | `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |
 | `OfflineQueue` | Pending write operations | `init()`, `enqueue()`, `flush()`, `pendingCount`, `hasPending` |
@@ -609,7 +612,10 @@ The AI layer mirrors PropertyManagement's design — provider-agnostic, build-mo
 
 Override in debug: `--dart-define=FORCE_EDGE_FUNCTION=true`
 
-Trip-specific Gemini tool declarations live in `lib/services/gemini_tools.dart` (`kGeminiTools`, `kWriteToolNames`). Currently empty — add trip CRUD tools here as AI features are built.
+Tool declarations live in `lib/services/gemini_tools.dart`:
+- `kGeminiTools` — general chat tools (empty by default)
+
+The optional `tools` parameter on `AIChatService.send()` lets callers override the tool set per request. `AiItineraryService` passes `tools: const []` (purely conversational — no tool-calling). The AI trip planner entry point is the `auto_awesome_outlined` AppBar button on `EventDetailScreen` (trip events only). Chat state (`AiChatSession` with messages + history) is lifted to `_EventDetailScreenState` so it persists across sheet close/reopen. Users must be organizer OR Pro to open the sheet (organizers always free).
 
 ---
 
@@ -620,6 +626,102 @@ Trip-specific Gemini tool declarations live in `lib/services/gemini_tools.dart` 
 - **Mobile** (iOS/Android): REST calls to `places.googleapis.com/v1/places:autocomplete` and `places.googleapis.com/v1/places/{placeId}` via `http` package.
 - **Web**: loads the Google Maps JS SDK and calls `google.maps.importLibrary('places')` — implemented in `trip_places_web.dart` using `dart:js_interop`. Conditional export via `if (dart.library.js_interop)`.
 - **Caching:** Suggestions are cached in-memory with a 1-hour TTL (`CacheEntry`). Place details are cached indefinitely per session.
+
+---
+
+## Subscription & Monetisation
+
+TripManagement uses a **freemium + Pro** model. Subscriptions are per-app — a TripManagement Pro subscription never grants access to PropertyManagement Pro, even though the apps share the same Supabase project.
+
+### Platform split
+
+| Platform | Purchase processor | Source of truth |
+|---|---|---|
+| iOS | RevenueCat (App Store) | RevenueCat entitlement → webhook → `user_subscriptions` |
+| Android | RevenueCat (Google Play) | RevenueCat entitlement → webhook → `user_subscriptions` |
+| Web | Stripe Checkout | Stripe webhook → `user_subscriptions` |
+
+### `user_subscriptions` table
+
+Stores one row per active or historical subscription, keyed by `stripe_subscription_id` (web) or `revenuecat_original_app_user_id` (mobile). The `app` column (`trip_management` | `property_management`) ensures complete isolation between apps.
+
+**isPro check:** any row where `user_id = auth.uid() AND app = 'trip_management' AND status IN ('active', 'trialing') AND current_period_end > now()`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `user_id` | uuid FK→auth.users CASCADE | |
+| `app` | text | `trip_management` \| `property_management` |
+| `platform` | text | `ios` \| `android` \| `web` |
+| `stripe_customer_id` | text nullable | web only |
+| `stripe_subscription_id` | text UNIQUE nullable | web only; used for upsert |
+| `stripe_price_id` | text nullable | web only |
+| `revenuecat_original_app_user_id` | text nullable | mobile only (future) |
+| `status` | text | `active` \| `trialing` \| `past_due` \| `canceled` \| `unpaid` \| `paused` |
+| `current_period_end` | timestamptz nullable | |
+| `trial_end` | timestamptz nullable | |
+| `created_at / updated_at` | timestamptz | |
+
+**RLS:** users can SELECT their own rows; only service role (Edge Functions) can INSERT/UPDATE.
+
+### Web Stripe flow
+
+```
+Flutter web → stripe-create-checkout Edge Function → Stripe Checkout Session
+  → browser redirect to Stripe-hosted page
+  → payment completed
+  → Stripe redirects to /events?stripe_success=true
+  → stripe-webhook Edge Function fires (checkout.session.completed)
+  → upserts user_subscriptions row
+  → SubscriptionProvider refreshes on next app foreground
+```
+
+`StripeService` (`lib/services/stripe_service.dart`) — web-only; calls `stripe-create-checkout` and opens the returned URL via `url_launcher`. The Stripe secret key lives in Supabase secrets (`STRIPE_SECRET_KEY`) — never in the app bundle. Price IDs (`kStripePriceIdMonthly`, `kStripePriceIdAnnual`) are safe for the client and live in `api_keys.dart`.
+
+### Edge Functions
+
+#### `stripe-create-checkout`
+Authenticated (Supabase JWT). Receives `{ price_id, success_url, cancel_url, app }`, creates a Stripe Checkout Session with `mode: subscription`, a 14-day trial, and `metadata: { user_id, app }` on the subscription, and returns `{ url }`.
+
+**Secrets required:**
+```
+supabase secrets set STRIPE_SECRET_KEY='sk_live_...'
+```
+
+#### `stripe-webhook`
+Public endpoint called by Stripe. Verifies `Stripe-Signature` header (HMAC-SHA256). Handles:
+- `checkout.session.completed` — upserts subscription row, grants immediate access
+- `customer.subscription.updated` — keeps status / period_end in sync (renewals, pauses, plan changes)
+- `customer.subscription.deleted` — marks row `status = 'canceled'`
+
+**Secrets required:**
+```
+supabase secrets set STRIPE_SECRET_KEY='sk_live_...'
+supabase secrets set STRIPE_WEBHOOK_SECRET='whsec_...'
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY='<key>'
+```
+
+Register in Stripe Dashboard → Developers → Webhooks → Add endpoint:
+- URL: `https://qgeocaectbdfonrorwco.supabase.co/functions/v1/stripe-webhook`
+- Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+
+### iOS / Android RevenueCat
+
+`purchases_flutter: ^10.2.2` is in `pubspec.yaml`. API keys (`kRevenueCatAppleApiKey`, `kRevenueCatGoogleApiKey`) live in `api_keys.dart`. `MainActivity` extends `FlutterFragmentActivity` (required by RevenueCat). In-App Purchase capability must be enabled in Xcode.
+
+**RevenueCat webhook** (future): will POST to a `revenuecat-webhook` Edge Function and upsert `user_subscriptions` with `platform = 'ios'|'android'`.
+
+### Freemium gates
+
+| Gate | Free limit | Where enforced |
+|---|---|---|
+| Event creation | 3 organiser-owned events | `EventsScreen._onFabTap()` |
+| Guest count | 10 guests per event | `_GuestsTabState._showAddGuest()` |
+| Expense export | Pro only | `_ExpensesTabState._showExportOptions()` |
+
+All gates push to `/paywall`. `PaywallScreen` (`lib/screens/subscription/paywall_screen.dart`) has a dark navy gradient hero (glow orbs, gold PRO badge, "Upgrade to Pro" title), animated billing toggle (Annual/Monthly with gradient pill slider), feature cards with colored icons, Basic vs Pro comparison table, gradient CTA button, and mobile-only "Restore purchases" link.
+
+The `ProfileScreen` header shows a `_TierBadge` below the user's name/email: free users see a two-part pill (shield "Free" | amber gradient "Upgrade →") that navigates to `/paywall`; Pro users see a `workspace_premium_rounded` badge in `AppTheme.accent`.
 
 ---
 

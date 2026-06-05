@@ -1044,4 +1044,88 @@ class AppLocalizationsDe extends AppLocalizations {
   String leaveEventMessage(String eventTitle) {
     return 'Sie werden von $eventTitle entfernt und verlieren den Zugang.';
   }
+
+  @override
+  String get generateWithAi => 'AI Assistant';
+
+  @override
+  String get aiTripPlannerSubtitle =>
+      'Stellen Sie Fragen zu Ihrem Reiseziel oder beschreiben Sie Ihren Stil, um Stopps hinzuzufügen.';
+
+  @override
+  String get aiChatHint => 'Stellen Sie beliebige Fragen zu Ihrer Reise...';
+
+  @override
+  String get tierFree => 'Basic';
+
+  @override
+  String get tierPro => 'Pro';
+
+  @override
+  String tierProTrial(String date) {
+    return 'Pro Testphase · Endet $date';
+  }
+
+  @override
+  String get cancelTrial => 'Testphase kündigen';
+
+  @override
+  String get cancelTrialConfirmTitle => 'Kostenlose Testphase kündigen?';
+
+  @override
+  String get cancelTrialConfirmMessage =>
+      'Sie verlieren sofort den Zugriff auf Pro-Funktionen. Sie können später auf Pro upgraden.';
+
+  @override
+  String get cancelTrialSuccess =>
+      'Ihre Testphase wurde gekündigt. Sie befinden sich jetzt im Basic-Tarif.';
+
+  @override
+  String get cancelTrialError =>
+      'Testphase konnte nicht gekündigt werden. Bitte versuchen Sie es erneut.';
+
+  @override
+  String get upgradeToPro => 'Auf Pro upgraden';
+
+  @override
+  String get upgradeNow => 'Jetzt upgraden';
+
+  @override
+  String get proAnnualPrice => '39,99 \$ / Jahr';
+
+  @override
+  String get proMonthlyPrice => '4,99 \$ / Monat';
+
+  @override
+  String get proAnnualSavings => '33% sparen';
+
+  @override
+  String get comparePlans => 'Pläne vergleichen';
+
+  @override
+  String get restorePurchases => 'Käufe wiederherstellen';
+
+  @override
+  String get proFeatureAIPlanner => 'AI Event Assistant';
+
+  @override
+  String get proFeatureUnlimitedEvents => 'Unbegrenzte Veranstaltungen & Gäste';
+
+  @override
+  String get proFeatureExpenseExport => 'Expense export';
+
+  @override
+  String get proFeatureOfflineAccess => 'Offline-Zugang';
+
+  @override
+  String get proFeatureTemplates => 'Veranstaltungsvorlagen';
+
+  @override
+  String get freeEventsLimit => 'Veranstaltungen (max. 3)';
+
+  @override
+  String get freeGuestsLimit => 'Gäste (max. 10)';
+
+  @override
+  String get freeBasicPlanning => 'RSVP & Grundplanung';
 }
