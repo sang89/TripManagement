@@ -57,24 +57,43 @@ class _EventsScreenState extends State<EventsScreen> {
       body: Consumer<EventProvider>(
         builder: (_, provider, _) {
           final all = [...provider.myEvents, ...provider.invitedEvents];
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-            child: GridView.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              children: EventType.values.map((type) {
-                final count =
-                    all.where((e) => e.eventType == type).length;
-                return _TypeTile(
-                  type: type,
-                  count: count,
-                  l10n: l10n,
-                  onTap: () =>
-                      context.push('/events/${type.dbValue}'),
-                );
-              }).toList(),
-            ),
+          final tiles = EventType.values.map((type) {
+            final count = all.where((e) => e.eventType == type).length;
+            return _TypeTile(
+              type: type,
+              count: count,
+              l10n: l10n,
+              onTap: () => context.push('/events/${type.dbValue}'),
+            );
+          }).toList();
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final w = constraints.maxWidth;
+              // On wider screens: cap tile size so they don't balloon.
+              // 5 tiles: 1 row at >= 700, 3+2 at >= 440, 2+2+1 on mobile.
+              final columns = w >= 700 ? 5 : w >= 440 ? 3 : 2;
+              // Cap tile size only on wider screens so mobile tiles stay full-width.
+              const tileMax = 160.0;
+              final gridWidth = w < 440
+                  ? w
+                  : (tileMax * columns + 16.0 * (columns - 1)).clamp(0.0, w);
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: gridWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: GridView.count(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: tiles,
+                    ),
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -148,7 +167,7 @@ class _TypeTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 56, color: Colors.white),
+            Icon(icon, size: 72, color: Colors.white),
             const SizedBox(height: 12),
             Text(
               label,

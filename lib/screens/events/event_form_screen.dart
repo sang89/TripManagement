@@ -564,8 +564,12 @@ class _EventTypePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final columns = w >= 600 ? 5 : w >= 380 ? 3 : 2;
+        return GridView.count(
+      crossAxisCount: columns,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
@@ -659,6 +663,8 @@ class _EventTypePicker extends StatelessWidget {
           ),
         );
       }).toList(),
+        );
+      },
     );
   }
 }
