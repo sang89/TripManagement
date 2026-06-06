@@ -47,6 +47,7 @@ class RestaurantSuggestion {
   final double? rating;
   final int? priceLevel;
   final List<String> photoRefs;
+  final String? primaryType;
 
   const RestaurantSuggestion({
     required this.placeId,
@@ -55,6 +56,7 @@ class RestaurantSuggestion {
     this.rating,
     this.priceLevel,
     this.photoRefs = const [],
+    this.primaryType,
   });
 
   String? get photoRef => photoRefs.firstOrNull;
@@ -226,7 +228,7 @@ class TripPlacesService {
               'Content-Type': 'application/json',
               'X-Goog-Api-Key': apiKey,
               'X-Goog-FieldMask':
-                  'places.id,places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos',
+                  'places.id,places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos,places.primaryType',
             },
             body: jsonEncode(body),
           )
@@ -263,6 +265,7 @@ class TripPlacesService {
           rating: rating,
           priceLevel: priceLevel,
           photoRefs: photoRefs,
+          primaryType: map['primaryType'] as String?,
         );
       }).where((r) => r.placeId.isNotEmpty).toList();
     } catch (_) {

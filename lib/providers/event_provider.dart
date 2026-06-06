@@ -353,6 +353,22 @@ class EventProvider extends ChangeNotifier {
     return null;
   }
 
+  // Falls back to a DB query when the poll isn't in the in-memory cache.
+  Future<String?> _resolveEventIdForPoll(String pollId) async {
+    final cached = _eventIdForPoll(pollId);
+    if (cached != null) return cached;
+    try {
+      final row = await _db
+          .from('event_polls')
+          .select('event_id')
+          .eq('id', pollId)
+          .maybeSingle();
+      return row?['event_id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _subscribeRealtime() {
     if (_userId == null) return;
     _realtimeChannel?.unsubscribe();
@@ -620,8 +636,9 @@ class EventProvider extends ChangeNotifier {
           callback: (payload) {
             final pollId = payload.newRecord['poll_id'] as String?;
             if (pollId == null) return;
-            final eventId = _eventIdForPoll(pollId);
-            if (eventId != null) unawaited(fetchPolls(eventId));
+            unawaited(_resolveEventIdForPoll(pollId).then((eventId) {
+              if (eventId != null) unawaited(fetchPolls(eventId));
+            }));
           },
         )
 
@@ -633,8 +650,9 @@ class EventProvider extends ChangeNotifier {
           callback: (payload) {
             final pollId = payload.newRecord['poll_id'] as String?;
             if (pollId == null) return;
-            final eventId = _eventIdForPoll(pollId);
-            if (eventId != null) unawaited(fetchPolls(eventId));
+            unawaited(_resolveEventIdForPoll(pollId).then((eventId) {
+              if (eventId != null) unawaited(fetchPolls(eventId));
+            }));
           },
         )
 
@@ -647,8 +665,110 @@ class EventProvider extends ChangeNotifier {
           callback: (payload) {
             final pollId = payload.oldRecord['poll_id'] as String?;
             if (pollId == null) return;
-            final eventId = _eventIdForPoll(pollId);
-            if (eventId != null) unawaited(fetchPolls(eventId));
+            unawaited(_resolveEventIdForPoll(pollId).then((eventId) {
+              if (eventId != null) unawaited(fetchPolls(eventId));
+            }));
+          },
+        )
+
+        // ── event_photos INSERT ─────────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_photos',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            if (eventId == null) return;
+            unawaited(fetchPhotos(eventId));
+          },
+        )
+
+        // ── event_photos DELETE ─────────────────────────────────────────────
+        // REPLICA IDENTITY FULL ensures event_id is present in the old record.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_photos',
+          callback: (payload) {
+            final row = payload.oldRecord;
+            final eventId = row['event_id'] as String?;
+            final photoId = row['id'] as String?;
+            if (eventId == null || photoId == null) return;
+            _photos[eventId]?.removeWhere((p) => p.id == photoId);
+            notifyListeners();
+          },
+        )
+
+        // ── event_expenses INSERT / UPDATE / DELETE ─────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_expenses',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            if (eventId == null) return;
+            unawaited(fetchExpenses(eventId));
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'event_expenses',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            if (eventId == null) return;
+            unawaited(fetchExpenses(eventId));
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_expenses',
+          callback: (payload) {
+            // event_expenses uses REPLICA IDENTITY DEFAULT so event_id may be
+            // absent on delete; fall back to a full refetch across loaded events.
+            final eventId = payload.oldRecord['event_id'] as String?;
+            if (eventId != null) {
+              unawaited(fetchExpenses(eventId));
+            } else {
+              for (final id in _expenses.keys.toList()) {
+                unawaited(fetchExpenses(id));
+              }
+            }
+          },
+        )
+
+        // ── event_bring_list_items INSERT / UPDATE / DELETE ─────────────────
+        // REPLICA IDENTITY FULL set in migration 20260605060000.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_bring_list_items',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            if (eventId == null) return;
+            unawaited(fetchBringList(eventId));
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'event_bring_list_items',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            if (eventId == null) return;
+            unawaited(fetchBringList(eventId));
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_bring_list_items',
+          callback: (payload) {
+            final eventId = payload.oldRecord['event_id'] as String?;
+            if (eventId != null) {
+              unawaited(fetchBringList(eventId));
+            }
           },
         )
 
@@ -853,13 +973,16 @@ class EventProvider extends ChangeNotifier {
     String? phone,
     String? userId,
   }) async {
+    // Linked users start as pending (they must accept); unlinked guests are accepted immediately.
+    final status = userId != null ? 'pending' : 'accepted';
     final data = await _db.from('event_guests').insert({
       'event_id': eventId,
       'user_id': ?userId,
       'display_name': displayName,
       'email': ?(email?.isNotEmpty == true ? email : null),
       'phone': ?(phone?.isNotEmpty == true ? phone : null),
-      'rsvp_at': DateTime.now().toUtc().toIso8601String(),
+      'status': status,
+      if (userId == null) 'rsvp_at': DateTime.now().toUtc().toIso8601String(),
     }).select().single();
 
     final guest = EventGuest.fromJson(data);

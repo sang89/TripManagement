@@ -26,10 +26,14 @@ CREATE INDEX IF NOT EXISTS user_subscriptions_user_app_idx
 
 ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users read own subscription"
-  ON public.user_subscriptions FOR SELECT
-  USING (user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "Users read own subscription"
+    ON public.user_subscriptions FOR SELECT
+    USING (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-CREATE POLICY "Users insert own subscription"
-  ON public.user_subscriptions FOR INSERT
-  WITH CHECK (user_id = auth.uid());
+DO $$ BEGIN
+  CREATE POLICY "Users insert own subscription"
+    ON public.user_subscriptions FOR INSERT
+    WITH CHECK (user_id = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

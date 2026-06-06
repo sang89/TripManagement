@@ -418,7 +418,7 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 
 **Storage:** `event-photos` bucket (public read); path = `{event_id}/{filename}`.
 
-**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`.
+**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`.
 
 ---
 
@@ -535,9 +535,9 @@ The invite flow applies **only to trip-type events** (`event.isTrip == true`). N
 - Without checkbox: `status = 'declined'`
 - With checkbox: `status = 'declined'`, `block_reinvite = true`
 
-### Leaving an accepted trip event
+### Leaving an event
 
-Available from the AppBar button in Event Detail (non-organizer trip members only). A confirmation dialog includes the same **"Don't allow future invitations"** checkbox:
+Available from the AppBar button in Event Detail for **all non-organizer members who are not already `left`** (applies to every event type — trip, birthday, wedding, social, quickBites). A confirmation dialog includes the same **"Don't allow future invitations"** checkbox:
 - Without checkbox: `status = 'left'` — row preserved, "Left" chip shown to other members
 - With checkbox: `status = 'left'`, `block_reinvite = true`
 
@@ -554,7 +554,7 @@ If the user had set `block_reinvite = true`:
 
 **Event records must be consistent across all members at all times.** Every mutation — to event metadata, stops, or guests — must propagate to every member's device via Supabase Realtime without requiring a reload.
 
-`EventProvider._subscribeRealtime()` uses a single channel (`event_sync_<userId>`) and handles events across 5 tables:
+`EventProvider._subscribeRealtime()` uses a single channel (`event_sync_<userId>`) and handles events across 8 tables:
 
 | Table | Event | Handler | Notes |
 |---|---|---|---|
@@ -565,6 +565,11 @@ If the user had set `block_reinvite = true`:
 | `event_stops` | INSERT | `EventStop.fromJson(row)` → append + re-sort, dedup guard | |
 | `event_stops` | UPDATE | `EventStop.fromJson(row)` → replace in-place + re-sort | |
 | `event_stops` | DELETE | Remove by id | Requires `REPLICA IDENTITY FULL` on `event_stops` |
+| `event_photos` | INSERT | `fetchPhotos(eventId)` | |
+| `event_photos` | DELETE | In-memory remove by id + `notifyListeners()` | Requires `REPLICA IDENTITY FULL` |
+| `event_expenses` | INSERT / UPDATE / DELETE | `fetchExpenses(eventId)` | `REPLICA IDENTITY FULL` on expenses; DELETE handler falls back to refreshing all loaded events if eventId missing |
+| `event_bring_list_items` | INSERT / UPDATE / DELETE | `fetchBringList(eventId)` | Requires `REPLICA IDENTITY FULL`; migration `20260605060000_bringlist_realtime.sql` adds table to publication |
+| `event_polls` (via option/vote tables) | INSERT / DELETE | `_resolveEventIdForPoll(pollId)` DB fallback → `fetchPolls(eventId)` | Handles cache-cold race via DB fallback |
 
 `InvitationsProvider` subscribes separately (INSERT + UPDATE on `event_guests` filtered by `user_id = currentUser` and `status = 'pending'`) to keep the invite badge current for the invited user's own device.
 

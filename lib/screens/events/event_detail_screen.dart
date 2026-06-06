@@ -205,11 +205,13 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                         _confirmDelete(context, event, provider),
                   ),
                 )
-              else if (event.isTrip)
+              else if (!isOrganizer &&
+                  event.guests.any(
+                      (g) => g.userId == authUid && g.status != 'left'))
                 IconButton(
                   icon: const Icon(Icons.exit_to_app_outlined,
                       color: AppTheme.danger),
-                  tooltip: l10n.leaveTripTooltip,
+                  tooltip: l10n.leave,
                   onPressed: () => _confirmLeave(context, event, provider),
                 ),
             ],
@@ -681,9 +683,9 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
             tabs: [
               Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
               Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
-              Tab(icon: const Icon(Icons.poll_outlined, size: 18), text: l10n.pollsTab),
+              Tab(icon: const Icon(Icons.how_to_vote_outlined, size: 18), text: l10n.pollsTab),
               if (widget.event.isQuickBites)
-                Tab(icon: const Icon(Icons.emoji_food_beverage_outlined, size: 18), text: l10n.cravingsTab),
+                Tab(icon: const Icon(Icons.ramen_dining_outlined, size: 18), text: l10n.cravingsTab),
             ],
           ),
         ),
@@ -809,40 +811,32 @@ class _InfoTab extends StatelessWidget {
           Text(event.description),
         ],
 
-        // RSVP counts (non-trip) or member counts (trip)
+        // RSVP / member counts — unified across all event types
         const Divider(height: 24),
-        if (event.isTrip)
-          Row(
-            children: [
-              _CountChip(
-                  label: '${event.goingCount} accepted',
-                  color: Colors.green),
-              const SizedBox(width: 8),
-              _CountChip(
-                  label: '${event.pendingCount} pending',
-                  color: Colors.orange),
-              const SizedBox(width: 8),
-              _CountChip(
-                  label: '${event.declinedCount} declined',
-                  color: AppTheme.danger),
-            ],
-          )
-        else
-          Row(
-            children: [
-              _CountChip(
-                  label: l10n.goingCount(event.goingCount),
-                  color: Colors.green),
-              const SizedBox(width: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            _CountChip(
+              label: event.isTrip
+                  ? '${event.goingCount} ${l10n.inviteAccepted.toLowerCase()}'
+                  : l10n.goingCount(event.goingCount),
+              color: Colors.green,
+            ),
+            if (!event.isTrip && event.maybeCount > 0)
               _CountChip(
                   label: l10n.maybeCount(event.maybeCount),
-                  color: Colors.orange),
-              const SizedBox(width: 8),
+                  color: Colors.amber),
+            if (event.pendingCount > 0)
               _CountChip(
-                  label: l10n.declinedCount(event.declinedCount),
-                  color: AppTheme.danger),
-            ],
-          ),
+                label: '${event.pendingCount} ${l10n.invitePending.toLowerCase()}',
+                color: Colors.orange,
+              ),
+            _CountChip(
+                label: l10n.declinedCount(event.declinedCount),
+                color: AppTheme.danger),
+          ],
+        ),
 
         if (event.capacity != null) ...[
           const SizedBox(height: 4),
@@ -1469,9 +1463,11 @@ class _PollCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            for (final option in poll.options) ...[
+            for (final option in (List.of(poll.options)
+                  ..sort((a, b) => poll.votesFor(b.id).compareTo(poll.votesFor(a.id))))) ...[
               if (isRestaurant)
                 _RestaurantPollOptionRow(
+                  key: ValueKey(option.id),
                   option: option,
                   votes: poll.votesFor(option.id),
                   isSelected: myVotedIds.contains(option.id),
@@ -1488,6 +1484,7 @@ class _PollCard extends StatelessWidget {
                 )
               else
                 _PollOptionRow(
+                  key: ValueKey(option.id),
                   option: option,
                   votes: poll.votesFor(option.id),
                   total: total,
@@ -1527,6 +1524,7 @@ class _PollOptionRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _PollOptionRow({
+    super.key,
     required this.option,
     required this.votes,
     required this.total,
@@ -1611,6 +1609,7 @@ class _RestaurantPollOptionRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   const _RestaurantPollOptionRow({
+    super.key,
     required this.option,
     required this.votes,
     required this.isSelected,
@@ -1627,11 +1626,15 @@ class _RestaurantPollOptionRow extends StatelessWidget {
             '?maxWidthPx=200&key=$kGooglePlacesApiKey'
         : null;
     final address = meta?['address'] as String?;
+    final primaryType = meta?['primary_type'] as String?;
+    final foodEmoji = _foodEmojiFor(primaryType, option.text);
+    final foodIcon = foodEmoji == null ? _foodIconFor(primaryType, option.text) : null;
     final rating = (meta?['rating'] as num?)?.toDouble();
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       margin: const EdgeInsets.symmetric(vertical: 4),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: isSelected
             ? AppTheme.primary.withValues(alpha: 0.06)
@@ -1657,30 +1660,27 @@ class _RestaurantPollOptionRow extends StatelessWidget {
                 priceLevel: meta?['price_level'] as int?,
                 photoRefs: _photoRefsFromMetadata(meta),
               ),
-              child: Row(
+              child: IntrinsicHeight(
+                child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ClipRRect(
-                    borderRadius:
-                        const BorderRadius.horizontal(left: Radius.circular(9)),
-                    child: SizedBox(
-                      width: 72,
-                      height: 72,
-                      child: photoUrl != null
-                          ? Image.network(
-                              photoUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: Colors.grey[100],
-                                child: const Icon(Icons.restaurant,
-                                    size: 24, color: Colors.black12),
-                              ),
-                            )
-                          : Container(
+                  SizedBox(
+                    width: 72,
+                    child: photoUrl != null
+                        ? Image.network(
+                            photoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
                               color: Colors.grey[100],
                               child: const Icon(Icons.restaurant,
                                   size: 24, color: Colors.black12),
                             ),
-                    ),
+                          )
+                        : Container(
+                            color: Colors.grey[100],
+                            child: const Icon(Icons.restaurant,
+                                size: 24, color: Colors.black12),
+                          ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1729,35 +1729,64 @@ class _RestaurantPollOptionRow extends StatelessWidget {
                   ),
                 ],
               ),
+              ),
             ),
           ),
-          // Right: vote toggle.
+          // Right: vote toggle — gradient circle, easy tap target.
           AppTappable(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isSelected ? Icons.check_circle : Icons.circle_outlined,
-                    size: 18,
-                    color: isSelected ? AppTheme.primary : Colors.grey[350],
+              padding: const EdgeInsets.fromLTRB(6, 10, 12, 10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  // Always use gradient so BoxDecoration.lerp stays structurally identical.
+                  gradient: LinearGradient(
+                    colors: isSelected
+                        ? const [Color(0xFF667EEA), Color(0xFF764BA2)]
+                        : [Colors.grey.shade100, Colors.grey.shade200],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$votes',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? AppTheme.primary : Colors.grey[700],
+                  // Always include a shadow so lerp never hits a null→list transition.
+                  boxShadow: [
+                    BoxShadow(
+                      color: isSelected
+                          ? const Color(0xFF667EEA).withValues(alpha: 0.4)
+                          : Colors.transparent,
+                      blurRadius: isSelected ? 10 : 1,
+                      offset: isSelected ? const Offset(0, 4) : Offset.zero,
                     ),
-                  ),
-                  Text(
-                    'vote${votes == 1 ? '' : 's'}',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-                  ),
-                ],
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$votes',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: isSelected ? Colors.white : Colors.grey[700],
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    if (foodEmoji != null)
+                      Text(foodEmoji,
+                          style: const TextStyle(fontSize: 18, height: 1))
+                    else
+                      Icon(foodIcon!,
+                          size: 18,
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.grey.shade400),
+                  ],
+                ),
               ),
             ),
           ),
@@ -2162,6 +2191,7 @@ class _CravingsTabState extends State<_CravingsTab> {
       'address': r.address,
       if (r.rating != null) 'rating': r.rating,
       if (r.priceLevel != null) 'price_level': r.priceLevel,
+      if (r.primaryType != null) 'primary_type': r.primaryType,
       if (r.photoRefs.isNotEmpty) 'photo_ref': r.photoRefs.first,
       if (r.photoRefs.isNotEmpty) 'photo_refs': r.photoRefs,
     };
@@ -2451,6 +2481,109 @@ List<String> _photoRefsFromMetadata(Map<String, dynamic>? meta) {
   final single = meta['photo_ref'] as String?;
   return single != null ? [single] : const [];
 }
+
+/// Returns a food emoji for categories that have a recognisable one, null otherwise.
+String? _foodEmojiFor(String? primaryType, String name) {
+  final t = (primaryType ?? '').toLowerCase();
+  final n = name.toLowerCase();
+  if (_m(t, ['sushi']) || _m(n, ['sushi', 'omakase', 'nigiri', 'maki', 'temaki', 'chirashi'])) {
+    return '🍣';
+  }
+  if (_m(t, ['seafood']) || _m(n, ['seafood', 'oyster', 'lobster', 'crab', 'shrimp', 'prawn', 'poke', 'ceviche', 'clam', 'mussel', 'scallop'])) {
+    return '🦞';
+  }
+  return null;
+}
+
+/// Maps a Places API primaryType (or restaurant name keywords) to a food icon.
+/// Type-based matching runs first (accurate); name keywords are the fallback.
+/// Within name fallback, BBQ/steak is checked before Japanese to avoid
+/// "Wagyu Factory | Limitless BBQ" being misclassified as Japanese.
+IconData _foodIconFor(String? primaryType, String name) {
+  final t = (primaryType ?? '').toLowerCase();
+  final n = name.toLowerCase();
+
+  // ── Pass 1: primaryType (precise — always wins when present) ──
+  if (t.isNotEmpty) {
+    if (_m(t, ['sushi']))                                        return Icons.rice_bowl_rounded;
+    if (_m(t, ['ramen']))                                        return Icons.ramen_dining_rounded;
+    if (_m(t, ['japanese']))                                     return Icons.set_meal_rounded;
+    if (_m(t, ['chinese', 'dim_sum', 'hot_pot', 'cantonese',
+                'szechuan', 'taiwanese'])) { return Icons.soup_kitchen_rounded; }
+    if (_m(t, ['korean']))                                       return Icons.outdoor_grill_rounded;
+    if (_m(t, ['thai', 'vietnamese']))                           return Icons.ramen_dining_rounded;
+    if (_m(t, ['pizza']))                                        return Icons.local_pizza_rounded;
+    if (_m(t, ['italian']))                                      return Icons.dinner_dining_rounded;
+    if (_m(t, ['burger', 'hamburger']))                          return Icons.lunch_dining_rounded;
+    if (_m(t, ['fast_food']))                                    return Icons.fastfood_rounded;
+    if (_m(t, ['steak', 'barbecue', 'smokehouse', 'steakhouse',
+                'yakiniku'])) { return Icons.outdoor_grill_rounded; }
+    if (_m(t, ['mexican', 'tex_mex']))                           return Icons.takeout_dining_rounded;
+    if (_m(t, ['indian', 'south_asian']))                        return Icons.restaurant_rounded;
+    if (_m(t, ['middle_eastern', 'kebab', 'turkish', 'lebanese',
+                'persian', 'israeli', 'falafel'])) { return Icons.kebab_dining_rounded; }
+    if (_m(t, ['mediterranean', 'greek', 'spanish', 'tapas']))   return Icons.tapas_rounded;
+    if (_m(t, ['french', 'bistro']))                             return Icons.dinner_dining_rounded;
+    if (_m(t, ['seafood']))                                      return Icons.set_meal_rounded;
+    if (_m(t, ['breakfast', 'brunch']))                          return Icons.egg_alt_rounded;
+    if (_m(t, ['cafe', 'coffee_shop']))                          return Icons.local_cafe_rounded;
+    if (_m(t, ['bakery', 'pastry']))                             return Icons.bakery_dining_rounded;
+    if (_m(t, ['dessert', 'ice_cream', 'sweet', 'donut']))       return Icons.icecream_rounded;
+    if (_m(t, ['wine_bar', 'winery']))                           return Icons.wine_bar_rounded;
+    if (_m(t, ['cocktail_bar', 'lounge', 'night_club']))         return Icons.local_bar_rounded;
+    if (_m(t, ['bar', 'pub', 'brewery', 'gastropub', 'izakaya'])) return Icons.sports_bar_rounded;
+    if (_m(t, ['vegetarian', 'vegan', 'health_food']))           return Icons.eco_rounded;
+    if (_m(t, ['sandwich', 'deli']))                             return Icons.lunch_dining_rounded;
+  }
+
+  // ── Pass 2: name keywords (BBQ/steak before Japanese!) ────────
+  if (_m(n, ['bbq', 'barbecue', 'steakhouse', 'smokehouse',
+              'brisket', 'ribs', 'churrasco', 'wagyu', 'yakiniku',
+              'limitless', 'smoked meat'])) { return Icons.outdoor_grill_rounded; }
+  if (_m(n, ['sushi', 'omakase', 'nigiri', 'maki', 'temaki',
+              'chirashi'])) { return Icons.rice_bowl_rounded; }
+  if (_m(n, ['ramen', 'noodle', 'pho', 'udon', 'soba']))         return Icons.ramen_dining_rounded;
+  if (_m(n, ['japanese', 'izakaya', 'yakitori', 'tonkatsu',
+              'tempura', 'teppanyaki'])) { return Icons.set_meal_rounded; }
+  if (_m(n, ['korean', 'kbbq', 'bibimbap', 'bulgogi', 'kimchi',
+              'galbi'])) { return Icons.outdoor_grill_rounded; }
+  if (_m(n, ['thai', 'pad thai', 'tom yum']))                    return Icons.ramen_dining_rounded;
+  if (_m(n, ['vietnamese', 'viet', 'banh mi']))                  return Icons.ramen_dining_rounded;
+  if (_m(n, ['pizza', 'pizzeria', 'neapolitan']))                 return Icons.local_pizza_rounded;
+  if (_m(n, ['pasta', 'trattoria', 'risotto', 'carbonara']))      return Icons.dinner_dining_rounded;
+  if (_m(n, ['burger', 'smash', 'patty', 'cheeseburger']))        return Icons.lunch_dining_rounded;
+  if (_m(n, ['mcdonald', 'kfc', 'chick-fil', 'fast food']))       return Icons.fastfood_rounded;
+  if (_m(n, ['hot pot', 'dim sum', 'wok', 'dumpling', 'bao',
+              'szechuan', 'cantonese', 'chinese'])) { return Icons.soup_kitchen_rounded; }
+  if (_m(n, ['taco', 'burrito', 'quesadilla', 'taqueria',
+              'mexican', 'tamale'])) { return Icons.takeout_dining_rounded; }
+  if (_m(n, ['kebab', 'shawarma', 'falafel', 'hummus',
+              'halal', 'gyro'])) { return Icons.kebab_dining_rounded; }
+  if (_m(n, ['curry', 'tandoor', 'biryani', 'masala', 'tikka']))  return Icons.restaurant_rounded;
+  if (_m(n, ['tapas', 'paella', 'mediterranean', 'greek',
+              'tzatziki'])) { return Icons.tapas_rounded; }
+  if (_m(n, ['french', 'bistro', 'brasserie', 'crepe']))          return Icons.dinner_dining_rounded;
+  if (_m(n, ['seafood', 'oyster', 'lobster', 'crab', 'shrimp',
+              'poke', 'ceviche'])) { return Icons.set_meal_rounded; }
+  if (_m(n, ['breakfast', 'brunch', 'pancake', 'waffle',
+              'omelette'])) { return Icons.egg_alt_rounded; }
+  if (_m(n, ['cafe', 'coffee', 'espresso', 'latte',
+              'starbucks'])) { return Icons.local_cafe_rounded; }
+  if (_m(n, ['bakery', 'croissant', 'boulangerie', 'bread']))     return Icons.bakery_dining_rounded;
+  if (_m(n, ['ice cream', 'gelato', 'dessert', 'boba',
+              'bubble tea', 'donut', 'mochi'])) { return Icons.icecream_rounded; }
+  if (_m(n, ['wine bar', 'winery', 'vineyard']))                  return Icons.wine_bar_rounded;
+  if (_m(n, ['cocktail', 'lounge', 'speakeasy']))                 return Icons.local_bar_rounded;
+  if (_m(n, ['pub', 'brewery', 'beer', 'taproom', 'izakaya']))    return Icons.sports_bar_rounded;
+  if (_m(n, ['vegan', 'vegetarian', 'plant-based', 'salad',
+              'juice bar', 'smoothie'])) { return Icons.eco_rounded; }
+  if (_m(n, ['sandwich', 'deli', 'sub', 'panini']))               return Icons.lunch_dining_rounded;
+
+  return Icons.restaurant_rounded;
+}
+
+bool _m(String haystack, List<String> needles) =>
+    needles.any((n) => haystack.contains(n));
 
 void _showRestaurantDetail(
   BuildContext context, {
