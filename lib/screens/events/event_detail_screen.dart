@@ -1535,67 +1535,130 @@ class _PollOptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = total > 0 ? votes / total : 0.0;
+    final pctLabel = '${(pct * 100).round()}%';
 
     return AppTappable(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-        children: [
-          Icon(
-            isSelected
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked,
-            size: 20,
-            color: isSelected ? AppTheme.primary : Colors.grey[400],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF00B09B).withValues(alpha: 0.07)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF00B09B).withValues(alpha: 0.45)
+                : Colors.grey.shade200,
+            width: isSelected ? 1.5 : 1,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  option.text,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                    color: isSelected ? AppTheme.primary : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Gradient check circle
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isSelected
+                          ? const LinearGradient(
+                              colors: [Color(0xFF00B09B), Color(0xFF96C93D)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      border: isSelected
+                          ? null
+                          : Border.all(color: Colors.grey.shade300, width: 1.5),
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check_rounded,
+                            size: 14, color: Colors.white)
+                        : null,
                   ),
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    minHeight: 5,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isSelected
-                          ? AppTheme.primary
-                          : AppTheme.primary.withValues(alpha: 0.4),
+                  const SizedBox(width: 12),
+                  // Option text
+                  Expanded(
+                    child: Text(
+                      option.text,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected
+                            ? const Color(0xFF00796B)
+                            : Colors.black87,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 36,
-            child: Text(
-              '${(pct * 100).round()}%',
-              textAlign: TextAlign.end,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? AppTheme.primary : Colors.grey[600],
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.normal,
+                  const SizedBox(width: 10),
+                  // Percentage badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? const LinearGradient(
+                              colors: [Color(0xFF00B09B), Color(0xFF96C93D)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: isSelected ? null : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      pctLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
+              const SizedBox(height: 10),
+              // Gradient progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  height: 6,
+                  child: Stack(
+                    children: [
+                      Container(color: Colors.grey.shade100),
+                      FractionallySizedBox(
+                        widthFactor: pct,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: isSelected
+                                  ? const [
+                                      Color(0xFF00B09B),
+                                      Color(0xFF96C93D)
+                                    ]
+                                  : [
+                                      Colors.grey.shade300,
+                                      Colors.grey.shade300
+                                    ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
         ),
       ),
     );
@@ -1628,7 +1691,6 @@ class _RestaurantPollOptionRow extends StatelessWidget {
     final address = meta?['address'] as String?;
     final primaryType = meta?['primary_type'] as String?;
     final foodEmoji = _foodEmojiFor(primaryType, option.text);
-    final foodIcon = foodEmoji == null ? _foodIconFor(primaryType, option.text) : null;
     final rating = (meta?['rating'] as num?)?.toDouble();
 
     return AnimatedContainer(
@@ -1776,15 +1838,8 @@ class _RestaurantPollOptionRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    if (foodEmoji != null)
-                      Text(foodEmoji,
-                          style: const TextStyle(fontSize: 18, height: 1))
-                    else
-                      Icon(foodIcon!,
-                          size: 18,
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.grey.shade400),
+                    Text(foodEmoji,
+                        style: const TextStyle(fontSize: 18, height: 1)),
                   ],
                 ),
               ),
@@ -2482,108 +2537,77 @@ List<String> _photoRefsFromMetadata(Map<String, dynamic>? meta) {
   return single != null ? [single] : const [];
 }
 
-/// Returns a food emoji for categories that have a recognisable one, null otherwise.
-String? _foodEmojiFor(String? primaryType, String name) {
+/// Maps restaurant type/name to a naturally-coloured emoji.
+/// BBQ/steak is checked before Japanese/Korean to avoid misclassifying "Wagyu BBQ".
+String _foodEmojiFor(String? primaryType, String name) {
   final t = (primaryType ?? '').toLowerCase();
   final n = name.toLowerCase();
-  if (_m(t, ['sushi']) || _m(n, ['sushi', 'omakase', 'nigiri', 'maki', 'temaki', 'chirashi'])) {
-    return '🍣';
-  }
-  if (_m(t, ['seafood']) || _m(n, ['seafood', 'oyster', 'lobster', 'crab', 'shrimp', 'prawn', 'poke', 'ceviche', 'clam', 'mussel', 'scallop'])) {
-    return '🦞';
-  }
-  return null;
+  bool m(List<String> needles) => needles.any(t.contains) || needles.any(n.contains);
+
+  // Sushi first (before Japanese)
+  if (m(['sushi', 'omakase', 'nigiri', 'maki', 'temaki', 'chirashi']))          return '🍣';
+  // Seafood
+  if (m(['seafood', 'oyster', 'lobster', 'crab', 'shrimp', 'prawn', 'poke',
+          'ceviche', 'clam', 'mussel', 'scallop'])) { return '🦞'; }
+  // BBQ / steak before Korean/Japanese (wagyu trap)
+  if (m(['steak', 'barbecue', 'smokehouse', 'steakhouse', 'bbq', 'brisket',
+          'ribs', 'churrasco', 'wagyu', 'yakiniku', 'limitless', 'smoked meat'])) { return '🥩'; }
+  // Ramen / noodles (before Japanese)
+  if (m(['ramen', 'noodle', 'pho', 'udon', 'soba', 'pad thai', 'tom yum',
+          'banh mi', 'viet'])) { return '🍜'; }
+  // Japanese
+  if (m(['japanese', 'izakaya', 'yakitori', 'tonkatsu', 'tempura', 'teppanyaki'])) return '🍱';
+  // Korean
+  if (m(['korean', 'kbbq', 'bibimbap', 'bulgogi', 'kimchi', 'galbi']))           return '🥢';
+  // Chinese / dim sum / hot pot
+  if (m(['chinese', 'dim_sum', 'dim sum', 'hot_pot', 'hot pot', 'cantonese',
+          'szechuan', 'taiwanese', 'wok', 'dumpling', 'bao'])) { return '🥟'; }
+  // Pizza
+  if (m(['pizza', 'pizzeria', 'neapolitan']))                                     return '🍕';
+  // Pasta / Italian
+  if (m(['italian', 'pasta', 'trattoria', 'risotto', 'carbonara']))              return '🍝';
+  // Burger
+  if (m(['burger', 'hamburger', 'smash', 'patty', 'cheeseburger']))              return '🍔';
+  // Fast food
+  if (m(['fast_food', 'mcdonald', 'kfc', 'chick-fil']))                          return '🍟';
+  // Mexican
+  if (m(['mexican', 'tex_mex', 'taco', 'burrito', 'quesadilla', 'taqueria',
+          'tamale'])) { return '🌮'; }
+  // Indian
+  if (m(['indian', 'south_asian', 'curry', 'tandoor', 'biryani', 'masala',
+          'tikka'])) { return '🍛'; }
+  // Middle Eastern / kebab
+  if (m(['middle_eastern', 'kebab', 'turkish', 'lebanese', 'persian', 'israeli',
+          'falafel', 'shawarma', 'hummus', 'halal', 'gyro'])) { return '🥙'; }
+  // Mediterranean / Greek
+  if (m(['mediterranean', 'greek', 'spanish', 'tapas', 'paella', 'tzatziki']))   return '🫒';
+  // French
+  if (m(['french', 'bistro', 'brasserie', 'crepe']))                             return '🥐';
+  // Breakfast / brunch
+  if (m(['breakfast', 'brunch', 'pancake', 'waffle', 'omelette']))               return '🍳';
+  // Cafe / coffee
+  if (m(['cafe', 'coffee_shop', 'coffee', 'espresso', 'latte', 'starbucks']))    return '☕';
+  // Bakery
+  if (m(['bakery', 'pastry', 'croissant', 'boulangerie', 'bread']))              return '🥖';
+  // Dessert / sweets
+  if (m(['dessert', 'ice_cream', 'sweet', 'donut', 'ice cream', 'gelato',
+          'boba', 'bubble tea', 'mochi'])) { return '🍦'; }
+  // Wine
+  if (m(['wine_bar', 'winery', 'wine bar', 'vineyard']))                         return '🍷';
+  // Cocktail bar
+  if (m(['cocktail_bar', 'lounge', 'night_club', 'cocktail', 'speakeasy']))      return '🍸';
+  // Pub / bar / brewery
+  if (m(['bar', 'pub', 'brewery', 'gastropub', 'izakaya', 'beer', 'taproom']))   return '🍺';
+  // Vegan / salad
+  if (m(['vegetarian', 'vegan', 'health_food', 'plant-based', 'salad',
+          'juice bar', 'smoothie'])) { return '🥗'; }
+  // Sandwich / deli
+  if (m(['sandwich', 'deli', 'sub', 'panini']))                                  return '🥪';
+
+  return '🍽️';
 }
 
-/// Maps a Places API primaryType (or restaurant name keywords) to a food icon.
-/// Type-based matching runs first (accurate); name keywords are the fallback.
-/// Within name fallback, BBQ/steak is checked before Japanese to avoid
-/// "Wagyu Factory | Limitless BBQ" being misclassified as Japanese.
-IconData _foodIconFor(String? primaryType, String name) {
-  final t = (primaryType ?? '').toLowerCase();
-  final n = name.toLowerCase();
 
-  // ── Pass 1: primaryType (precise — always wins when present) ──
-  if (t.isNotEmpty) {
-    if (_m(t, ['sushi']))                                        return Icons.rice_bowl_rounded;
-    if (_m(t, ['ramen']))                                        return Icons.ramen_dining_rounded;
-    if (_m(t, ['japanese']))                                     return Icons.set_meal_rounded;
-    if (_m(t, ['chinese', 'dim_sum', 'hot_pot', 'cantonese',
-                'szechuan', 'taiwanese'])) { return Icons.soup_kitchen_rounded; }
-    if (_m(t, ['korean']))                                       return Icons.outdoor_grill_rounded;
-    if (_m(t, ['thai', 'vietnamese']))                           return Icons.ramen_dining_rounded;
-    if (_m(t, ['pizza']))                                        return Icons.local_pizza_rounded;
-    if (_m(t, ['italian']))                                      return Icons.dinner_dining_rounded;
-    if (_m(t, ['burger', 'hamburger']))                          return Icons.lunch_dining_rounded;
-    if (_m(t, ['fast_food']))                                    return Icons.fastfood_rounded;
-    if (_m(t, ['steak', 'barbecue', 'smokehouse', 'steakhouse',
-                'yakiniku'])) { return Icons.outdoor_grill_rounded; }
-    if (_m(t, ['mexican', 'tex_mex']))                           return Icons.takeout_dining_rounded;
-    if (_m(t, ['indian', 'south_asian']))                        return Icons.restaurant_rounded;
-    if (_m(t, ['middle_eastern', 'kebab', 'turkish', 'lebanese',
-                'persian', 'israeli', 'falafel'])) { return Icons.kebab_dining_rounded; }
-    if (_m(t, ['mediterranean', 'greek', 'spanish', 'tapas']))   return Icons.tapas_rounded;
-    if (_m(t, ['french', 'bistro']))                             return Icons.dinner_dining_rounded;
-    if (_m(t, ['seafood']))                                      return Icons.set_meal_rounded;
-    if (_m(t, ['breakfast', 'brunch']))                          return Icons.egg_alt_rounded;
-    if (_m(t, ['cafe', 'coffee_shop']))                          return Icons.local_cafe_rounded;
-    if (_m(t, ['bakery', 'pastry']))                             return Icons.bakery_dining_rounded;
-    if (_m(t, ['dessert', 'ice_cream', 'sweet', 'donut']))       return Icons.icecream_rounded;
-    if (_m(t, ['wine_bar', 'winery']))                           return Icons.wine_bar_rounded;
-    if (_m(t, ['cocktail_bar', 'lounge', 'night_club']))         return Icons.local_bar_rounded;
-    if (_m(t, ['bar', 'pub', 'brewery', 'gastropub', 'izakaya'])) return Icons.sports_bar_rounded;
-    if (_m(t, ['vegetarian', 'vegan', 'health_food']))           return Icons.eco_rounded;
-    if (_m(t, ['sandwich', 'deli']))                             return Icons.lunch_dining_rounded;
-  }
-
-  // ── Pass 2: name keywords (BBQ/steak before Japanese!) ────────
-  if (_m(n, ['bbq', 'barbecue', 'steakhouse', 'smokehouse',
-              'brisket', 'ribs', 'churrasco', 'wagyu', 'yakiniku',
-              'limitless', 'smoked meat'])) { return Icons.outdoor_grill_rounded; }
-  if (_m(n, ['sushi', 'omakase', 'nigiri', 'maki', 'temaki',
-              'chirashi'])) { return Icons.rice_bowl_rounded; }
-  if (_m(n, ['ramen', 'noodle', 'pho', 'udon', 'soba']))         return Icons.ramen_dining_rounded;
-  if (_m(n, ['japanese', 'izakaya', 'yakitori', 'tonkatsu',
-              'tempura', 'teppanyaki'])) { return Icons.set_meal_rounded; }
-  if (_m(n, ['korean', 'kbbq', 'bibimbap', 'bulgogi', 'kimchi',
-              'galbi'])) { return Icons.outdoor_grill_rounded; }
-  if (_m(n, ['thai', 'pad thai', 'tom yum']))                    return Icons.ramen_dining_rounded;
-  if (_m(n, ['vietnamese', 'viet', 'banh mi']))                  return Icons.ramen_dining_rounded;
-  if (_m(n, ['pizza', 'pizzeria', 'neapolitan']))                 return Icons.local_pizza_rounded;
-  if (_m(n, ['pasta', 'trattoria', 'risotto', 'carbonara']))      return Icons.dinner_dining_rounded;
-  if (_m(n, ['burger', 'smash', 'patty', 'cheeseburger']))        return Icons.lunch_dining_rounded;
-  if (_m(n, ['mcdonald', 'kfc', 'chick-fil', 'fast food']))       return Icons.fastfood_rounded;
-  if (_m(n, ['hot pot', 'dim sum', 'wok', 'dumpling', 'bao',
-              'szechuan', 'cantonese', 'chinese'])) { return Icons.soup_kitchen_rounded; }
-  if (_m(n, ['taco', 'burrito', 'quesadilla', 'taqueria',
-              'mexican', 'tamale'])) { return Icons.takeout_dining_rounded; }
-  if (_m(n, ['kebab', 'shawarma', 'falafel', 'hummus',
-              'halal', 'gyro'])) { return Icons.kebab_dining_rounded; }
-  if (_m(n, ['curry', 'tandoor', 'biryani', 'masala', 'tikka']))  return Icons.restaurant_rounded;
-  if (_m(n, ['tapas', 'paella', 'mediterranean', 'greek',
-              'tzatziki'])) { return Icons.tapas_rounded; }
-  if (_m(n, ['french', 'bistro', 'brasserie', 'crepe']))          return Icons.dinner_dining_rounded;
-  if (_m(n, ['seafood', 'oyster', 'lobster', 'crab', 'shrimp',
-              'poke', 'ceviche'])) { return Icons.set_meal_rounded; }
-  if (_m(n, ['breakfast', 'brunch', 'pancake', 'waffle',
-              'omelette'])) { return Icons.egg_alt_rounded; }
-  if (_m(n, ['cafe', 'coffee', 'espresso', 'latte',
-              'starbucks'])) { return Icons.local_cafe_rounded; }
-  if (_m(n, ['bakery', 'croissant', 'boulangerie', 'bread']))     return Icons.bakery_dining_rounded;
-  if (_m(n, ['ice cream', 'gelato', 'dessert', 'boba',
-              'bubble tea', 'donut', 'mochi'])) { return Icons.icecream_rounded; }
-  if (_m(n, ['wine bar', 'winery', 'vineyard']))                  return Icons.wine_bar_rounded;
-  if (_m(n, ['cocktail', 'lounge', 'speakeasy']))                 return Icons.local_bar_rounded;
-  if (_m(n, ['pub', 'brewery', 'beer', 'taproom', 'izakaya']))    return Icons.sports_bar_rounded;
-  if (_m(n, ['vegan', 'vegetarian', 'plant-based', 'salad',
-              'juice bar', 'smoothie'])) { return Icons.eco_rounded; }
-  if (_m(n, ['sandwich', 'deli', 'sub', 'panini']))               return Icons.lunch_dining_rounded;
-
-  return Icons.restaurant_rounded;
-}
-
-bool _m(String haystack, List<String> needles) =>
-    needles.any((n) => haystack.contains(n));
 
 void _showRestaurantDetail(
   BuildContext context, {

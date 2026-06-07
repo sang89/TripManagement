@@ -8,6 +8,19 @@
 
 ---
 
+## Design Philosophy
+
+**Colorful and fun.** This app should feel vibrant and joyful — not corporate or minimal. Concrete rules:
+
+- Use gradients, bright accent colours, and bold icons liberally on cards, tiles, and buttons.
+- Food/category icons must use naturally-coloured emoji (🍣 🌮 🍕 🥩 …) rather than monochrome Material icons wherever possible.
+- Event-type tiles on the home screen use per-type gradient backgrounds (blue, pink, purple, orange, green).
+- Vote/interaction elements should have a fun, tactile feel — gradient circles, animated state transitions, coloured shadows.
+- Avoid flat grey placeholders; always give elements a colour hint that matches their category.
+- When adding new UI components, default to "more colourful" rather than "more neutral".
+
+---
+
 ## Tech Stack
 
 | Layer | Choice | Package |

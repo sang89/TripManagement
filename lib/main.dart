@@ -41,6 +41,22 @@ import 'services/push_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Flutter framework bug (still present in 3.44): _InkResponseState receives
+  // a _HighlightModeManager callback while its element is deactivated-but-not-
+  // disposed, so `mounted` is still true but ancestor lookup asserts. This only
+  // fires in debug mode and has no effect on release builds or user-visible
+  // behaviour. Filter it so it doesn't flood the debug console.
+  assert(() {
+    final original = FlutterError.onError;
+    FlutterError.onError = (FlutterErrorDetails details) {
+      if (details.exceptionAsString().contains("deactivated widget's ancestor")) {
+        return;
+      }
+      original?.call(details);
+    };
+    return true;
+  }());
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await AppLogger.init();
 
