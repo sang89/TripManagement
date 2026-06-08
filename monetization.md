@@ -206,6 +206,7 @@ One "Find me a spot" session = 1 text search + up to 5 photo fetches (one per re
 | Search that returns 10 results | 1 text search + 10 photos | $0.032 + $0.070 = **$0.102** |
 | Viewing Polls tab with 5 pitched restaurants | 5 photo fetches (one per poll option row) | **$0.035** |
 | Pitching a restaurant (no extra API call) | 0 — uses data already fetched in the search | **$0.000** |
+| Reacting to a poll option (any emoji) | Supabase write only, no external API | **$0.000** |
 | Viewing restaurant detail sheet (up to 4 extra photos) | 0–4 photo fetches | **$0–$0.028** |
 | Tapping "View on Yelp" (resolves exact listing) | 1 Yelp Fusion Business Search call | **$0** (free tier; 500/day cap) |
 
