@@ -779,6 +779,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get filterAll => '全部';
 
   @override
+  String get calendarViewToggle => '日历';
+
+  @override
+  String get listViewToggle => '列表';
+
+  @override
+  String get noEventsOnDay => '当天没有活动';
+
+  @override
   String get myEvents => 'My events';
 
   @override

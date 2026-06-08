@@ -794,6 +794,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get filterAll => 'Todos';
 
   @override
+  String get calendarViewToggle => 'Calendário';
+
+  @override
+  String get listViewToggle => 'Lista';
+
+  @override
+  String get noEventsOnDay => 'Nenhum evento neste dia';
+
+  @override
   String get myEvents => 'My events';
 
   @override

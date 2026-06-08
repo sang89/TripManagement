@@ -781,6 +781,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get filterAll => 'すべて';
 
   @override
+  String get calendarViewToggle => 'カレンダー';
+
+  @override
+  String get listViewToggle => 'リスト';
+
+  @override
+  String get noEventsOnDay => 'この日にイベントはありません';
+
+  @override
   String get myEvents => 'My events';
 
   @override
