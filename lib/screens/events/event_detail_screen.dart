@@ -1585,6 +1585,7 @@ void _showEmojiPickerSheet(
   required Set<String> myEmojis,
   required void Function(String) onReact,
   required void Function(String) onUnreact,
+  int maxReactions = _kMaxReactionsPerUser,
 }) {
   showModalBottomSheet(
     context: context,
@@ -1594,6 +1595,7 @@ void _showEmojiPickerSheet(
       initialMyEmojis: myEmojis,
       onReact: onReact,
       onUnreact: onUnreact,
+      maxReactions: maxReactions,
     ),
   );
 }
@@ -1602,11 +1604,13 @@ class _EmojiPickerSheet extends StatefulWidget {
   final Set<String> initialMyEmojis;
   final void Function(String) onReact;
   final void Function(String) onUnreact;
+  final int maxReactions;
 
   const _EmojiPickerSheet({
     required this.initialMyEmojis,
     required this.onReact,
     required this.onUnreact,
+    this.maxReactions = _kMaxReactionsPerUser,
   });
 
   @override
@@ -1626,7 +1630,7 @@ class _EmojiPickerSheetState extends State<_EmojiPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final maxReached = _myEmojis.length >= _kMaxReactionsPerUser;
+    final maxReached = _myEmojis.length >= widget.maxReactions;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -1663,7 +1667,7 @@ class _EmojiPickerSheetState extends State<_EmojiPickerSheet> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${_myEmojis.length} / $_kMaxReactionsPerUser',
+                    '${_myEmojis.length} / ${widget.maxReactions}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -4133,6 +4137,11 @@ class _ChatTabState extends State<_ChatTab> {
                   return _MessageBubble(
                     msg: msg,
                     isMe: msg.userId == authUid,
+                    authUid: authUid,
+                    onReact: (emoji) =>
+                        context.read<EventChatProvider>().reactToMessage(msg.id, emoji),
+                    onUnreact: (reactionId) =>
+                        context.read<EventChatProvider>().unreactToMessage(msg.id, reactionId),
                   );
                 },
               );
@@ -4148,13 +4157,26 @@ class _ChatTabState extends State<_ChatTab> {
 class _MessageBubble extends StatelessWidget {
   final EventMessage msg;
   final bool isMe;
+  final String? authUid;
+  final void Function(String emoji) onReact;
+  final void Function(String reactionId) onUnreact;
 
-  const _MessageBubble({required this.msg, required this.isMe});
+  const _MessageBubble({
+    required this.msg,
+    required this.isMe,
+    required this.authUid,
+    required this.onReact,
+    required this.onUnreact,
+  });
 
   @override
   Widget build(BuildContext context) {
     final hasAvatar =
         msg.senderAvatarUrl != null && msg.senderAvatarUrl!.isNotEmpty;
+    final reactionCounts = msg.reactionCounts;
+    final myEmojis =
+        authUid != null ? msg.myReactionEmojis(authUid!) : <String>{};
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -4194,30 +4216,60 @@ class _MessageBubble extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 11, color: Colors.grey[500])),
                   ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isMe
-                        ? AppTheme.primary
-                        : Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isMe ? 16 : 4),
-                      bottomRight: Radius.circular(isMe ? 4 : 16),
-                    ),
-                    border: isMe
-                        ? null
-                        : Border.all(color: Colors.grey.shade200),
+                GestureDetector(
+                  onLongPress: () => _showEmojiPickerSheet(
+                    context,
+                    myEmojis: myEmojis,
+                    maxReactions: 1,
+                    onReact: onReact,
+                    onUnreact: (emoji) {
+                      final reaction = msg.reactions.where(
+                          (r) => r.userId == authUid && r.emoji == emoji).firstOrNull;
+                      if (reaction != null) onUnreact(reaction.id);
+                    },
                   ),
-                  child: Text(
-                    msg.content,
-                    style: TextStyle(
-                        color: isMe ? Colors.white : null,
-                        fontSize: 14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isMe
+                          ? AppTheme.primary
+                          : Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isMe ? 16 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 16),
+                      ),
+                      border: isMe
+                          ? null
+                          : Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Text(
+                      msg.content,
+                      style: TextStyle(
+                          color: isMe ? Colors.white : null,
+                          fontSize: 14),
+                    ),
                   ),
                 ),
+                if (reactionCounts.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: _ReactionPills(
+                      reactions: reactionCounts,
+                      myEmojis: myEmojis,
+                      onToggle: (emoji) {
+                        if (myEmojis.contains(emoji)) {
+                          final reaction = msg.reactions.where(
+                              (r) => r.userId == authUid && r.emoji == emoji).firstOrNull;
+                          if (reaction != null) onUnreact(reaction.id);
+                        } else {
+                          onReact(emoji);
+                        }
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
