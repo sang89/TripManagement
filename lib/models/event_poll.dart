@@ -1,3 +1,28 @@
+class EventPollReaction {
+  final String id;
+  final String optionId;
+  final String userId;
+  final String emoji;
+  final DateTime createdAt;
+
+  const EventPollReaction({
+    required this.id,
+    required this.optionId,
+    required this.userId,
+    required this.emoji,
+    required this.createdAt,
+  });
+
+  factory EventPollReaction.fromJson(Map<String, dynamic> json) =>
+      EventPollReaction(
+        id: json['id'] as String,
+        optionId: json['option_id'] as String,
+        userId: json['user_id'] as String,
+        emoji: json['emoji'] as String,
+        createdAt: DateTime.parse(json['created_at'] as String),
+      );
+}
+
 class EventPollVote {
   final String id;
   final String pollId;
@@ -29,6 +54,7 @@ class EventPollOption {
   final int sortOrder;
   // Non-null for restaurant-vote options — stores Places API metadata.
   final Map<String, dynamic>? placeMetadata;
+  final List<EventPollReaction> reactions;
 
   const EventPollOption({
     required this.id,
@@ -36,7 +62,26 @@ class EventPollOption {
     required this.text,
     this.sortOrder = 0,
     this.placeMetadata,
+    this.reactions = const [],
   });
+
+  EventPollOption copyWithReactions(List<EventPollReaction> r) =>
+      EventPollOption(
+        id: id,
+        pollId: pollId,
+        text: text,
+        sortOrder: sortOrder,
+        placeMetadata: placeMetadata,
+        reactions: r,
+      );
+
+  static List<EventPollReaction> _parseReactions(dynamic raw) {
+    if (raw == null || raw is! List) return const [];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(EventPollReaction.fromJson)
+        .toList();
+  }
 
   factory EventPollOption.fromJson(Map<String, dynamic> json) =>
       EventPollOption(
@@ -47,6 +92,7 @@ class EventPollOption {
         placeMetadata: json['place_metadata'] != null
             ? Map<String, dynamic>.from(json['place_metadata'] as Map)
             : null,
+        reactions: _parseReactions(json['event_poll_reactions']),
       );
 }
 
@@ -87,6 +133,19 @@ class EventPoll {
   String? myVoteId(String userId) =>
       votes.where((v) => v.userId == userId).firstOrNull?.id;
 
+  Map<String, int> reactionsFor(String optionId) {
+    final rs = options.firstWhere((o) => o.id == optionId,
+        orElse: () => EventPollOption(id: '', pollId: '', text: '')).reactions;
+    return rs.fold(<String, int>{},
+        (map, r) => map..[r.emoji] = (map[r.emoji] ?? 0) + 1);
+  }
+
+  Set<String> myReactionEmojis(String optionId, String userId) {
+    final rs = options.firstWhere((o) => o.id == optionId,
+        orElse: () => EventPollOption(id: '', pollId: '', text: '')).reactions;
+    return rs.where((r) => r.userId == userId).map((r) => r.emoji).toSet();
+  }
+
   EventPoll copyWithVotes(List<EventPollVote> newVotes) => EventPoll(
         id: id,
         eventId: eventId,
@@ -96,6 +155,21 @@ class EventPoll {
         createdAt: createdAt,
         options: options,
         votes: newVotes,
+      );
+
+  EventPoll copyWithOptionReactions(
+      String optionId, List<EventPollReaction> reactions) =>
+      EventPoll(
+        id: id,
+        eventId: eventId,
+        question: question,
+        pollType: pollType,
+        createdBy: createdBy,
+        createdAt: createdAt,
+        options: options
+            .map((o) => o.id == optionId ? o.copyWithReactions(reactions) : o)
+            .toList(),
+        votes: votes,
       );
 
   factory EventPoll.fromJson(Map<String, dynamic> json) {

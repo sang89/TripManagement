@@ -369,6 +369,31 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  String? _eventIdForOption(String optionId) {
+    for (final entry in _polls.entries) {
+      for (final poll in entry.value) {
+        if (poll.options.any((o) => o.id == optionId)) return entry.key;
+      }
+    }
+    return null;
+  }
+
+  Future<String?> _resolveEventIdForOption(String optionId) async {
+    final cached = _eventIdForOption(optionId);
+    if (cached != null) return cached;
+    try {
+      final row = await _db
+          .from('event_poll_options')
+          .select('poll_id, event_polls(event_id)')
+          .eq('id', optionId)
+          .maybeSingle();
+      final polls = row?['event_polls'] as Map<String, dynamic>?;
+      return polls?['event_id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _subscribeRealtime() {
     if (_userId == null) return;
     _realtimeChannel?.unsubscribe();
@@ -666,6 +691,35 @@ class EventProvider extends ChangeNotifier {
             final pollId = payload.oldRecord['poll_id'] as String?;
             if (pollId == null) return;
             unawaited(_resolveEventIdForPoll(pollId).then((eventId) {
+              if (eventId != null) unawaited(fetchPolls(eventId));
+            }));
+          },
+        )
+
+        // ── event_poll_reactions INSERT ─────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_poll_reactions',
+          callback: (payload) {
+            final optionId = payload.newRecord['option_id'] as String?;
+            if (optionId == null) return;
+            unawaited(_resolveEventIdForOption(optionId).then((eventId) {
+              if (eventId != null) unawaited(fetchPolls(eventId));
+            }));
+          },
+        )
+
+        // ── event_poll_reactions DELETE ──────────────────────────────────────
+        // REPLICA IDENTITY FULL ensures option_id is present in the old record.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_poll_reactions',
+          callback: (payload) {
+            final optionId = payload.oldRecord['option_id'] as String?;
+            if (optionId == null) return;
+            unawaited(_resolveEventIdForOption(optionId).then((eventId) {
               if (eventId != null) unawaited(fetchPolls(eventId));
             }));
           },
@@ -1595,7 +1649,7 @@ class EventProvider extends ChangeNotifier {
     try {
       final data = await _db
           .from('event_polls')
-          .select('*, event_poll_options(*), event_poll_votes(*)')
+          .select('*, event_poll_options(*, event_poll_reactions(*)), event_poll_votes(*)')
           .eq('event_id', eventId)
           .order('created_at', ascending: true);
       final rows = List<Map<String, dynamic>>.from(data as List);
@@ -1815,6 +1869,75 @@ class EventProvider extends ChangeNotifier {
       'user_id': _userId,
     });
     unawaited(fetchPolls(eventId));
+  }
+
+  Future<void> reactToPollOption(
+      String optionId, String emoji, String userId, String eventId) async {
+    final tempReaction = EventPollReaction(
+      id: _uuid.v4(),
+      optionId: optionId,
+      userId: userId,
+      emoji: emoji,
+      createdAt: DateTime.now(),
+    );
+    _applyOptimisticReaction(eventId, optionId, tempReaction);
+    try {
+      await _db.from('event_poll_reactions').insert({
+        'option_id': optionId,
+        'user_id': userId,
+        'emoji': emoji,
+      });
+      unawaited(fetchPolls(eventId));
+    } catch (e) {
+      _revertOptimisticReaction(eventId, optionId, tempReaction.id);
+    }
+  }
+
+  Future<void> unreactToPollOption(
+      String reactionId, String optionId, String eventId) async {
+    _removeOptimisticReaction(eventId, optionId, reactionId);
+    try {
+      await _db.from('event_poll_reactions').delete().eq('id', reactionId);
+      unawaited(fetchPolls(eventId));
+    } catch (e) {
+      unawaited(fetchPolls(eventId));
+    }
+  }
+
+  void _applyOptimisticReaction(
+      String eventId, String optionId, EventPollReaction reaction) {
+    final polls = _polls[eventId];
+    if (polls == null) return;
+    final pollIdx = polls.indexWhere(
+        (p) => p.options.any((o) => o.id == optionId));
+    if (pollIdx < 0) return;
+    final poll = polls[pollIdx];
+    final option = poll.options.firstWhere((o) => o.id == optionId);
+    final newReactions = [...option.reactions, reaction];
+    _polls[eventId]![pollIdx] =
+        poll.copyWithOptionReactions(optionId, newReactions);
+    notifyListeners();
+  }
+
+  void _revertOptimisticReaction(
+      String eventId, String optionId, String tempId) {
+    final polls = _polls[eventId];
+    if (polls == null) return;
+    final pollIdx = polls.indexWhere(
+        (p) => p.options.any((o) => o.id == optionId));
+    if (pollIdx < 0) return;
+    final poll = polls[pollIdx];
+    final option = poll.options.firstWhere((o) => o.id == optionId);
+    final newReactions =
+        option.reactions.where((r) => r.id != tempId).toList();
+    _polls[eventId]![pollIdx] =
+        poll.copyWithOptionReactions(optionId, newReactions);
+    notifyListeners();
+  }
+
+  void _removeOptimisticReaction(
+      String eventId, String optionId, String reactionId) {
+    _revertOptimisticReaction(eventId, optionId, reactionId);
   }
 
 }

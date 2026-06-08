@@ -62,7 +62,7 @@ lib/
 │   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, publicUrl (resolved at load)
 │   ├── event_expense.dart  # EventExpense + EventExpenseSplit for cost splitting
 │   ├── event_bring_item.dart # EventBringItem — id, eventId, label, quantity, claimedBy (nullable), claimedByName, claimedAt, createdBy, createdAt
-│   ├── event_poll.dart     # EventPoll + EventPollOption (+ optional placeMetadata for restaurant-vote) + EventPollVote; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId
+│   ├── event_poll.dart     # EventPollReaction + EventPollVote + EventPollOption (+ optional placeMetadata + reactions list) + EventPoll; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId, reactionsFor, myReactionEmojis
 │   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
@@ -159,7 +159,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | Provider | Owns | Key methods |
 |---|---|---|
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
-| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; Realtime via `event_sync_<userId>` channel |
+| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; Realtime via `event_sync_<userId>` channel |
 | `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel; scoped to `/event/:id` route |
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
@@ -302,6 +302,20 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 
 **Constraint:** `UNIQUE (poll_id, user_id)` — one vote per user per poll. Changing vote = DELETE own vote + INSERT new.  
 **RLS:** members SELECT all; members INSERT own vote; organizer INSERT polls/options; DELETE own vote.
+
+#### `event_poll_reactions`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `option_id` | uuid FK→event_poll_options | CASCADE delete |
+| `user_id` | uuid FK→auth.users | |
+| `emoji` | text | one of `['🔥','😂','👍','❤️','😬']` |
+| `created_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (option_id, user_id, emoji)` — one of each emoji per user per option (Slack-style multi-react).  
+**RLS:** members SELECT; members INSERT own; DELETE own.  
+**Realtime:** REPLICA IDENTITY FULL — DELETE payloads carry option_id for cache resolution.  
+**UX:** Long-press any poll option (custom or restaurant) to open an animated emoji picker. Emojis are shuffled on each open. Reactions appear as teal-tinted pills below the option with counts.
 
 #### `friendships`
 | Column | Type | Notes |
@@ -583,6 +597,7 @@ If the user had set `block_reinvite = true`:
 | `event_expenses` | INSERT / UPDATE / DELETE | `fetchExpenses(eventId)` | `REPLICA IDENTITY FULL` on expenses; DELETE handler falls back to refreshing all loaded events if eventId missing |
 | `event_bring_list_items` | INSERT / UPDATE / DELETE | `fetchBringList(eventId)` | Requires `REPLICA IDENTITY FULL`; migration `20260605060000_bringlist_realtime.sql` adds table to publication |
 | `event_polls` (via option/vote tables) | INSERT / DELETE | `_resolveEventIdForPoll(pollId)` DB fallback → `fetchPolls(eventId)` | Handles cache-cold race via DB fallback |
+| `event_poll_reactions` | INSERT / DELETE | `_resolveEventIdForOption(optionId)` DB fallback → `fetchPolls(eventId)` | Reactions with REPLICA IDENTITY FULL carry option_id in DELETE |
 
 `InvitationsProvider` subscribes separately (INSERT + UPDATE on `event_guests` filtered by `user_id = currentUser` and `status = 'pending'`) to keep the invite badge current for the invited user's own device.
 

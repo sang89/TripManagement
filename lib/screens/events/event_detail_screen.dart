@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'dart:math' show min;
+import 'dart:math' show Random, min;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1465,41 +1465,78 @@ class _PollCard extends StatelessWidget {
             const SizedBox(height: 12),
             for (final option in (List.of(poll.options)
                   ..sort((a, b) => poll.votesFor(b.id).compareTo(poll.votesFor(a.id))))) ...[
-              if (isRestaurant)
-                _RestaurantPollOptionRow(
-                  key: ValueKey(option.id),
-                  option: option,
-                  votes: poll.votesFor(option.id),
-                  isSelected: myVotedIds.contains(option.id),
-                  onTap: authUid == null
-                      ? null
-                      : () {
-                          final provider = context.read<EventProvider>();
-                          if (myVotedIds.contains(option.id)) {
-                            provider.unvote(poll.id, option.id, eventId);
-                          } else {
-                            provider.vote(poll.id, option.id, eventId);
-                          }
-                        },
-                )
-              else
-                _PollOptionRow(
-                  key: ValueKey(option.id),
-                  option: option,
-                  votes: poll.votesFor(option.id),
-                  total: total,
-                  isSelected: myVotedIds.contains(option.id),
-                  onTap: authUid == null
-                      ? null
-                      : () {
-                          final provider = context.read<EventProvider>();
-                          if (myVotedIds.contains(option.id)) {
-                            provider.unvote(poll.id, option.id, eventId);
-                          } else {
-                            provider.vote(poll.id, option.id, eventId);
-                          }
-                        },
-                ),
+              Builder(builder: (context) {
+                final reactionCounts = authUid != null
+                    ? poll.reactionsFor(option.id)
+                    : <String, int>{};
+                final myEmojis = authUid != null
+                    ? poll.myReactionEmojis(option.id, authUid!)
+                    : <String>{};
+
+                void handleReact(String emoji) {
+                  if (authUid == null) return;
+                  context
+                      .read<EventProvider>()
+                      .reactToPollOption(option.id, emoji, authUid!, eventId);
+                }
+
+                void handleUnreact(String emoji) {
+                  if (authUid == null) return;
+                  final reaction = option.reactions.firstWhere(
+                    (r) => r.userId == authUid && r.emoji == emoji,
+                    orElse: () => EventPollReaction(
+                        id: '', optionId: '', userId: '', emoji: '',
+                        createdAt: DateTime.now()),
+                  );
+                  if (reaction.id.isEmpty) return;
+                  context
+                      .read<EventProvider>()
+                      .unreactToPollOption(reaction.id, option.id, eventId);
+                }
+
+                return isRestaurant
+                    ? _RestaurantPollOptionRow(
+                        key: ValueKey(option.id),
+                        option: option,
+                        votes: poll.votesFor(option.id),
+                        isSelected: myVotedIds.contains(option.id),
+                        reactions: reactionCounts,
+                        myReactionEmojis: myEmojis,
+                        onReact: handleReact,
+                        onUnreact: handleUnreact,
+                        onTap: authUid == null
+                            ? null
+                            : () {
+                                final provider = context.read<EventProvider>();
+                                if (myVotedIds.contains(option.id)) {
+                                  provider.unvote(poll.id, option.id, eventId);
+                                } else {
+                                  provider.vote(poll.id, option.id, eventId);
+                                }
+                              },
+                      )
+                    : _PollOptionRow(
+                        key: ValueKey(option.id),
+                        option: option,
+                        votes: poll.votesFor(option.id),
+                        total: total,
+                        isSelected: myVotedIds.contains(option.id),
+                        reactions: reactionCounts,
+                        myReactionEmojis: myEmojis,
+                        onReact: handleReact,
+                        onUnreact: handleUnreact,
+                        onTap: authUid == null
+                            ? null
+                            : () {
+                                final provider = context.read<EventProvider>();
+                                if (myVotedIds.contains(option.id)) {
+                                  provider.unvote(poll.id, option.id, eventId);
+                                } else {
+                                  provider.vote(poll.id, option.id, eventId);
+                                }
+                              },
+                      );
+              }),
               const SizedBox(height: 8),
             ],
             const SizedBox(height: 4),
@@ -1516,12 +1553,309 @@ class _PollCard extends StatelessWidget {
   }
 }
 
+// ~96 emojis for the reaction panel (8-column grid = 12 rows).
+const _kAllReactionEmojis = [
+  // Faces & emotions
+  '😂', '😍', '🥲', '😎', '🤩', '🥳', '😱', '😅', '🤣', '🫡',
+  '😤', '🫠', '🥺', '😭', '🙄', '🤔', '😒', '😬', '🤯', '🥴',
+  '😵', '🤗', '🥹', '😈', '👻',
+  // Love & affection
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+  // Hands & gestures
+  '👍', '👎', '🙌', '👏', '🤝', '💪', '👋', '🤙', '✌️', '🤞',
+  // Celebration
+  '🎉', '🎊', '🏆', '👑', '🎯', '🎪', '🎭', '🎨', '🎰', '🎸',
+  // Food & drink
+  '🍕', '🍔', '🌮', '🍣', '🍜', '🍝', '🧋', '🍦', '🎂', '🍩',
+  // Animals & nature
+  '🦁', '🐻', '🐼', '🦊', '🐸', '🦄', '🦋', '🐙', '🦞', '🐳',
+  // Fire & energy
+  '🔥', '⚡', '💫', '✨', '🌟', '⭐', '🌈', '🌊', '💥', '🎆',
+  // Objects & symbols
+  '💎', '🚀', '💯', '🎵', '🎶', '💰', '🎮', '🔮', '🧨', '💣',
+  // Special / fun
+  '💀', '🤖', '👽', '🎃', '🫧', '🌀',
+];
+
+// Maximum reactions a single user may place on one option.
+const _kMaxReactionsPerUser = 10;
+
+void _showEmojiPickerSheet(
+  BuildContext context, {
+  required Set<String> myEmojis,
+  required void Function(String) onReact,
+  required void Function(String) onUnreact,
+}) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => _EmojiPickerSheet(
+      initialMyEmojis: myEmojis,
+      onReact: onReact,
+      onUnreact: onUnreact,
+    ),
+  );
+}
+
+class _EmojiPickerSheet extends StatefulWidget {
+  final Set<String> initialMyEmojis;
+  final void Function(String) onReact;
+  final void Function(String) onUnreact;
+
+  const _EmojiPickerSheet({
+    required this.initialMyEmojis,
+    required this.onReact,
+    required this.onUnreact,
+  });
+
+  @override
+  State<_EmojiPickerSheet> createState() => _EmojiPickerSheetState();
+}
+
+class _EmojiPickerSheetState extends State<_EmojiPickerSheet> {
+  late final List<String> _shuffled;
+  late final Set<String> _myEmojis;
+
+  @override
+  void initState() {
+    super.initState();
+    _shuffled = List.of(_kAllReactionEmojis)..shuffle();
+    _myEmojis = Set.of(widget.initialMyEmojis);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxReached = _myEmojis.length >= _kMaxReactionsPerUser;
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Text('React 🎉',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                const Spacer(),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: maxReached
+                        ? AppTheme.danger.withValues(alpha: 0.12)
+                        : const Color(0xFF00B09B).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_myEmojis.length} / $_kMaxReactionsPerUser',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: maxReached
+                          ? AppTheme.danger
+                          : const Color(0xFF00796B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Flexible(
+            child: GridView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 8,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
+              ),
+              itemCount: _shuffled.length,
+              itemBuilder: (ctx, i) {
+                final emoji = _shuffled[i];
+                final isMine = _myEmojis.contains(emoji);
+                final disabled = !isMine && maxReached;
+                return TweenAnimationBuilder<double>(
+                  key: ValueKey('$emoji-${isMine ? 1 : 0}'),
+                  tween: Tween(begin: 0.5, end: 1.0),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.elasticOut,
+                  builder: (ctx, scale, child) =>
+                      Transform.scale(scale: scale, child: child),
+                  child: AppTappable(
+                    onTap: disabled
+                        ? null
+                        : () {
+                            if (isMine) {
+                              widget.onUnreact(emoji);
+                            } else {
+                              widget.onReact(emoji);
+                            }
+                            Navigator.pop(context);
+                          },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: isMine
+                            ? const Color(0xFF00B09B).withValues(alpha: 0.18)
+                            : null,
+                        borderRadius: BorderRadius.circular(10),
+                        border: isMine
+                            ? Border.all(
+                                color: const Color(0xFF00B09B)
+                                    .withValues(alpha: 0.5),
+                                width: 1.5)
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          emoji,
+                          style: TextStyle(
+                            fontSize: isMine ? 26 : 22,
+                            color: disabled ? Colors.grey.shade300 : null,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReactionPills extends StatefulWidget {
+  final Map<String, int> reactions;
+  final Set<String> myEmojis;
+  final void Function(String emoji) onToggle;
+
+  const _ReactionPills({
+    required this.reactions,
+    required this.myEmojis,
+    required this.onToggle,
+  });
+
+  @override
+  State<_ReactionPills> createState() => _ReactionPillsState();
+}
+
+class _ReactionPillsState extends State<_ReactionPills> {
+  final _rng = Random();
+  late List<String> _order;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.reactions.keys.toList()..shuffle(_rng);
+  }
+
+  @override
+  void didUpdateWidget(_ReactionPills old) {
+    super.didUpdateWidget(old);
+    final current = widget.reactions.keys.toSet();
+    // Remove emojis that disappeared.
+    _order.removeWhere((e) => !current.contains(e));
+    // Insert new emojis at a random position.
+    for (final e in current.difference(old.reactions.keys.toSet())) {
+      final pos = _order.isEmpty ? 0 : _rng.nextInt(_order.length + 1);
+      _order.insert(pos, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.reactions.isEmpty) {
+      return Text(
+        'Hold to react',
+        style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+      );
+    }
+    return Wrap(
+      spacing: 5,
+      runSpacing: 5,
+      children: _order.map((emoji) {
+        final count = widget.reactions[emoji];
+        if (count == null) return const SizedBox.shrink();
+        final isMine = widget.myEmojis.contains(emoji);
+        final seed = emoji.runes.first;
+        final emojiFs = 12.0 + (seed % 4);
+        final radius = 8.0 + (seed % 7);
+        return Transform.rotate(
+          angle: ((seed % 7) - 3) * 0.025,
+          child: AppTappable(
+            onTap: () => widget.onToggle(emoji),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: 7.0 + (seed % 3), vertical: 3),
+              decoration: BoxDecoration(
+                color: isMine
+                    ? const Color(0xFF00B09B).withValues(alpha: 0.13)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(radius),
+                border: Border.all(
+                  color: isMine
+                      ? const Color(0xFF00B09B).withValues(alpha: 0.4)
+                      : Colors.grey.shade200,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(emoji,
+                      style: TextStyle(fontSize: emojiFs, height: 1)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isMine
+                          ? const Color(0xFF00796B)
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
 class _PollOptionRow extends StatelessWidget {
   final EventPollOption option;
   final int votes;
   final int total;
   final bool isSelected;
   final VoidCallback? onTap;
+  final Map<String, int> reactions;
+  final Set<String> myReactionEmojis;
+  final void Function(String emoji) onReact;
+  final void Function(String emoji) onUnreact;
 
   const _PollOptionRow({
     super.key,
@@ -1530,6 +1864,10 @@ class _PollOptionRow extends StatelessWidget {
     required this.total,
     required this.isSelected,
     required this.onTap,
+    required this.reactions,
+    required this.myReactionEmojis,
+    required this.onReact,
+    required this.onUnreact,
   });
 
   @override
@@ -1537,8 +1875,14 @@ class _PollOptionRow extends StatelessWidget {
     final pct = total > 0 ? votes / total : 0.0;
     final pctLabel = '${(pct * 100).round()}%';
 
-    return AppTappable(
+    return GestureDetector(
       onTap: onTap,
+      onLongPress: () => _showEmojiPickerSheet(
+        context,
+        myEmojis: myReactionEmojis,
+        onReact: onReact,
+        onUnreact: onUnreact,
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: const EdgeInsets.symmetric(vertical: 4),
@@ -1576,7 +1920,8 @@ class _PollOptionRow extends StatelessWidget {
                           : null,
                       border: isSelected
                           ? null
-                          : Border.all(color: Colors.grey.shade300, width: 1.5),
+                          : Border.all(
+                              color: Colors.grey.shade300, width: 1.5),
                     ),
                     child: isSelected
                         ? const Icon(Icons.check_rounded,
@@ -1592,9 +1937,8 @@ class _PollOptionRow extends StatelessWidget {
                         fontSize: 15,
                         fontWeight:
                             isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected
-                            ? const Color(0xFF00796B)
-                            : Colors.black87,
+                        color:
+                            isSelected ? const Color(0xFF00796B) : Colors.black87,
                       ),
                     ),
                   ),
@@ -1657,6 +2001,21 @@ class _PollOptionRow extends StatelessWidget {
                   ),
                 ),
               ),
+              if (reactions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _ReactionPills(
+                    reactions: reactions,
+                    myEmojis: myReactionEmojis,
+                    onToggle: (emoji) {
+                      if (myReactionEmojis.contains(emoji)) {
+                        onUnreact(emoji);
+                      } else {
+                        onReact(emoji);
+                      }
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -1670,6 +2029,10 @@ class _RestaurantPollOptionRow extends StatelessWidget {
   final int votes;
   final bool isSelected;
   final VoidCallback? onTap;
+  final Map<String, int> reactions;
+  final Set<String> myReactionEmojis;
+  final void Function(String emoji) onReact;
+  final void Function(String emoji) onUnreact;
 
   const _RestaurantPollOptionRow({
     super.key,
@@ -1677,9 +2040,12 @@ class _RestaurantPollOptionRow extends StatelessWidget {
     required this.votes,
     required this.isSelected,
     required this.onTap,
+    required this.reactions,
+    required this.myReactionEmojis,
+    required this.onReact,
+    required this.onUnreact,
   });
 
-  @override
   @override
   Widget build(BuildContext context) {
     final meta = option.placeMetadata;
@@ -1693,159 +2059,200 @@ class _RestaurantPollOptionRow extends StatelessWidget {
     final foodEmoji = _foodEmojiFor(primaryType, option.text);
     final rating = (meta?['rating'] as num?)?.toDouble();
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: isSelected
-            ? AppTheme.primary.withValues(alpha: 0.06)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isSelected
-              ? AppTheme.primary.withValues(alpha: 0.45)
-              : Colors.grey.shade200,
-          width: isSelected ? 1.5 : 1,
-        ),
+    return GestureDetector(
+      onLongPress: () => _showEmojiPickerSheet(
+        context,
+        myEmojis: myReactionEmojis,
+        onReact: onReact,
+        onUnreact: onUnreact,
       ),
-      child: Row(
-        children: [
-          // Left: thumbnail + info → opens detail sheet.
-          Expanded(
-            child: AppTappable(
-              onTap: () => _showRestaurantDetail(
-                context,
-                name: option.text,
-                address: address ?? '',
-                rating: rating,
-                priceLevel: meta?['price_level'] as int?,
-                photoRefs: _photoRefsFromMetadata(meta),
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: 72,
-                    child: photoUrl != null
-                        ? Image.network(
-                            photoUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              color: Colors.grey[100],
-                              child: const Icon(Icons.restaurant,
-                                  size: 24, color: Colors.black12),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey[100],
-                            child: const Icon(Icons.restaurant,
-                                size: 24, color: Colors.black12),
-                          ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primary.withValues(alpha: 0.06)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primary.withValues(alpha: 0.45)
+                : Colors.grey.shade200,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // Left: thumbnail + info → opens detail sheet.
+                Expanded(
+                  child: AppTappable(
+                    onTap: () => _showRestaurantDetail(
+                      context,
+                      name: option.text,
+                      address: address ?? '',
+                      rating: rating,
+                      priceLevel: meta?['price_level'] as int?,
+                      photoRefs: _photoRefsFromMetadata(meta),
+                    ),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            option.text,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected ? AppTheme.primary : null,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          SizedBox(
+                            width: 72,
+                            child: photoUrl != null
+                                ? Image.network(
+                                    photoUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Container(
+                                      color: Colors.grey[100],
+                                      child: const Icon(Icons.restaurant,
+                                          size: 24, color: Colors.black12),
+                                    ),
+                                  )
+                                : Container(
+                                    color: Colors.grey[100],
+                                    child: const Icon(Icons.restaurant,
+                                        size: 24, color: Colors.black12),
+                                  ),
                           ),
-                          if (address != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              address,
-                              style:
-                                  TextStyle(fontSize: 11, color: Colors.grey[500]),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    option.text,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? AppTheme.primary
+                                          : null,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (address != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      address,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[500]),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                  if (rating != null) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.star_rounded,
+                                            size: 12, color: Colors.amber),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          rating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
-                          ],
-                          if (rating != null) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.star_rounded,
-                                    size: 12, color: Colors.amber),
-                                const SizedBox(width: 2),
-                                Text(rating.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
-              ),
-            ),
-          ),
-          // Right: vote toggle — gradient circle, easy tap target.
-          AppTappable(
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 10, 12, 10),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOutCubic,
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  // Always use gradient so BoxDecoration.lerp stays structurally identical.
-                  gradient: LinearGradient(
-                    colors: isSelected
-                        ? const [Color(0xFF667EEA), Color(0xFF764BA2)]
-                        : [Colors.grey.shade100, Colors.grey.shade200],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  // Always include a shadow so lerp never hits a null→list transition.
-                  boxShadow: [
-                    BoxShadow(
-                      color: isSelected
-                          ? const Color(0xFF667EEA).withValues(alpha: 0.4)
-                          : Colors.transparent,
-                      blurRadius: isSelected ? 10 : 1,
-                      offset: isSelected ? const Offset(0, 4) : Offset.zero,
-                    ),
-                  ],
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$votes',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: isSelected ? Colors.white : Colors.grey[700],
-                        height: 1,
+                // Right: vote toggle — gradient circle, easy tap target.
+                AppTappable(
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 10, 12, 10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        // Always use gradient so BoxDecoration.lerp stays structurally identical.
+                        gradient: LinearGradient(
+                          colors: isSelected
+                              ? const [Color(0xFF667EEA), Color(0xFF764BA2)]
+                              : [
+                                  Colors.grey.shade100,
+                                  Colors.grey.shade200
+                                ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        // Always include a shadow so lerp never hits a null→list transition.
+                        boxShadow: [
+                          BoxShadow(
+                            color: isSelected
+                                ? const Color(0xFF667EEA).withValues(alpha: 0.4)
+                                : Colors.transparent,
+                            blurRadius: isSelected ? 10 : 1,
+                            offset: isSelected
+                                ? const Offset(0, 4)
+                                : Offset.zero,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$votes',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey[700],
+                              height: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(foodEmoji,
+                              style:
+                                  const TextStyle(fontSize: 18, height: 1)),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(foodEmoji,
-                        style: const TextStyle(fontSize: 18, height: 1)),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+            if (reactions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: _ReactionPills(
+                  reactions: reactions,
+                  myEmojis: myReactionEmojis,
+                  onToggle: (emoji) {
+                    if (myReactionEmojis.contains(emoji)) {
+                      onUnreact(emoji);
+                    } else {
+                      onReact(emoji);
+                    }
+                  },
                 ),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
