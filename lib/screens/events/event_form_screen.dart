@@ -358,8 +358,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   PlacesAutocompleteField(
                     controller: _locationCtrl,
                     label: _isTrip
-                        ? '${l10n.destinationLabel} *'
-                        : '${l10n.eventLocation} *',
+                        ? l10n.destinationLabel
+                        : l10n.eventLocation,
+                    required: true,
                     prefixIcon: Icons.location_on_outlined,
                     placesService: _places,
                     onCoordinatesChanged: (lat, lng) => setState(() {
@@ -373,7 +374,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
                   // Start date/time *
                   _DateTimeTile(
-                    label: '${l10n.eventStartDateTime} *',
+                    label: l10n.eventStartDateTime,
+                    isRequired: true,
                     value: _startAt,
                     display: _startAt != null
                         ? fmt.format(_startAt!)
@@ -516,12 +518,14 @@ class _DateTimeTile extends StatelessWidget {
   final DateTime? value;
   final String display;
   final VoidCallback onTap;
+  final bool isRequired;
 
   const _DateTimeTile({
     required this.label,
     required this.value,
     required this.display,
     required this.onTap,
+    this.isRequired = false,
   });
 
   @override
@@ -529,13 +533,17 @@ class _DateTimeTile extends StatelessWidget {
         onTap: onTap,
         child: InputDecorator(
           decoration: InputDecoration(
-            labelText: label,
+            label: isRequired
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(label),
+                    const Text(' *', style: TextStyle(color: Colors.red)),
+                  ])
+                : Text(label),
             prefixIcon: const Icon(Icons.calendar_today_outlined),
           ),
           child: Text(
             display,
-            style:
-                TextStyle(color: value != null ? null : Colors.grey[500]),
+            style: TextStyle(color: value != null ? null : Colors.grey[500]),
           ),
         ),
       );

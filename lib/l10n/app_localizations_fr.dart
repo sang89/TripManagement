@@ -781,6 +781,23 @@ class AppLocalizationsFr extends AppLocalizations {
   String get noEventsYet => 'No events yet. Tap + to create one.';
 
   @override
+  String get noUpcomingEvents => 'Aucun événement à venir';
+
+  @override
+  String get noUpcomingEventsHint =>
+      'Appuyez sur + pour planifier votre prochain événement.';
+
+  @override
+  String get noPastEvents => 'Pas encore d\'événements passés';
+
+  @override
+  String get noPastEventsHint =>
+      'Les événements auxquels vous avez participé apparaîtront ici.';
+
+  @override
+  String get filterAll => 'Tous';
+
+  @override
   String get myEvents => 'My events';
 
   @override

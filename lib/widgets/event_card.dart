@@ -7,8 +7,9 @@ import 'event_type_banner.dart';
 
 class EventCard extends StatelessWidget {
   final Event event;
+  final String? currentUserId;
 
-  const EventCard({super.key, required this.event});
+  const EventCard({super.key, required this.event, this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +19,25 @@ class EventCard extends StatelessWidget {
         event.startAt.isBefore(now) &&
         (event.endAt == null || event.endAt!.isAfter(now));
 
-    final statusLabel = isOngoing ? 'Ongoing' : isPast ? 'Past' : 'Upcoming';
-    final statusColor = isOngoing
-        ? AppTheme.accent
-        : isPast
-            ? Colors.grey
-            : AppTheme.primaryLight;
+    final isPendingInvite = !isPast &&
+        currentUserId != null &&
+        event.guests.any(
+            (g) => g.userId == currentUserId && g.isPending);
+
+    final statusLabel = isPendingInvite
+        ? 'Invited'
+        : isOngoing
+            ? 'Ongoing'
+            : isPast
+                ? 'Past'
+                : 'Upcoming';
+    final statusColor = isPendingInvite
+        ? Colors.orange
+        : isOngoing
+            ? AppTheme.accent
+            : isPast
+                ? Colors.grey
+                : AppTheme.primaryLight;
 
     final fmt = DateFormat('MMM d, y');
     final dateRange = event.endAt != null
@@ -89,111 +103,109 @@ class _ThemedCardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 160,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          EventTypeBanner(theme: bannerTheme, height: 160),
-          // bottom dark fade so text pops
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.45),
-                  ],
-                ),
+    // Stack without StackFit.expand — the non-positioned content child drives height.
+    // Positioned.fill children (banner + fade) stretch to match.
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: EventTypeBanner(theme: bannerTheme),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.15),
+                  Colors.black.withValues(alpha: 0.60),
+                ],
               ),
-              child: const SizedBox(height: 80, width: double.infinity),
             ),
           ),
-          // content
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(typeIcon, size: 18, color: Colors.white),
-                    const Spacer(),
-                    if (pendingCount > 0) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '$pendingCount pending',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600),
-                        ),
+        ),
+        // Content drives the card height — no Spacer, no fixed size
+        Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(typeIcon, size: 20, color: Colors.white),
+                  const Spacer(),
+                  if (pendingCount > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 6),
-                    ],
-                    _StatusChip(
-                        label: statusLabel, color: statusColor, onImage: true),
+                      child: Text(
+                        '$pendingCount pending',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                   ],
+                  _StatusChip(
+                      label: statusLabel, color: statusColor, onImage: true),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
                 ),
-                const Spacer(),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    if (location.isNotEmpty) ...[
-                      const Icon(Icons.location_on_outlined,
-                          size: 14, color: Colors.white70),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          location,
-                          style:
-                              const TextStyle(color: Colors.white70, fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ] else
-                      const Spacer(),
-                    const Icon(Icons.calendar_today_outlined,
-                        size: 13, color: Colors.white70),
-                    const SizedBox(width: 3),
-                    Text(dateRange,
-                        style:
-                            const TextStyle(color: Colors.white70, fontSize: 12)),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.people_outline,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (location.isNotEmpty) ...[
+                    const Icon(Icons.location_on_outlined,
                         size: 14, color: Colors.white70),
-                    const SizedBox(width: 3),
-                    Text('$guestCount',
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        location,
                         style:
-                            const TextStyle(color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
-              ],
-            ),
+                            const TextStyle(color: Colors.white70, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ] else
+                    const Spacer(),
+                  const Icon(Icons.calendar_today_outlined,
+                      size: 13, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Text(dateRange,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.people_outline,
+                      size: 14, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Text('$guestCount',
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13)),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
