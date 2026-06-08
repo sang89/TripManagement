@@ -782,6 +782,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get filterAll => '전체';
 
   @override
+  String get calendarViewToggle => '캘린더';
+
+  @override
+  String get listViewToggle => '목록';
+
+  @override
+  String get noEventsOnDay => '이 날에 이벤트가 없습니다';
+
+  @override
   String get myEvents => 'My events';
 
   @override

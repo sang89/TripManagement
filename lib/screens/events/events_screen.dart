@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/auth_provider.dart';
@@ -12,6 +14,83 @@ import '../../widgets/event_card.dart';
 import '../../widgets/event_type_banner.dart';
 
 enum _EventTab { upcoming, invited, past }
+
+// Vibrant gradient mixing all five event type colours + one icon from each.
+const _kAllEventsBannerTheme = EventTypeBannerTheme(
+  gradientColors: [
+    Color(0xFF1565C0), // trip blue
+    Color(0xFF7B1FA2), // wedding purple
+    Color(0xFFE91E63), // birthday pink
+    Color(0xFFFF6F00), // quick-bites orange
+  ],
+  icons: [
+    Icons.flight_rounded,
+    Icons.cake_rounded,
+    Icons.favorite_rounded,
+    Icons.celebration_rounded,
+    Icons.restaurant_rounded,
+    Icons.luggage_rounded,
+    Icons.music_note_rounded,
+    Icons.auto_awesome_rounded,
+    Icons.camera_alt_rounded,
+    Icons.local_florist_rounded,
+    Icons.stars_rounded,
+    Icons.diamond_rounded,
+  ],
+);
+
+// ─── Shared filter helper ─────────────────────────────────────────────────────
+
+List<Event> _filteredEvents({
+  required EventProvider provider,
+  required _EventTab tab,
+  required EventType? typeFilter,
+  required String? currentUserId,
+}) {
+  final now = DateTime.now();
+  var events = [...provider.myEvents, ...provider.invitedEvents];
+
+  events = switch (tab) {
+    _EventTab.upcoming => events
+        .where((e) => !(e.endAt != null && e.endAt!.isBefore(now)))
+        .toList(),
+    _EventTab.invited => events
+        .where((e) =>
+            !(e.endAt != null && e.endAt!.isBefore(now)) &&
+            currentUserId != null &&
+            e.guests.any((g) => g.userId == currentUserId && g.isPending))
+        .toList(),
+    _EventTab.past => events
+        .where((e) => e.endAt != null && e.endAt!.isBefore(now))
+        .toList(),
+  };
+
+  if (typeFilter != null) {
+    events = events.where((e) => e.eventType == typeFilter).toList();
+  }
+  return events;
+}
+
+// Returns events that overlap with [day] (handles multi-day trips).
+List<Event> _eventsOnDay(DateTime day, List<Event> events) {
+  final d = DateTime(day.year, day.month, day.day);
+  return events.where((e) {
+    final start = DateTime(e.startAt.year, e.startAt.month, e.startAt.day);
+    if (e.endAt == null) return start == d;
+    final end = DateTime(e.endAt!.year, e.endAt!.month, e.endAt!.day);
+    return !d.isBefore(start) && !d.isAfter(end);
+  }).toList();
+}
+
+Color _dotColorFor(EventType type) => switch (type) {
+      EventType.trip => const Color(0xFF1565C0),
+      EventType.birthday => const Color(0xFFE91E63),
+      EventType.wedding => const Color(0xFF7B1FA2),
+      EventType.social => const Color(0xFF00897B),
+      EventType.quickBites => const Color(0xFFE64A19),
+    };
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -23,12 +102,14 @@ class EventsScreen extends StatefulWidget {
 class _EventsScreenState extends State<EventsScreen> {
   _EventTab _selectedTab = _EventTab.upcoming;
   EventType? _typeFilter;
+  bool _calendarView = false;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
 
   @override
   void initState() {
     super.initState();
     // On web, Stripe redirects back to /events?stripe_success=true after payment.
-    // Reload subscription so isPro updates without requiring a restart.
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final uri = Uri.base;
@@ -56,45 +137,139 @@ class _EventsScreenState extends State<EventsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final provider = context.watch<EventProvider>();
+    final userId = context.read<AuthProvider>().userId;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.navEvents)),
-      floatingActionButton: AppFab(onPressed: _onFabTap),
-      body: Consumer<EventProvider>(
-        builder: (_, provider, _) {
-          return Column(
-            children: [
-              AppTabSelector<_EventTab>(
-                selected: _selectedTab,
-                onChanged: (v) => setState(() => _selectedTab = v),
-                items: [
-                  AppTabItem(label: l10n.upcoming, value: _EventTab.upcoming, icon: Icons.schedule),
-                  AppTabItem(label: l10n.invitedEvents, value: _EventTab.invited, icon: Icons.mail_outline, badge: provider.pendingInviteCount),
-                  AppTabItem(label: l10n.past, value: _EventTab.past, icon: Icons.history),
-                ],
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          flexibleSpace: EventTypeBanner(
+            theme: _kAllEventsBannerTheme,
+            height: double.infinity,
+          ),
+          title: Text(l10n.navEvents),
+          actions: [
+            IconButton(
+              icon: Icon(
+                _calendarView
+                    ? Icons.view_list_rounded
+                    : Icons.calendar_month_rounded,
+                color: Colors.white,
               ),
-              _TypeFilterRow(
-                selected: _typeFilter,
-                onChanged: (v) => setState(() => _typeFilter = v),
-                l10n: l10n,
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: _EventList(
-                  provider: provider,
-                  tab: _selectedTab,
-                  typeFilter: _typeFilter,
-                  l10n: l10n,
-                  onCreateTap: _onFabTap,
-                  currentUserId: context.read<AuthProvider>().userId,
+              tooltip: _calendarView
+                  ? l10n.listViewToggle
+                  : l10n.calendarViewToggle,
+              onPressed: () => setState(() {
+                _calendarView = !_calendarView;
+                if (!_calendarView) _selectedDay = null;
+              }),
+            ),
+          ],
+          bottom: TabBar(
+            onTap: (i) => setState(() => _selectedTab = _EventTab.values[i]),
+            tabAlignment: TabAlignment.fill,
+            labelStyle:
+                const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            tabs: [
+              Tab(
+                  icon: const Icon(Icons.schedule, size: 20),
+                  text: l10n.upcoming),
+              Tab(
+                icon: _BadgedIcon(
+                  icon: Icons.mail_outline,
+                  count: provider.pendingInviteCount,
                 ),
+                text: l10n.invitedEvents,
               ),
+              Tab(
+                  icon: const Icon(Icons.history, size: 20),
+                  text: l10n.past),
             ],
-          );
-        },
+          ),
+        ),
+        floatingActionButton: AppFab(onPressed: _onFabTap),
+        body: Column(
+          children: [
+            _TypeFilterRow(
+              selected: _typeFilter,
+              onChanged: (v) => setState(() => _typeFilter = v),
+              l10n: l10n,
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _calendarView
+                  ? _CalendarView(
+                      provider: provider,
+                      tab: _selectedTab,
+                      typeFilter: _typeFilter,
+                      focusedDay: _focusedDay,
+                      selectedDay: _selectedDay,
+                      onDaySelected: (sel, foc) => setState(() {
+                        _selectedDay = sel;
+                        _focusedDay = foc;
+                      }),
+                      onPageChanged: (foc) =>
+                          setState(() => _focusedDay = foc),
+                      l10n: l10n,
+                      currentUserId: userId,
+                    )
+                  : _EventList(
+                      provider: provider,
+                      tab: _selectedTab,
+                      typeFilter: _typeFilter,
+                      l10n: l10n,
+                      onCreateTap: _onFabTap,
+                      currentUserId: userId,
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+// ─── Badged icon for tab bar ──────────────────────────────────────────────────
+
+class _BadgedIcon extends StatelessWidget {
+  final IconData icon;
+  final int count;
+  const _BadgedIcon({required this.icon, required this.count});
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(icon, size: 20),
+          if (count > 0)
+            Positioned(
+              top: -4,
+              right: -10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
 }
 
 // ─── Type filter chip row ────────────────────────────────────────────────────
@@ -118,14 +293,17 @@ class _TypeFilterRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: types.length + 1, // +1 for "All"
+        itemCount: types.length + 1,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           if (index == 0) {
             return _TypeChip(
               label: l10n.filterAll,
               isSelected: selected == null,
-              gradientColors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.7)],
+              gradientColors: [
+                AppTheme.primary,
+                AppTheme.primary.withValues(alpha: 0.7)
+              ],
               onTap: () => onChanged(null),
             );
           }
@@ -180,9 +358,7 @@ class _TypeChip extends StatelessWidget {
               : null,
           color: isSelected ? null : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? null
-              : Border.all(color: Colors.grey.shade300),
+          border: isSelected ? null : Border.all(color: Colors.grey.shade300),
         ),
         child: Center(
           child: Text(
@@ -195,6 +371,194 @@ class _TypeChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─── Calendar view ───────────────────────────────────────────────────────────
+
+class _CalendarView extends StatelessWidget {
+  final EventProvider provider;
+  final _EventTab tab;
+  final EventType? typeFilter;
+  final DateTime focusedDay;
+  final DateTime? selectedDay;
+  final void Function(DateTime selected, DateTime focused) onDaySelected;
+  final void Function(DateTime focused) onPageChanged;
+  final AppLocalizations l10n;
+  final String? currentUserId;
+
+  const _CalendarView({
+    required this.provider,
+    required this.tab,
+    required this.typeFilter,
+    required this.focusedDay,
+    required this.selectedDay,
+    required this.onDaySelected,
+    required this.onPageChanged,
+    required this.l10n,
+    required this.currentUserId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filteredEvents(
+      provider: provider,
+      tab: tab,
+      typeFilter: typeFilter,
+      currentUserId: currentUserId,
+    );
+
+    final dayEvents = selectedDay != null
+        ? _eventsOnDay(selectedDay!, filtered)
+        : <Event>[];
+
+    return Column(
+      children: [
+        TableCalendar<Event>(
+          firstDay: DateTime(2020),
+          lastDay: DateTime(2030),
+          focusedDay: focusedDay,
+          selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+          onDaySelected: onDaySelected,
+          onPageChanged: onPageChanged,
+          eventLoader: (day) => _eventsOnDay(day, filtered),
+          calendarFormat: CalendarFormat.month,
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (ctx, day, events) {
+              if (events.isEmpty) return null;
+              final types = events.map((e) => e.eventType).toSet().toList();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: types
+                      .take(5)
+                      .map((t) => Container(
+                            width: 6,
+                            height: 6,
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 1.5),
+                            decoration: BoxDecoration(
+                              color: _dotColorFor(t),
+                              shape: BoxShape.circle,
+                            ),
+                          ))
+                      .toList(),
+                ),
+              );
+            },
+          ),
+          calendarStyle: CalendarStyle(
+            todayDecoration: const BoxDecoration(
+              color: AppTheme.primaryLight,
+              shape: BoxShape.circle,
+            ),
+            todayTextStyle: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
+            selectedDecoration: const BoxDecoration(
+              color: AppTheme.primary,
+              shape: BoxShape.circle,
+            ),
+            selectedTextStyle: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
+            weekendTextStyle:
+                const TextStyle(color: Color(0xFFE91E63)),
+            outsideTextStyle: TextStyle(color: Colors.grey.shade400),
+            markersMaxCount: 5,
+            markerDecoration: const BoxDecoration(shape: BoxShape.circle),
+          ),
+          headerStyle: HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            titleTextStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.primary,
+            ),
+            leftChevronIcon:
+                const Icon(Icons.chevron_left, color: AppTheme.primary),
+            rightChevronIcon:
+                const Icon(Icons.chevron_right, color: AppTheme.primary),
+          ),
+        ),
+        const Divider(height: 1),
+        if (selectedDay != null) ...[
+          Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primary, AppTheme.primaryLight],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+            ),
+            child: Text(
+              DateFormat('EEEE, MMMM d').format(selectedDay!),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _DayEventList(
+              events: dayEvents,
+              l10n: l10n,
+              currentUserId: currentUserId,
+            ),
+          ),
+        ] else
+          Expanded(
+            child: Center(
+              child: Text(
+                '👆 Tap a date to see events',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: Colors.grey.shade500),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Day event list ───────────────────────────────────────────────────────────
+
+class _DayEventList extends StatelessWidget {
+  final List<Event> events;
+  final AppLocalizations l10n;
+  final String? currentUserId;
+
+  const _DayEventList({
+    required this.events,
+    required this.l10n,
+    required this.currentUserId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return Center(
+        child: Text(
+          l10n.noEventsOnDay,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: Colors.grey.shade500),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 4, bottom: 80),
+      itemCount: events.length,
+      itemBuilder: (ctx, i) =>
+          EventCard(event: events[i], currentUserId: currentUserId),
     );
   }
 }
@@ -227,25 +591,12 @@ class _EventList extends StatelessWidget {
       return Center(child: Text(provider.loadError!));
     }
 
-    final now = DateTime.now();
-    var events = [...provider.myEvents, ...provider.invitedEvents];
-
-    events = switch (tab) {
-      _EventTab.upcoming => events
-          .where((e) => !(e.endAt != null && e.endAt!.isBefore(now)))
-          .toList(),
-      _EventTab.invited => events.where((e) =>
-          !(e.endAt != null && e.endAt!.isBefore(now)) &&
-          currentUserId != null &&
-          e.guests.any((g) => g.userId == currentUserId && g.isPending)).toList(),
-      _EventTab.past => events
-          .where((e) => e.endAt != null && e.endAt!.isBefore(now))
-          .toList(),
-    };
-
-    if (typeFilter != null) {
-      events = events.where((e) => e.eventType == typeFilter).toList();
-    }
+    var events = _filteredEvents(
+      provider: provider,
+      tab: tab,
+      typeFilter: typeFilter,
+      currentUserId: currentUserId,
+    );
 
     if (tab == _EventTab.past) {
       events.sort((a, b) =>
@@ -255,19 +606,80 @@ class _EventList extends StatelessWidget {
     }
 
     if (events.isEmpty) {
-      return _EmptyState(tab: tab, l10n: l10n, onCreateTap: onCreateTap,
-          pendingCount: provider.pendingInviteCount);
+      return _EmptyState(
+        tab: tab,
+        l10n: l10n,
+        onCreateTap: onCreateTap,
+        pendingCount: provider.pendingInviteCount,
+      );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.only(top: 8, bottom: 80),
       itemCount: events.length,
-      itemBuilder: (context, index) => EventCard(
-            event: events[index],
-            currentUserId: currentUserId,
-          ),
+      itemBuilder: (context, index) {
+        final event = events[index];
+        final card = EventCard(event: event, currentUserId: currentUserId);
+
+        if (tab != _EventTab.invited) return card;
+
+        return Dismissible(
+          key: ValueKey(event.id),
+          direction: DismissDirection.horizontal,
+          background: const _SwipeBackground(accept: true),
+          secondaryBackground: const _SwipeBackground(accept: false),
+          onDismissed: (direction) {
+            final status = direction == DismissDirection.startToEnd
+                ? 'accepted'
+                : 'declined';
+            provider.rsvp(event.id, status);
+            final label = status == 'accepted' ? '✓ Accepted' : 'Declined';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(label),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+          child: card,
+        );
+      },
     );
   }
+}
+
+// ─── Swipe background ────────────────────────────────────────────────────────
+
+class _SwipeBackground extends StatelessWidget {
+  final bool accept;
+  const _SwipeBackground({required this.accept});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: accept ? Colors.green.shade400 : Colors.red.shade400,
+        alignment:
+            accept ? Alignment.centerLeft : Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              accept ? Icons.check_circle_outline : Icons.cancel_outlined,
+              color: Colors.white,
+              size: 30,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              accept ? 'Accept' : 'Decline',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
@@ -288,9 +700,17 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (emoji, title, hint) = switch (tab) {
-      _EventTab.upcoming => ('🎉', l10n.noUpcomingEvents, l10n.noUpcomingEventsHint),
-      _EventTab.invited  => ('✉️', 'No pending invites', 'Events you\'ve been invited to will appear here.'),
-      _EventTab.past     => ('📅', l10n.noPastEvents, l10n.noPastEventsHint),
+      _EventTab.upcoming => (
+          '🎉',
+          l10n.noUpcomingEvents,
+          l10n.noUpcomingEventsHint
+        ),
+      _EventTab.invited => (
+          '✉️',
+          'No pending invites',
+          "Events you've been invited to will appear here."
+        ),
+      _EventTab.past => ('📅', l10n.noPastEvents, l10n.noPastEventsHint),
     };
 
     return Center(
@@ -321,7 +741,8 @@ class _EmptyState extends StatelessWidget {
               const SizedBox(height: 24),
               SizedBox(
                 width: 200,
-                child: AppButton(label: l10n.newEvent, onPressed: onCreateTap),
+                child:
+                    AppButton(label: l10n.newEvent, onPressed: onCreateTap),
               ),
             ],
           ],

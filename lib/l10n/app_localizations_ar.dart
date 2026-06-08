@@ -788,6 +788,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get filterAll => 'الكل';
 
   @override
+  String get calendarViewToggle => 'تقويم';
+
+  @override
+  String get listViewToggle => 'قائمة';
+
+  @override
+  String get noEventsOnDay => 'لا توجد أحداث في هذا اليوم';
+
+  @override
   String get myEvents => 'My events';
 
   @override

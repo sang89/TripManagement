@@ -789,6 +789,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterAll => 'All';
 
   @override
+  String get calendarViewToggle => 'Calendar';
+
+  @override
+  String get listViewToggle => 'List';
+
+  @override
+  String get noEventsOnDay => 'No events on this day';
+
+  @override
   String get myEvents => 'My events';
 
   @override

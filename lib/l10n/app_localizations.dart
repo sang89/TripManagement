@@ -1572,6 +1572,24 @@ abstract class AppLocalizations {
   /// **'All'**
   String get filterAll;
 
+  /// No description provided for @calendarViewToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendarViewToggle;
+
+  /// No description provided for @listViewToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get listViewToggle;
+
+  /// No description provided for @noEventsOnDay.
+  ///
+  /// In en, this message translates to:
+  /// **'No events on this day'**
+  String get noEventsOnDay;
+
   /// No description provided for @myEvents.
   ///
   /// In en, this message translates to:

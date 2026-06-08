@@ -794,6 +794,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get filterAll => 'Tất cả';
 
   @override
+  String get calendarViewToggle => 'Lịch';
+
+  @override
+  String get listViewToggle => 'Danh sách';
+
+  @override
+  String get noEventsOnDay => 'Không có sự kiện vào ngày này';
+
+  @override
   String get myEvents => 'My events';
 
   @override
