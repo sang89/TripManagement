@@ -764,6 +764,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noEventsYet => 'No events yet. Tap + to create one.';
 
   @override
+  String get noUpcomingEvents => '暂无即将到来的活动';
+
+  @override
+  String get noUpcomingEventsHint => '点击 + 计划您的下一个活动。';
+
+  @override
+  String get noPastEvents => '暂无已结束的活动';
+
+  @override
+  String get noPastEventsHint => '您参与的活动将显示在这里。';
+
+  @override
+  String get filterAll => '全部';
+
+  @override
   String get myEvents => 'My events';
 
   @override

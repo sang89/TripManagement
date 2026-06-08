@@ -777,6 +777,23 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noEventsYet => 'No events yet. Tap + to create one.';
 
   @override
+  String get noUpcomingEvents => 'Không có sự kiện sắp tới';
+
+  @override
+  String get noUpcomingEventsHint =>
+      'Nhấn + để lên kế hoạch sự kiện tiếp theo.';
+
+  @override
+  String get noPastEvents => 'Chưa có sự kiện nào trong quá khứ';
+
+  @override
+  String get noPastEventsHint =>
+      'Các sự kiện bạn đã tham gia sẽ hiển thị ở đây.';
+
+  @override
+  String get filterAll => 'Tất cả';
+
+  @override
   String get myEvents => 'My events';
 
   @override

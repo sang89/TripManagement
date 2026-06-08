@@ -767,6 +767,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noEventsYet => 'No events yet. Tap + to create one.';
 
   @override
+  String get noUpcomingEvents => '예정된 이벤트가 없습니다';
+
+  @override
+  String get noUpcomingEventsHint => '+ 를 눌러 다음 이벤트를 계획하세요.';
+
+  @override
+  String get noPastEvents => '아직 지난 이벤트가 없습니다';
+
+  @override
+  String get noPastEventsHint => '참여한 이벤트가 여기에 표시됩니다.';
+
+  @override
+  String get filterAll => '전체';
+
+  @override
   String get myEvents => 'My events';
 
   @override

@@ -1542,6 +1542,36 @@ abstract class AppLocalizations {
   /// **'No events yet. Tap + to create one.'**
   String get noEventsYet;
 
+  /// No description provided for @noUpcomingEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming events'**
+  String get noUpcomingEvents;
+
+  /// No description provided for @noUpcomingEventsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to plan your next event.'**
+  String get noUpcomingEventsHint;
+
+  /// No description provided for @noPastEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No past events yet'**
+  String get noPastEvents;
+
+  /// No description provided for @noPastEventsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Events you\'ve attended will appear here.'**
+  String get noPastEventsHint;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
   /// No description provided for @myEvents.
   ///
   /// In en, this message translates to:

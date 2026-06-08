@@ -18,6 +18,7 @@ class PlacesAutocompleteField extends StatefulWidget {
   final TripPlacesService placesService;
   final void Function(double? lat, double? lng) onCoordinatesChanged;
   final String? Function(String?)? validator;
+  final bool required;
 
   const PlacesAutocompleteField({
     super.key,
@@ -27,6 +28,7 @@ class PlacesAutocompleteField extends StatefulWidget {
     required this.placesService,
     required this.onCoordinatesChanged,
     this.validator,
+    this.required = false,
   });
 
   @override
@@ -107,7 +109,12 @@ class _PlacesAutocompleteFieldState extends State<PlacesAutocompleteField> {
           controller: widget.controller,
           focusNode: _focusNode,
           decoration: InputDecoration(
-            labelText: widget.label,
+            label: widget.required
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(widget.label),
+                    const Text(' *', style: TextStyle(color: Colors.red)),
+                  ])
+                : Text(widget.label),
             prefixIcon: Icon(widget.prefixIcon),
           ),
           onChanged: _onTextChanged,
