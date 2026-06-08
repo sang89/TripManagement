@@ -70,11 +70,11 @@ class _EventsScreenState extends State<EventsScreen> {
             builder: (context, constraints) {
               final w = constraints.maxWidth;
               // On wider screens: cap tile size so they don't balloon.
-              // 5 tiles: 1 row at >= 700, 3+2 at >= 440, 2+2+1 on mobile.
-              final columns = w >= 700 ? 5 : w >= 440 ? 3 : 2;
+              // 5 tiles: 1 row at >= 700, 3 cols at >= 600, 2 cols on mobile.
+              final columns = w >= 700 ? 5 : w >= 600 ? 3 : 2;
               // Cap tile size only on wider screens so mobile tiles stay full-width.
               const tileMax = 160.0;
-              final gridWidth = w < 440
+              final gridWidth = w < 600
                   ? w
                   : (tileMax * columns + 16.0 * (columns - 1)).clamp(0.0, w);
               return Center(

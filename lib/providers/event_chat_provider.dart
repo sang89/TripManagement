@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/event_message.dart';
 
@@ -44,10 +45,12 @@ class EventChatProvider extends ChangeNotifier {
 
     try {
       List<Map<String, dynamic>> data;
+      const select =
+          'id, event_id, user_id, content, created_at, event_message_reactions(*)';
       if (!initial && _messages.isNotEmpty) {
         final raw = await _db
             .from('event_messages')
-            .select('id, event_id, user_id, content, created_at')
+            .select(select)
             .eq('event_id', eventId)
             .lt('created_at', _messages.first.createdAt.toIso8601String())
             .order('created_at', ascending: false)
@@ -56,7 +59,7 @@ class EventChatProvider extends ChangeNotifier {
       } else {
         final raw = await _db
             .from('event_messages')
-            .select('id, event_id, user_id, content, created_at')
+            .select(select)
             .eq('event_id', eventId)
             .order('created_at', ascending: false)
             .limit(_pageSize);
@@ -134,7 +137,46 @@ class EventChatProvider extends ChangeNotifier {
             notifyListeners();
           },
         )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_message_reactions',
+          callback: (payload) {
+            final messageId = payload.newRecord['message_id'] as String?;
+            if (messageId == null) return;
+            _refreshMessageReactions(messageId);
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_message_reactions',
+          callback: (payload) {
+            final messageId = payload.oldRecord['message_id'] as String?;
+            if (messageId == null) return;
+            _refreshMessageReactions(messageId);
+          },
+        )
         .subscribe();
+  }
+
+  Future<void> _refreshMessageReactions(String messageId) async {
+    try {
+      final raw = await _db
+          .from('event_message_reactions')
+          .select()
+          .eq('message_id', messageId);
+      final reactions = (raw as List)
+          .map((r) =>
+              EventMessageReaction.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _messages = _messages
+          .map((m) => m.id == messageId ? m.copyWith(reactions: reactions) : m)
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('EventChatProvider._refreshMessageReactions error: $e');
+    }
   }
 
   Future<void> sendMessage(String content) async {
@@ -163,6 +205,60 @@ class EventChatProvider extends ChangeNotifier {
       _messages = _messages.where((m) => m.id != tempId).toList();
       notifyListeners();
       rethrow;
+    }
+  }
+
+  Future<void> reactToMessage(String messageId, String emoji) async {
+    final tempId = const Uuid().v4();
+    final optimistic = EventMessageReaction(
+      id: tempId,
+      messageId: messageId,
+      userId: userId,
+      emoji: emoji,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _messages = _messages
+        .map((m) => m.id == messageId
+            ? m.copyWith(reactions: [...m.reactions, optimistic])
+            : m)
+        .toList();
+    notifyListeners();
+
+    try {
+      await _db.from('event_message_reactions').insert({
+        'message_id': messageId,
+        'user_id': userId,
+        'emoji': emoji,
+      });
+    } catch (e, st) {
+      debugPrint('EventChatProvider.reactToMessage error: $e\n$st');
+      _messages = _messages
+          .map((m) => m.id == messageId
+              ? m.copyWith(
+                  reactions: m.reactions.where((r) => r.id != tempId).toList())
+              : m)
+          .toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> unreactToMessage(String messageId, String reactionId) async {
+    _messages = _messages
+        .map((m) => m.id == messageId
+            ? m.copyWith(
+                reactions: m.reactions.where((r) => r.id != reactionId).toList())
+            : m)
+        .toList();
+    notifyListeners();
+
+    try {
+      await _db
+          .from('event_message_reactions')
+          .delete()
+          .eq('id', reactionId);
+    } catch (e, st) {
+      debugPrint('EventChatProvider.unreactToMessage error: $e\n$st');
+      await _refreshMessageReactions(messageId);
     }
   }
 
