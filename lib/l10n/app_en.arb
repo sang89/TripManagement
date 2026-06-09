@@ -557,7 +557,9 @@
   "tierProTrial": "Pro Trial · Ends {date}",
   "@tierProTrial": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "cancelTrial": "Cancel Trial",
@@ -584,5 +586,233 @@
   "cuisineTagsLabel": "Cuisine",
   "rsvpDeadlineLabel": "RSVP deadline",
   "rsvpDeadlineClosed": "RSVP closed",
-  "vibePickerLabel": "Vibe (optional)"
+  "vibePickerLabel": "Vibe (optional)",
+  "honoreeNameLabel": "Whose birthday is it?",
+  "honoreeNameHint": "Enter their name",
+  "birthYearLabel": "Birth year (optional)",
+  "birthYearHint": "e.g. 1996",
+  "celebrateTab": "Party",
+  "giftsTab": "Gifts",
+  "memoriesTab": "Memories",
+  "birthdayHeroTitle": "{name}'s Birthday",
+  "@birthdayHeroTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "turningAge": "Turning {age}",
+  "@turningAge": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "birthdayCountdownDays": "{count} days away",
+  "@birthdayCountdownDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "birthdayCountdownHours": "{count} hours away",
+  "@birthdayCountdownHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "birthdayToday": "Today's the day!",
+  "activityVoteTitle": "What should we do at {name}'s party?",
+  "@activityVoteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "activityVoteEmpty": "No activities added yet. The organizer can add options to vote on.",
+  "addActivityOption": "Add activity",
+  "cakeVoteTitle": "What cake does {name} want?",
+  "@cakeVoteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cakeVoteEmpty": "No cake options yet. Add flavors for everyone to vote on!",
+  "addCakeOption": "Add flavor",
+  "wishlistTitle": "{name}'s Wishlist",
+  "@wishlistTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wishlistEmpty": "No items yet. Add something {name} would love!",
+  "@wishlistEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addWishlistItem": "Add gift idea",
+  "wishlistItemLabel": "Gift idea",
+  "wishlistPriceRange": "Price range (optional)",
+  "wishlistLink": "Link (optional)",
+  "claimItem": "I'll get this!",
+  "unclaimItem": "Unclaim",
+  "itemClaimed": "Someone's on it",
+  "itemClaimedBy": "Claimed by {name}",
+  "@itemClaimedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "markReceived": "Mark received",
+  "giftPoolTitle": "Group Gift Pool",
+  "giftPoolEmpty": "No group gift yet. The organizer can start one.",
+  "createGiftPool": "Start a group gift",
+  "giftPoolName": "Gift name",
+  "giftPoolTarget": "Target amount",
+  "giftPoolProgress": "{pledged} of {target} pledged",
+  "@giftPoolProgress": {
+    "placeholders": {
+      "pledged": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "giftPoolContributors": "{count} contributors",
+  "@giftPoolContributors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pledgeAmount": "Pledge amount",
+  "addPledge": "Pledge",
+  "myPledge": "My pledge",
+  "removePledge": "Remove pledge",
+  "predictionsTitle": "{name}'s Predictions",
+  "@predictionsTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "predictionsSealed": "{count} predictions sealed until the event date",
+  "@predictionsSealed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "revealPredictions": "Reveal Predictions",
+  "predictionsHowItWorks": "Predictions are locked until the event date — then everyone finds out who called it!",
+  "predictionsEmpty": "No predictions yet. What do you think {name}'s year will bring?",
+  "@predictionsEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addPrediction": "Add prediction",
+  "predictionHint": "Predict something for {name}'s next year...",
+  "@predictionHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wishesTitle": "Wishes for {name}",
+  "@wishesTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wishesSealed": "{name} can't see these yet",
+  "@wishesSealed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wishesHowItWorks": "Wishes are kept secret until the organizer reveals them on the big day!",
+  "wishesEmpty": "No wishes yet. Be the first to send one!",
+  "addWish": "Make a wish",
+  "wishHint": "Write your wish for {name}...",
+  "@wishHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blowOutCandles": "Blow out the candles!",
+  "wishesRevealed": "Wishes revealed!",
+  "memoryWallTitle": "{name}'s Memory Wall",
+  "@memoryWallTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryWallEmpty": "Share your memories with {name}!",
+  "@memoryWallEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addMemory": "Add a memory",
+  "memoryCaptionHint": "Share your favorite memory with {name}...",
+  "@memoryCaptionHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "toastsTitle": "Toasts & Speeches",
+  "toastsEmpty": "No toasts yet. Share something sweet or funny for {name}!",
+  "@toastsEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addToast": "Write a toast",
+  "toastTypeSweet": "Sweet",
+  "toastTypeFunny": "Funny",
+  "toastTypePoem": "Poem",
+  "toastTextHint": "Write your speech here...",
+  "exportToasts": "Export speeches",
+  "wishesTab": "Wishes",
+  "predictionsTab": "Predictions",
+  "wallTab": "Wall",
+  "pleaseSelectEventType": "Please select an event type"
 }

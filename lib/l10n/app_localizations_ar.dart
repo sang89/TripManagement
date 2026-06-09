@@ -1220,4 +1220,263 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get vibePickerLabel => 'الأجواء (اختياري)';
+
+  @override
+  String get honoreeNameLabel => 'لمن هذا عيد الميلاد؟';
+
+  @override
+  String get honoreeNameHint => 'أدخل اسمه/اسمها';
+
+  @override
+  String get birthYearLabel => 'سنة الميلاد (اختياري)';
+
+  @override
+  String get birthYearHint => 'مثال: 1996';
+
+  @override
+  String get celebrateTab => 'حفلة';
+
+  @override
+  String get giftsTab => 'هدايا';
+
+  @override
+  String get memoriesTab => 'ذكريات';
+
+  @override
+  String birthdayHeroTitle(String name) {
+    return 'عيد ميلاد $name';
+  }
+
+  @override
+  String turningAge(int age) {
+    return 'يبلغ $age';
+  }
+
+  @override
+  String birthdayCountdownDays(int count) {
+    return 'بعد $count أيام';
+  }
+
+  @override
+  String birthdayCountdownHours(int count) {
+    return 'بعد $count ساعات';
+  }
+
+  @override
+  String get birthdayToday => 'اليوم هو اليوم!';
+
+  @override
+  String activityVoteTitle(String name) {
+    return 'ماذا نفعل في حفلة $name؟';
+  }
+
+  @override
+  String get activityVoteEmpty => 'لا أنشطة بعد.';
+
+  @override
+  String get addActivityOption => 'إضافة نشاط';
+
+  @override
+  String cakeVoteTitle(String name) {
+    return 'ما الكعكة التي يريدها $name؟';
+  }
+
+  @override
+  String get cakeVoteEmpty => 'لا خيارات للكعكة بعد.';
+
+  @override
+  String get addCakeOption => 'إضافة نكهة';
+
+  @override
+  String wishlistTitle(String name) {
+    return 'قائمة أمنيات $name';
+  }
+
+  @override
+  String wishlistEmpty(String name) {
+    return 'لا عناصر بعد. أضف شيئاً يحبه $name!';
+  }
+
+  @override
+  String get addWishlistItem => 'إضافة فكرة هدية';
+
+  @override
+  String get wishlistItemLabel => 'فكرة هدية';
+
+  @override
+  String get wishlistPriceRange => 'نطاق السعر (اختياري)';
+
+  @override
+  String get wishlistLink => 'رابط (اختياري)';
+
+  @override
+  String get claimItem => 'سأتكفل بهذا!';
+
+  @override
+  String get unclaimItem => 'إلغاء';
+
+  @override
+  String get itemClaimed => 'شخص ما يتكفل بذلك';
+
+  @override
+  String itemClaimedBy(String name) {
+    return 'محجوز بواسطة $name';
+  }
+
+  @override
+  String get markReceived => 'تحديد كمستلم';
+
+  @override
+  String get giftPoolTitle => 'هدية جماعية';
+
+  @override
+  String get giftPoolEmpty => 'لا هدية جماعية بعد.';
+
+  @override
+  String get createGiftPool => 'بدء هدية جماعية';
+
+  @override
+  String get giftPoolName => 'اسم الهدية';
+
+  @override
+  String get giftPoolTarget => 'المبلغ المستهدف';
+
+  @override
+  String giftPoolProgress(String pledged, String target) {
+    return '$pledged من $target متعهد';
+  }
+
+  @override
+  String giftPoolContributors(int count) {
+    return '$count مساهمين';
+  }
+
+  @override
+  String get pledgeAmount => 'مبلغ التعهد';
+
+  @override
+  String get addPledge => 'تعهد';
+
+  @override
+  String get myPledge => 'تعهدي';
+
+  @override
+  String get removePledge => 'إزالة التعهد';
+
+  @override
+  String predictionsTitle(String name) {
+    return 'تنبؤات لـ $name';
+  }
+
+  @override
+  String predictionsSealed(int count) {
+    return '$count تنبؤات مختومة';
+  }
+
+  @override
+  String get revealPredictions => 'الكشف عن التنبؤات';
+
+  @override
+  String get predictionsHowItWorks =>
+      'التنبؤات مقفلة حتى تاريخ الحدث — ثم يكتشف الجميع من كان محقاً!';
+
+  @override
+  String predictionsEmpty(String name) {
+    return 'لا تنبؤات بعد لـ $name.';
+  }
+
+  @override
+  String get addPrediction => 'إضافة تنبؤ';
+
+  @override
+  String predictionHint(String name) {
+    return 'توقع شيئاً للسنة القادمة لـ $name...';
+  }
+
+  @override
+  String wishesTitle(String name) {
+    return 'أمنيات لـ $name';
+  }
+
+  @override
+  String wishesSealed(String name) {
+    return '$name لا يمكنه رؤية هذه بعد';
+  }
+
+  @override
+  String get wishesHowItWorks =>
+      'تبقى الأمنيات سرية حتى يكشف المنظم عنها في اليوم الكبير!';
+
+  @override
+  String get wishesEmpty => 'لا أمنيات بعد. كن الأول!';
+
+  @override
+  String get addWish => 'تمنَّ أمنية';
+
+  @override
+  String wishHint(String name) {
+    return 'اكتب أمنيتك لـ $name...';
+  }
+
+  @override
+  String get blowOutCandles => 'أطفئ الشمعات!';
+
+  @override
+  String get wishesRevealed => 'تم الكشف عن الأمنيات!';
+
+  @override
+  String memoryWallTitle(String name) {
+    return 'جدار ذكريات $name';
+  }
+
+  @override
+  String memoryWallEmpty(String name) {
+    return 'شارك ذكرياتك مع $name!';
+  }
+
+  @override
+  String get addMemory => 'إضافة ذكرى';
+
+  @override
+  String memoryCaptionHint(String name) {
+    return 'شارك ذكرتك المفضلة مع $name...';
+  }
+
+  @override
+  String get toastsTitle => 'الكلمات والخطابات';
+
+  @override
+  String toastsEmpty(String name) {
+    return 'لا كلمات بعد لـ $name.';
+  }
+
+  @override
+  String get addToast => 'كتابة كلمة';
+
+  @override
+  String get toastTypeSweet => 'عاطفي';
+
+  @override
+  String get toastTypeFunny => 'مضحك';
+
+  @override
+  String get toastTypePoem => 'قصيدة';
+
+  @override
+  String get toastTextHint => 'اكتب خطابك هنا...';
+
+  @override
+  String get exportToasts => 'تصدير الخطابات';
+
+  @override
+  String get wishesTab => 'أمنيات';
+
+  @override
+  String get predictionsTab => 'تنبؤات';
+
+  @override
+  String get wallTab => 'الجدار';
+
+  @override
+  String get pleaseSelectEventType => 'الرجاء اختيار نوع الحدث';
 }

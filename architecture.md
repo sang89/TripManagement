@@ -55,19 +55,24 @@ lib/
 ├── config/
 │   └── api_keys.dart       # Supabase URL/anon key, Google Places/Maps key, Gemini key (gitignored)
 ├── models/                 # Pure data classes — toJson/fromJson, no Flutter deps
-│   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social/quickBites); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng); quick-bites fields (budgetPerHead, cuisineTags, rsvpDeadline, vibe)
+│   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social/quickBites); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng); quick-bites fields (budgetPerHead, cuisineTags, rsvpDeadline, vibe); birthday fields (honoreeDisplayName, birthYear, predictionsRevealedAt, wishesRevealedAt); getters isBirthday, honoreeAge
 │   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role, rsvpNote (nullable)
 │   ├── event_stop.dart     # EventStop — id, eventId, title, address, lat/lng, arriveAt, departAt, notes, sortOrder
 │   ├── event_message.dart  # EventMessage — id, eventId, userId, content, enriched senderName
-│   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, publicUrl (resolved at load)
+│   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, caption, publicUrl (resolved at load); photos with captions appear in Memory Wall
 │   ├── event_expense.dart  # EventExpense + EventExpenseSplit for cost splitting
 │   ├── event_bring_item.dart # EventBringItem — id, eventId, label, quantity, claimedBy (nullable), claimedByName, claimedAt, createdBy, createdAt
-│   ├── event_poll.dart     # EventPollReaction + EventPollVote + EventPollOption (+ optional placeMetadata + reactions list) + EventPoll; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId, reactionsFor, myReactionEmojis
+│   ├── event_poll.dart     # EventPollReaction + EventPollVote + EventPollOption (+ optional placeMetadata + reactions list) + EventPoll; helpers: totalVotes, votesFor, myVoteOptionId, myVoteId, reactionsFor, myReactionEmojis; pollType: 'general'|'restaurant'|'activity'|'cake'
+│   ├── event_wishlist_item.dart # EventWishlistItem — id, eventId, label, priceRange, link, createdBy, claimedBy (nullable), claimedByName, claimedAt, isReceived
+│   ├── event_gift_pool.dart # EventGiftPool (id, eventId, giftName, targetAmount, pledges[]) + EventGiftPledge; totalPledged computed
+│   ├── event_prediction.dart # EventPrediction — id, eventId, submittedBy, submittedByName, predictionText, createdAt; sealed until event.predictionsRevealedAt
+│   ├── event_wish.dart     # EventWish — id, eventId, submittedBy, submittedByName, wishText, createdAt; sealed until event.wishesRevealedAt
+│   ├── event_toast.dart    # EventToast — id, eventId, submittedBy, submittedByName, toastText, toastType ('sweet'|'funny'|'poem'), sortOrder, createdAt
 │   ├── friendship.dart     # Friendship — id, requesterId, addresseeId, status, enriched name
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart          # Auth session; login/register/logout
-│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; full CRUD + Realtime; pendingInviteCount for badge
+│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param
 │   ├── event_chat_provider.dart    # Event-scoped chat; paginated load + Realtime INSERT; scoped to /event/:id route
 │   ├── invitations_provider.dart   # Pending trip-event invitations for the current user; Realtime
 │   ├── friends_provider.dart       # Friend list + requests; two Realtime channels; searchUsers RPC
@@ -79,8 +84,8 @@ lib/
 │   │   └── register_screen.dart
 │   ├── events/
 │   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type tiles grid (Trip/Birthday/Wedding/Social/Quick Bites)
-│   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; non-trip shows single location field
-│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize. Organize inner tabs: Todo/Expenses/Polls (+ Orders for quickBites). Quick Bites extras: _QuickBitesHeroCard (gradient card with vibe/budget/cuisine/RSVP), _FoodMoodSheet (emoji RSVP tiles stored as mood:<value> in rsvp_note), _FoodMoodRow, _RestaurantPollOptionRow (renders place_metadata as restaurant card), _AddRestaurantPollSheet (Places search → createRestaurantPoll), _OrdersTab/_AddOrderSheet (dish claims in bring_list_items with [order:tags] prefix)
+│   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; quick-bites shows budget/vibe/cuisine/rsvp fields; birthday shows honoree name + birth year fields
+│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Organize inner tabs: Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Birthday extras: _BirthdayHeroCard (gradient card with name/age/countdown), _CelebrateTab (Activity Vote + Cake Vote with pollType:'activity'/'cake'), _GiftsTab (_WishlistItemRow claim mechanic + _GiftPoolCard pledge/progress), _MemoriesTabGroup (Wishes/Predictions/Wall/Toasts inner tabs), _WishesTab (sealed until revealWishes(), confetti reveal), _PredictionsTab (sealed until revealPredictions()), _MemoryWallTab (photos with caption grid), _ToastsTab (speech list with type badges)
 │   │   └── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   ├── friends/
 │   │   ├── friends_screen.dart  # Friends tab (shell tab 1): accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
@@ -212,6 +217,10 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 | `cuisine_tags` | text[] default '{}' | quick_bites-only — e.g. Japanese, Italian, BBQ |
 | `rsvp_deadline` | timestamptz nullable | quick_bites-only — RSVP cutoff time |
 | `vibe` | text nullable | quick_bites-only — preset mood label |
+| `honoree_name` | text nullable | birthday-only — name of the person being celebrated |
+| `birth_year` | integer nullable | birthday-only — used to compute age ("Turning 28") |
+| `predictions_revealed_at` | timestamptz nullable | birthday-only — when organizer revealed predictions |
+| `wishes_revealed_at` | timestamptz nullable | birthday-only — when organizer blew out the candles |
 | `created_at / updated_at` | timestamptz | |
 
 #### `event_guests`
@@ -316,6 +325,37 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 **RLS:** members SELECT; members INSERT own; DELETE own.  
 **Realtime:** REPLICA IDENTITY FULL — DELETE payloads carry option_id for cache resolution.  
 **UX:** Long-press any poll option (custom or restaurant) to open an animated emoji picker. Emojis are shuffled on each open. Reactions appear as teal-tinted pills below the option with counts.
+
+#### Birthday tables (migration `20260608000000_add_birthday_features.sql`)
+
+**`event_wishlist_items`** — claimable gift list  
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `label` | text | gift name |
+| `price_range` | text nullable | |
+| `link` | text nullable | external product link |
+| `created_by` | uuid FK→auth.users | |
+| `claimed_by` | uuid FK→auth.users nullable | who claimed this gift |
+| `claimed_by_name` | text nullable | display name of claimer |
+| `claimed_at` | timestamptz nullable | |
+| `is_received` | bool default false | organizer marks after party |
+
+**RLS:** members SELECT/INSERT/UPDATE; creator or organizer DELETE. The claim detail (`claimed_by_name`) is visible to organizer and to the claimer; guests only see "someone's on it" in the UI.
+
+**`event_gift_pools`** + **`event_gift_pledges`** — group gift coordination  
+Pool: `id, event_id, gift_name, target_amount, created_by`. Organizer-only INSERT/DELETE.  
+Pledge: `id, pool_id, pledged_by, pledged_by_name, amount, pledged_at`. Any member can insert/delete their own pledge.
+
+**`event_predictions`** — sealed birthday predictions  
+`id, event_id, submitted_by, submitted_by_name, prediction_text, created_at`. Visible to submitter + organizer at all times; visible to all members after `events.predictions_revealed_at IS NOT NULL`. Reveal triggered by organizer via `revealPredictions(eventId)`.
+
+**`event_wishes`** — candle wish reveal  
+`id, event_id, submitted_by, submitted_by_name, wish_text, created_at`. Same reveal mechanic via `events.wishes_revealed_at`; organizer triggers `revealWishes(eventId)`.
+
+**`event_toasts`** — speech submissions  
+`id, event_id, submitted_by, submitted_by_name, toast_text, toast_type ('sweet'|'funny'|'poem'), sort_order, created_at`. Organizer can reorder (`reorderToasts`). Members can INSERT/DELETE own; organizer can UPDATE all.
 
 #### `friendships`
 | Column | Type | Notes |

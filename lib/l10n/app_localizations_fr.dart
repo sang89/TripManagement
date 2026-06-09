@@ -1234,4 +1234,265 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get vibePickerLabel => 'Ambiance (optionnel)';
+
+  @override
+  String get honoreeNameLabel => 'C\'est l\'anniversaire de qui ?';
+
+  @override
+  String get honoreeNameHint => 'Entrez son prénom';
+
+  @override
+  String get birthYearLabel => 'Année de naissance (optionnel)';
+
+  @override
+  String get birthYearHint => 'ex. 1996';
+
+  @override
+  String get celebrateTab => 'Fête';
+
+  @override
+  String get giftsTab => 'Cadeaux';
+
+  @override
+  String get memoriesTab => 'Souvenirs';
+
+  @override
+  String birthdayHeroTitle(String name) {
+    return 'Anniversaire de $name';
+  }
+
+  @override
+  String turningAge(int age) {
+    return '$age ans';
+  }
+
+  @override
+  String birthdayCountdownDays(int count) {
+    return 'Dans $count jours';
+  }
+
+  @override
+  String birthdayCountdownHours(int count) {
+    return 'Dans $count heures';
+  }
+
+  @override
+  String get birthdayToday => 'C\'est le grand jour !';
+
+  @override
+  String activityVoteTitle(String name) {
+    return 'Que faire à la fête de $name ?';
+  }
+
+  @override
+  String get activityVoteEmpty =>
+      'Pas encore d\'activités. L\'organisateur peut en ajouter.';
+
+  @override
+  String get addActivityOption => 'Ajouter une activité';
+
+  @override
+  String cakeVoteTitle(String name) {
+    return 'Quel gâteau veut $name ?';
+  }
+
+  @override
+  String get cakeVoteEmpty => 'Pas encore d\'options de gâteau !';
+
+  @override
+  String get addCakeOption => 'Ajouter une saveur';
+
+  @override
+  String wishlistTitle(String name) {
+    return 'Liste de $name';
+  }
+
+  @override
+  String wishlistEmpty(String name) {
+    return 'Aucun article. Ajoutez quelque chose que $name aimerait !';
+  }
+
+  @override
+  String get addWishlistItem => 'Ajouter une idée';
+
+  @override
+  String get wishlistItemLabel => 'Idée de cadeau';
+
+  @override
+  String get wishlistPriceRange => 'Fourchette de prix (optionnel)';
+
+  @override
+  String get wishlistLink => 'Lien (optionnel)';
+
+  @override
+  String get claimItem => 'Je m\'en charge !';
+
+  @override
+  String get unclaimItem => 'Annuler';
+
+  @override
+  String get itemClaimed => 'Quelqu\'un s\'en occupe';
+
+  @override
+  String itemClaimedBy(String name) {
+    return 'Pris par $name';
+  }
+
+  @override
+  String get markReceived => 'Marquer reçu';
+
+  @override
+  String get giftPoolTitle => 'Cadeau collectif';
+
+  @override
+  String get giftPoolEmpty => 'Pas encore de cadeau collectif.';
+
+  @override
+  String get createGiftPool => 'Créer un cadeau collectif';
+
+  @override
+  String get giftPoolName => 'Nom du cadeau';
+
+  @override
+  String get giftPoolTarget => 'Montant cible';
+
+  @override
+  String giftPoolProgress(String pledged, String target) {
+    return '$pledged sur $target promis';
+  }
+
+  @override
+  String giftPoolContributors(int count) {
+    return '$count contributeurs';
+  }
+
+  @override
+  String get pledgeAmount => 'Montant à promettre';
+
+  @override
+  String get addPledge => 'Promettre';
+
+  @override
+  String get myPledge => 'Ma promesse';
+
+  @override
+  String get removePledge => 'Retirer ma promesse';
+
+  @override
+  String predictionsTitle(String name) {
+    return 'Prédictions pour $name';
+  }
+
+  @override
+  String predictionsSealed(int count) {
+    return '$count prédictions scellées';
+  }
+
+  @override
+  String get revealPredictions => 'Révéler les prédictions';
+
+  @override
+  String get predictionsHowItWorks =>
+      'Les prédictions sont verrouillées jusqu\'à la date de l\'événement — puis on découvre qui avait raison !';
+
+  @override
+  String predictionsEmpty(String name) {
+    return 'Aucune prédiction. Que pensez-vous de l\'année de $name ?';
+  }
+
+  @override
+  String get addPrediction => 'Ajouter une prédiction';
+
+  @override
+  String predictionHint(String name) {
+    return 'Prédisez quelque chose pour $name...';
+  }
+
+  @override
+  String wishesTitle(String name) {
+    return 'Vœux pour $name';
+  }
+
+  @override
+  String wishesSealed(String name) {
+    return '$name ne peut pas encore les voir';
+  }
+
+  @override
+  String get wishesHowItWorks =>
+      'Les vœux restent secrets jusqu\'à ce que l\'organisateur les révèle le grand jour !';
+
+  @override
+  String get wishesEmpty => 'Aucun vœu. Soyez le premier !';
+
+  @override
+  String get addWish => 'Faire un vœu';
+
+  @override
+  String wishHint(String name) {
+    return 'Écrivez votre vœu pour $name...';
+  }
+
+  @override
+  String get blowOutCandles => 'Souffler les bougies !';
+
+  @override
+  String get wishesRevealed => 'Vœux révélés !';
+
+  @override
+  String memoryWallTitle(String name) {
+    return 'Mur des souvenirs de $name';
+  }
+
+  @override
+  String memoryWallEmpty(String name) {
+    return 'Partagez vos souvenirs avec $name !';
+  }
+
+  @override
+  String get addMemory => 'Ajouter un souvenir';
+
+  @override
+  String memoryCaptionHint(String name) {
+    return 'Partagez votre souvenir préféré avec $name...';
+  }
+
+  @override
+  String get toastsTitle => 'Toasts et discours';
+
+  @override
+  String toastsEmpty(String name) {
+    return 'Aucun toast. Partagez quelque chose pour $name !';
+  }
+
+  @override
+  String get addToast => 'Écrire un toast';
+
+  @override
+  String get toastTypeSweet => 'Touchant';
+
+  @override
+  String get toastTypeFunny => 'Drôle';
+
+  @override
+  String get toastTypePoem => 'Poème';
+
+  @override
+  String get toastTextHint => 'Écrivez votre discours ici...';
+
+  @override
+  String get exportToasts => 'Exporter les discours';
+
+  @override
+  String get wishesTab => 'Vœux';
+
+  @override
+  String get predictionsTab => 'Prédictions';
+
+  @override
+  String get wallTab => 'Mur';
+
+  @override
+  String get pleaseSelectEventType =>
+      'Veuillez sélectionner un type d\'événement';
 }
