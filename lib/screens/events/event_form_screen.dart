@@ -29,6 +29,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _startLocationCtrl = TextEditingController();
   final _capacityCtrl = TextEditingController();
   final _budgetCtrl = TextEditingController();
+  final _honoreeNameCtrl = TextEditingController();
+  final _birthYearCtrl = TextEditingController();
 
   DateTime? _startAt;
   DateTime? _endAt;
@@ -36,7 +38,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   double? _locationLng;
   double? _startLat;
   double? _startLng;
-  late EventType _eventType;
+  EventType? _eventType;
 
   // Quick Bites fields
   List<String> _cuisineTags = [];
@@ -45,12 +47,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   bool _loading = false;
   String? _error;
+  bool _triedToSave = false;
 
   Event? _existing;
   final _places = TripPlacesService(kGooglePlacesApiKey);
   bool get _isEdit => widget.eventId != null;
   bool get _isTrip => _eventType == EventType.trip;
   bool get _isQuickBites => _eventType == EventType.quickBites;
+  bool get _isBirthday => _eventType == EventType.birthday;
 
   static const _kCuisineTags = [
     'Asian', 'Italian', 'Mexican', 'Japanese', 'Chinese',
@@ -71,7 +75,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   @override
   void initState() {
     super.initState();
-    _eventType = widget.defaultEventType ?? EventType.social;
+    _eventType = widget.defaultEventType; // null = no selection on new events
     if (_isEdit) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadExisting());
     }
@@ -87,6 +91,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _startLocationCtrl.text = event.startLocation ?? '';
     _capacityCtrl.text = event.capacity?.toString() ?? '';
     _budgetCtrl.text = event.budgetPerHead?.toStringAsFixed(2) ?? '';
+    _honoreeNameCtrl.text = event.honoreeDisplayName ?? '';
+    _birthYearCtrl.text = event.birthYear?.toString() ?? '';
     setState(() {
       _startAt = event.startAt;
       _endAt = event.endAt;
@@ -109,6 +115,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _startLocationCtrl.dispose();
     _capacityCtrl.dispose();
     _budgetCtrl.dispose();
+    _honoreeNameCtrl.dispose();
+    _birthYearCtrl.dispose();
     super.dispose();
   }
 
@@ -166,6 +174,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
+    if (_eventType == null) {
+      setState(() => _triedToSave = true);
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     if (_startAt == null) {
       setState(() => _error = l10n.required);
@@ -192,6 +204,13 @@ class _EventFormScreenState extends State<EventFormScreen> {
       final budgetPerHead = _isQuickBites && _budgetCtrl.text.trim().isNotEmpty
           ? double.tryParse(_budgetCtrl.text.trim())
           : null;
+      final honoreeDisplayName = _isBirthday &&
+              _honoreeNameCtrl.text.trim().isNotEmpty
+          ? _honoreeNameCtrl.text.trim()
+          : null;
+      final birthYear = _isBirthday && _birthYearCtrl.text.trim().isNotEmpty
+          ? int.tryParse(_birthYearCtrl.text.trim())
+          : null;
 
       if (_isEdit && _existing != null) {
         final updated = _existing!.copyWith(
@@ -207,7 +226,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
           clearEndAt: _endAt == null,
           capacity: capacity,
           clearCapacity: capacity == null,
-          eventType: _eventType,
+          eventType: _eventType!,
           startLocation: startLocation,
           clearStartLocation: startLocation == null,
           startLat: _isTrip ? _startLat : null,
@@ -221,6 +240,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
           clearRsvpDeadline: !_isQuickBites || _rsvpDeadline == null,
           vibe: _isQuickBites ? _vibe : null,
           clearVibe: !_isQuickBites || _vibe == null,
+          honoreeDisplayName: honoreeDisplayName,
+          clearHonoreeName: !_isBirthday || honoreeDisplayName == null,
+          birthYear: birthYear,
+          clearBirthYear: !_isBirthday || birthYear == null,
         );
         await provider.updateEvent(updated);
         if (mounted) context.pop();
@@ -234,7 +257,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
           startAt: _startAt!,
           endAt: _endAt,
           capacity: capacity,
-          eventType: _eventType,
+          eventType: _eventType!,
           startLocation: startLocation,
           startLat: _isTrip ? _startLat : null,
           startLng: _isTrip ? _startLng : null,
@@ -242,6 +265,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
           cuisineTags: _isQuickBites ? _cuisineTags : [],
           rsvpDeadline: _isQuickBites ? _rsvpDeadline : null,
           vibe: _isQuickBites ? _vibe : null,
+          honoreeDisplayName: _isBirthday ? honoreeDisplayName : null,
+          birthYear: _isBirthday ? birthYear : null,
         );
         if (mounted) context.go('/event/${event.id}');
       }
@@ -305,9 +330,35 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   _EventTypePicker(
                     selected: _eventType,
                     labelOf: (t) => _eventTypeLabel(t, l10n),
-                    onChanged: (t) => setState(() => _eventType = t),
+                    onChanged: (t) => setState(() {
+                      _eventType = t;
+                      _triedToSave = false;
+                    }),
                   ),
-                  const SizedBox(height: 16),
+
+                  // Inline error when user tries to save without a type.
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    child: _triedToSave && _eventType == null
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded,
+                                    size: 14, color: AppTheme.danger),
+                                const SizedBox(width: 4),
+                                Text(
+                                  l10n.pleaseSelectEventType,
+                                  style: const TextStyle(
+                                      color: AppTheme.danger, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 12),
 
                   // Title *
                   TextFormField(
@@ -321,7 +372,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               style: TextStyle(color: Colors.red)),
                         ],
                       ),
-                      prefixIcon: Icon(_eventTypeIcon(_eventType)),
+                      prefixIcon: Icon(_eventType != null
+                          ? _eventTypeIcon(_eventType!)
+                          : Icons.event_outlined),
                     ),
                     validator: (v) =>
                         v == null || v.trim().isEmpty ? l10n.required : null,
@@ -485,6 +538,39 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     ),
                   ],
 
+                  // ── Birthday-only fields ─────────────────────────────────
+                  if (_isBirthday) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _honoreeNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.honoreeNameLabel,
+                        hintText: l10n.honoreeNameHint,
+                        prefixIcon: const Icon(Icons.cake_outlined),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _birthYearCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.birthYearLabel,
+                        hintText: l10n.birthYearHint,
+                        prefixIcon: const Icon(Icons.cake_rounded),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final n = int.tryParse(v.trim());
+                        final currentYear = DateTime.now().year;
+                        if (n == null || n < 1900 || n > currentYear) {
+                          return l10n.required;
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Text(_error!,
@@ -549,10 +635,14 @@ class _DateTimeTile extends StatelessWidget {
       );
 }
 
-// ── Event type card grid ─────────────────────────────────────────────────────
+// ── Event type picker ─────────────────────────────────────────────────────────
+//
+// Unselected state: full 2-col grid so each tile is easy to tap.
+// Selected state: collapses to a compact single-row horizontal strip so the
+//   rest of the form becomes visible immediately.
 
 class _EventTypePicker extends StatelessWidget {
-  final EventType selected;
+  final EventType? selected;
   final String Function(EventType) labelOf;
   final ValueChanged<EventType> onChanged;
 
@@ -570,13 +660,11 @@ class _EventTypePicker extends StatelessWidget {
     EventType.quickBites: Icons.restaurant_rounded,
   };
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final columns = w >= 600 ? 5 : w >= 380 ? 3 : 2;
-        return GridView.count(
+  // Full grid shown before any selection.
+  Widget _grid(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final columns = w >= 600 ? 5 : w >= 380 ? 3 : 2;
+    return GridView.count(
       crossAxisCount: columns,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -585,11 +673,9 @@ class _EventTypePicker extends StatelessWidget {
       childAspectRatio: 1.1,
       children: EventType.values.map((type) {
         final theme = bannerThemeFor(type);
-        final isSelected = type == selected;
         return AppTappable(
           onTap: () => onChanged(type),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+          child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               gradient: LinearGradient(
@@ -597,30 +683,18 @@ class _EventTypePicker extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: theme.gradientColors,
               ),
-              border: isSelected
-                  ? Border.all(color: Colors.white, width: 3)
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: theme.gradientColors.last.withValues(alpha: 0.5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      )
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Stack(
                 children: [
-                  // subtle icon pattern
                   CustomPaint(
                     painter: EventIconPatternPainter(
                       icons: theme.icons,
@@ -628,51 +702,123 @@ class _EventTypePicker extends StatelessWidget {
                     ),
                     child: const SizedBox.expand(),
                   ),
-                  // content
                   Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(_icons[type]!, size: 40, color: Colors.white),
-                        const SizedBox(height: 10),
+                        Icon(_icons[type]!, size: 38, color: Colors.white),
+                        const SizedBox(height: 8),
                         Text(
                           labelOf(type),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // selected check
-                  if (isSelected)
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        width: 22,
-                        height: 22,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.check_rounded,
-                          size: 14,
-                          color: theme.gradientColors.first,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
           ),
         );
       }).toList(),
-        );
-      },
+    );
+  }
+
+  // Compact horizontal chip strip shown after selection.
+  Widget _strip(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: EventType.values.map((type) {
+          final theme = bannerThemeFor(type);
+          final isSelected = type == selected;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: AppTappable(
+              onTap: () => onChanged(type),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isSelected
+                        ? theme.gradientColors
+                        : [
+                            theme.gradientColors.first.withValues(alpha: 0.18),
+                            theme.gradientColors.last.withValues(alpha: 0.18),
+                          ],
+                  ),
+                  border: isSelected
+                      ? Border.all(color: Colors.white, width: 2)
+                      : null,
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: theme.gradientColors.last
+                                .withValues(alpha: 0.45),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _icons[type]!,
+                      size: isSelected ? 20 : 18,
+                      color: isSelected
+                          ? Colors.white
+                          : theme.gradientColors.first,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      labelOf(type),
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : theme.gradientColors.first,
+                        fontSize: 13,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.check_rounded,
+                          size: 14, color: Colors.white),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedCrossFade(
+      duration: const Duration(milliseconds: 280),
+      sizeCurve: Curves.easeOut,
+      crossFadeState: selected == null
+          ? CrossFadeState.showFirst
+          : CrossFadeState.showSecond,
+      firstChild: _grid(context),
+      secondChild: _strip(context),
     );
   }
 }

@@ -26,11 +26,16 @@ import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../models/event_bring_item.dart';
 import '../../models/event_expense.dart';
+import '../../models/event_gift_pool.dart';
 import '../../models/event_poll.dart';
 import '../../models/event_guest.dart';
 import '../../models/event_message.dart';
 import '../../models/event_photo.dart';
+import '../../models/event_prediction.dart';
 import '../../models/event_stop.dart';
+import '../../models/event_toast.dart';
+import '../../models/event_wish.dart';
+import '../../models/event_wishlist_item.dart';
 import '../../models/friendship.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/event_chat_provider.dart';
@@ -64,15 +69,31 @@ class _EventDetailScreenState extends State<EventDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    // Read the event synchronously (already in provider) to set the correct
+    // initial tab count — avoids a dispose-during-build crash on birthday events.
+    final event = Provider.of<EventProvider>(context, listen: false)
+        .getById(widget.eventId);
+    _tabController =
+        TabController(length: event?.isBirthday == true ? 5 : 4, vsync: this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final eventId = widget.eventId;
-      context.read<EventProvider>()
+      final provider = context.read<EventProvider>();
+      provider
         ..fetchPhotos(eventId)
         ..fetchExpenses(eventId)
         ..fetchBringList(eventId)
         ..fetchPolls(eventId);
+      final ev = provider.getById(eventId);
+      if (ev?.isBirthday == true) {
+        provider
+          ..fetchWishlist(eventId)
+          ..fetchGiftPool(eventId)
+          ..fetchPredictions(eventId)
+          ..fetchWishes(eventId)
+          ..fetchToasts(eventId);
+      }
     });
   }
 
@@ -152,6 +173,10 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
         final eventBannerTheme = bannerThemeFor(event.eventType);
 
+        // Use the controller's actual length to gate the 5th tab so that
+        // TabBar, TabBarView and the controller are ALWAYS consistent.
+        final mainTabCount = _tabController.length;
+
         return Scaffold(
           appBar: AppBar(
             title: Text(event.title, overflow: TextOverflow.ellipsis),
@@ -161,25 +186,23 @@ class _EventDetailScreenState extends State<EventDetailScreen>
             bottom: TabBar(
               controller: _tabController,
               tabAlignment: TabAlignment.fill,
-              labelStyle: const TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w600),
+              // Shrink icon + font + padding when 5 tabs to prevent clipping.
+              labelStyle: TextStyle(
+                  fontSize: mainTabCount > 4 ? 9 : 11,
+                  fontWeight: FontWeight.w600),
+              labelPadding: mainTabCount > 4
+                  ? const EdgeInsets.symmetric(horizontal: 2)
+                  : null,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
               indicatorColor: Colors.white,
               tabs: [
-                Tab(
-                    icon: const Icon(Icons.info_outline_rounded, size: 20),
-                    text: l10n.infoTab),
-                Tab(
-                    icon:
-                        const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-                    text: l10n.chatTabLabel),
-                Tab(
-                    icon: const Icon(Icons.photo_library_outlined, size: 20),
-                    text: l10n.photosTab),
-                Tab(
-                    icon: const Icon(Icons.grid_view_outlined, size: 20),
-                    text: l10n.organizeTab),
+                Tab(icon: Icon(Icons.info_outline_rounded, size: mainTabCount > 4 ? 18 : 20), text: l10n.infoTab),
+                Tab(icon: Icon(Icons.chat_bubble_outline_rounded, size: mainTabCount > 4 ? 18 : 20), text: l10n.chatTabLabel),
+                Tab(icon: Icon(Icons.photo_library_outlined, size: mainTabCount > 4 ? 18 : 20), text: l10n.photosTab),
+                Tab(icon: Icon(Icons.grid_view_outlined, size: mainTabCount > 4 ? 18 : 20), text: l10n.organizeTab),
+                if (event.isBirthday)
+                  Tab(icon: const Icon(Icons.favorite_rounded, size: 18), text: l10n.memoriesTab),
               ],
             ),
             actions: [
@@ -234,7 +257,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 isOrganizer: isOrganizer,
               ),
               _OrganizeTabGroup(
-                key: ValueKey('organize_${event.isQuickBites}'),
+                key: ValueKey('organize_${event.isQuickBites}_${event.isBirthday}'),
                 event: event,
                 authUid: authUid,
                 isOrganizer: isOrganizer,
@@ -242,6 +265,17 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 expenses: provider.expensesFor(event.id),
                 polls: provider.pollsFor(event.id),
               ),
+              if (event.isBirthday)
+                _MemoriesTabGroup(
+                  event: event,
+                  authUid: authUid,
+                  isOrganizer: isOrganizer,
+                  wishlistItems: provider.wishlistFor(event.id),
+                  giftPool: provider.giftPoolFor(event.id),
+                  predictions: provider.predictionsFor(event.id),
+                  wishes: provider.wishesFor(event.id),
+                  toasts: provider.toastsFor(event.id),
+                ),
             ],
           ),
         );
@@ -632,7 +666,9 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
     with SingleTickerProviderStateMixin {
   late TabController _ctrl;
 
-  int get _tabCount => widget.event.isQuickBites ? 4 : 3;
+  int get _tabCount => widget.event.isQuickBites
+      ? 4
+      : (widget.event.isBirthday ? 5 : 3);
 
   @override
   void initState() {
@@ -643,7 +679,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
   @override
   void didUpdateWidget(_OrganizeTabGroup old) {
     super.didUpdateWidget(old);
-    if (old.event.isQuickBites != widget.event.isQuickBites) {
+    if (old.event.isQuickBites != widget.event.isQuickBites ||
+        old.event.isBirthday != widget.event.isBirthday) {
       _ctrl.dispose();
       _ctrl = TabController(length: _tabCount, vsync: this);
     }
@@ -677,15 +714,22 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
             unselectedLabelColor: colorScheme.onSurfaceVariant,
             indicatorColor: AppTheme.primary,
             dividerColor: colorScheme.outlineVariant,
-            labelStyle: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600),
-            unselectedLabelStyle: const TextStyle(fontSize: 13),
+            // Slightly smaller text when 5 tabs to avoid crowding.
+            labelStyle: TextStyle(
+                fontSize: _tabCount > 4 ? 11 : 13,
+                fontWeight: FontWeight.w600),
+            unselectedLabelStyle: TextStyle(
+                fontSize: _tabCount > 4 ? 11 : 13),
             tabs: [
               Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
               Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
               Tab(icon: const Icon(Icons.how_to_vote_outlined, size: 18), text: l10n.pollsTab),
               if (widget.event.isQuickBites)
                 Tab(icon: const Icon(Icons.ramen_dining_outlined, size: 18), text: l10n.cravingsTab),
+              if (widget.event.isBirthday) ...[
+                Tab(icon: const Icon(Icons.celebration_rounded, size: 18), text: l10n.celebrateTab),
+                Tab(icon: const Icon(Icons.card_giftcard_rounded, size: 18), text: l10n.giftsTab),
+              ],
             ],
           ),
         ),
@@ -717,6 +761,19 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                   authUid: widget.authUid,
                   isOrganizer: widget.isOrganizer,
                 ),
+              if (widget.event.isBirthday) ...[
+                _CelebrateTab(
+                  event: widget.event,
+                  authUid: widget.authUid,
+                  isOrganizer: widget.isOrganizer,
+                  polls: widget.polls,
+                ),
+                _GiftsTab(
+                  event: widget.event,
+                  authUid: widget.authUid,
+                  isOrganizer: widget.isOrganizer,
+                ),
+              ],
             ],
           ),
         ),
@@ -775,6 +832,12 @@ class _InfoTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Birthday hero card
+        if (event.isBirthday) ...[
+          _BirthdayHeroCard(event: event),
+          const SizedBox(height: 16),
+        ],
+
         // Date row
         _DetailRow(
           icon: Icons.calendar_today_outlined,
@@ -6526,6 +6589,2167 @@ class _AllSquareCard extends StatelessWidget {
               color: AppTheme.accent,
               fontWeight: FontWeight.bold,
               fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Birthday hero card ────────────────────────────────────────────────────────
+
+class _BirthdayHeroCard extends StatelessWidget {
+  final Event event;
+  const _BirthdayHeroCard({required this.event});
+
+  String _countdown(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final now = DateTime.now();
+    final diff = event.startAt.toLocal().difference(now);
+    if (diff.isNegative || diff.inHours < 1) return l10n.birthdayToday;
+    if (diff.inDays >= 1) return l10n.birthdayCountdownDays(diff.inDays);
+    return l10n.birthdayCountdownHours(diff.inHours);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final name = event.honoreeDisplayName;
+    final age = event.honoreeAge;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFAD1457), Color(0xFFE91E63), Color(0xFFFF8A65)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE91E63).withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🎂', style: TextStyle(fontSize: 32)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  name != null
+                      ? l10n.birthdayHeroTitle(name)
+                      : l10n.eventTypeBirthday,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (age != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                l10n.turningAge(age),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            _countdown(context),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Celebrate tab (Birthday: Activity Vote + Cake Vote) ──────────────────────
+
+class _CelebrateTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventPoll> polls;
+
+  const _CelebrateTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.polls,
+  });
+
+  @override
+  State<_CelebrateTab> createState() => _CelebrateTabState();
+}
+
+class _CelebrateTabState extends State<_CelebrateTab> {
+  final _activityCtrl = TextEditingController();
+  final _cakeCtrl = TextEditingController();
+
+  static const _kActivityPresets = [
+    '🎮 Games night',
+    '🎤 Karaoke',
+    '🎬 Movie marathon',
+    '🎨 Paint & sip',
+    '🔐 Escape room',
+    '🍸 Bar crawl',
+    '🍕 Dinner out',
+    '🎳 Bowling',
+  ];
+
+  static const _kCakePresets = [
+    '🍫 Chocolate',
+    '🍋 Lemon drizzle',
+    '🍓 Strawberry',
+    '🎂 Red velvet',
+    '🍦 Vanilla cream',
+    '🥜 Peanut butter',
+  ];
+
+  @override
+  void dispose() {
+    _activityCtrl.dispose();
+    _cakeCtrl.dispose();
+    super.dispose();
+  }
+
+  EventPoll? get _activityPoll => widget.polls
+      .where((p) => p.pollType == 'activity')
+      .firstOrNull;
+
+  EventPoll? get _cakePoll => widget.polls
+      .where((p) => p.pollType == 'cake')
+      .firstOrNull;
+
+  String get _honoreeName =>
+      widget.event.honoreeDisplayName ?? widget.event.title;
+
+  Future<void> _addActivityOption(String text) async {
+    if (text.trim().isEmpty) return;
+    final provider = context.read<EventProvider>();
+    final existing = _activityPoll;
+    if (existing != null) {
+      await provider.addPollOption(existing.id, widget.event.id, text.trim());
+    } else {
+      await provider.createPoll(
+        widget.event.id,
+        AppLocalizations.of(context).activityVoteTitle(_honoreeName),
+        [text.trim()],
+        pollType: 'activity',
+      );
+    }
+    _activityCtrl.clear();
+  }
+
+  Future<void> _addCakeOption(String text) async {
+    if (text.trim().isEmpty) return;
+    final provider = context.read<EventProvider>();
+    final existing = _cakePoll;
+    if (existing != null) {
+      await provider.addPollOption(existing.id, widget.event.id, text.trim());
+    } else {
+      await provider.createPoll(
+        widget.event.id,
+        AppLocalizations.of(context).cakeVoteTitle(_honoreeName),
+        [text.trim()],
+        pollType: 'cake',
+      );
+    }
+    _cakeCtrl.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final activityPoll = _activityPoll;
+    final cakePoll = _cakePoll;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      children: [
+        // ── Activity Vote ────────────────────────────────────────────────────
+        _BirthdaySectionHeader(
+          emoji: '🎮',
+          title: l10n.activityVoteTitle(_honoreeName),
+          color: const Color(0xFF7B1FA2),
+        ),
+        const SizedBox(height: 12),
+        if (activityPoll == null || activityPoll.options.isEmpty)
+          _BirthdayEmptyNote(l10n.activityVoteEmpty)
+        else
+          ...activityPoll.options.map((opt) => _SimplePollOptionRow(
+                option: opt,
+                poll: activityPoll,
+                authUid: widget.authUid,
+                eventId: widget.event.id,
+                accentColor: const Color(0xFF7B1FA2),
+              )),
+        const SizedBox(height: 8),
+        if (widget.isOrganizer) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _kActivityPresets.map((preset) => ActionChip(
+              label: Text(preset, style: const TextStyle(fontSize: 12)),
+              onPressed: () => _addActivityOption(preset),
+            )).toList(),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _activityCtrl,
+                  decoration: InputDecoration(
+                    hintText: l10n.addActivityOption,
+                    isDense: true,
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                  onSubmitted: _addActivityOption,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_rounded,
+                    color: Color(0xFF7B1FA2)),
+                onPressed: () => _addActivityOption(_activityCtrl.text),
+              ),
+            ],
+          ),
+        ],
+
+        const SizedBox(height: 24),
+        Divider(color: colorScheme.outlineVariant),
+        const SizedBox(height: 16),
+
+        // ── Cake Vote ────────────────────────────────────────────────────────
+        _BirthdaySectionHeader(
+          emoji: '🎂',
+          title: l10n.cakeVoteTitle(_honoreeName),
+          color: const Color(0xFFE91E63),
+        ),
+        const SizedBox(height: 12),
+        if (cakePoll == null || cakePoll.options.isEmpty)
+          _BirthdayEmptyNote(l10n.cakeVoteEmpty)
+        else
+          ...cakePoll.options.map((opt) => _SimplePollOptionRow(
+                option: opt,
+                poll: cakePoll,
+                authUid: widget.authUid,
+                eventId: widget.event.id,
+                accentColor: const Color(0xFFE91E63),
+              )),
+        const SizedBox(height: 8),
+        if (widget.isOrganizer) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _kCakePresets.map((preset) => ActionChip(
+              label: Text(preset, style: const TextStyle(fontSize: 12)),
+              onPressed: () => _addCakeOption(preset),
+            )).toList(),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cakeCtrl,
+                  decoration: InputDecoration(
+                    hintText: l10n.addCakeOption,
+                    isDense: true,
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                  onSubmitted: _addCakeOption,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_rounded,
+                    color: Color(0xFFE91E63)),
+                onPressed: () => _addCakeOption(_cakeCtrl.text),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Gifts tab (Birthday: Wishlist + Group Gift Pool) ─────────────────────────
+
+class _GiftsTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+
+  const _GiftsTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+  });
+
+  @override
+  State<_GiftsTab> createState() => _GiftsTabState();
+}
+
+class _GiftsTabState extends State<_GiftsTab> {
+  String get _honoreeName =>
+      widget.event.honoreeDisplayName ?? widget.event.title;
+
+  String get _myName {
+    final me = widget.event.guests
+        .where((g) => g.userId == widget.authUid)
+        .firstOrNull;
+    return me?.displayName ?? 'Me';
+  }
+
+  Future<void> _showAddWishlistItemSheet() async {
+    final l10n = AppLocalizations.of(context);
+    final labelCtrl = TextEditingController();
+    final priceCtrl = TextEditingController();
+    final linkCtrl = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.addWishlistItem,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: labelCtrl,
+                autofocus: true,
+                decoration:
+                    InputDecoration(labelText: l10n.wishlistItemLabel),
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: priceCtrl,
+                decoration: InputDecoration(
+                    labelText: l10n.wishlistPriceRange),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: linkCtrl,
+                decoration:
+                    InputDecoration(labelText: l10n.wishlistLink),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 20),
+              AppButton(
+                label: l10n.save,
+                onPressed: () {
+                  if (labelCtrl.text.trim().isEmpty) return;
+                  final label = labelCtrl.text.trim();
+                  final price = priceCtrl.text.trim().isEmpty ? null : priceCtrl.text.trim();
+                  final link = linkCtrl.text.trim().isEmpty ? null : linkCtrl.text.trim();
+                  Navigator.pop(ctx);
+                  context.read<EventProvider>().addWishlistItem(
+                        eventId: widget.event.id,
+                        label: label,
+                        priceRange: price,
+                        link: link,
+                      );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    labelCtrl.dispose();
+    priceCtrl.dispose();
+    linkCtrl.dispose();
+  }
+
+  Future<void> _showCreateGiftPoolSheet() async {
+    final l10n = AppLocalizations.of(context);
+    final nameCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.createGiftPool,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration:
+                    InputDecoration(labelText: l10n.giftPoolName),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amountCtrl,
+                decoration:
+                    InputDecoration(labelText: l10n.giftPoolTarget),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 20),
+              AppButton(
+                label: l10n.save,
+                onPressed: () {
+                  final amount = double.tryParse(amountCtrl.text.trim());
+                  if (nameCtrl.text.trim().isEmpty || amount == null || amount <= 0) return;
+                  final name = nameCtrl.text.trim();
+                  Navigator.pop(ctx);
+                  context.read<EventProvider>().createGiftPool(
+                        eventId: widget.event.id,
+                        giftName: name,
+                        targetAmount: amount,
+                      );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    nameCtrl.dispose();
+    amountCtrl.dispose();
+  }
+
+  Future<void> _showAddPledgeSheet(EventGiftPool pool) async {
+    final l10n = AppLocalizations.of(context);
+    final amountCtrl = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.pledgeAmount,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountCtrl,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: l10n.pledgeAmount,
+                  prefixText: '\$',
+                ),
+              ),
+              const SizedBox(height: 20),
+              AppButton(
+                label: l10n.addPledge,
+                onPressed: () {
+                  final amount = double.tryParse(amountCtrl.text.trim());
+                  if (amount == null || amount <= 0) return;
+                  Navigator.pop(ctx);
+                  context.read<EventProvider>().addPledge(
+                        poolId: pool.id,
+                        eventId: widget.event.id,
+                        amount: amount,
+                        pledgerName: _myName,
+                      );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    amountCtrl.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final provider = context.read<EventProvider>();
+    final wishlistItems = provider.wishlistFor(widget.event.id);
+    final giftPool = provider.giftPoolFor(widget.event.id);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+          children: [
+            // ── Wishlist ─────────────────────────────────────────────────────
+            _BirthdaySectionHeader(
+              emoji: '🎁',
+              title: l10n.wishlistTitle(_honoreeName),
+              color: const Color(0xFF1565C0),
+            ),
+            const SizedBox(height: 12),
+            if (wishlistItems.isEmpty)
+              _BirthdayEmptyNote(l10n.wishlistEmpty(_honoreeName))
+            else
+              ...wishlistItems.map((item) => _WishlistItemRow(
+                    item: item,
+                    event: widget.event,
+                    authUid: widget.authUid,
+                    isOrganizer: widget.isOrganizer,
+                    myName: _myName,
+                  )),
+            if (widget.isOrganizer) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.addWishlistItem),
+                onPressed: _showAddWishlistItemSheet,
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            Divider(color: colorScheme.outlineVariant),
+            const SizedBox(height: 16),
+
+            // ── Group Gift Pool ───────────────────────────────────────────────
+            _BirthdaySectionHeader(
+              emoji: '💸',
+              title: l10n.giftPoolTitle,
+              color: const Color(0xFF388E3C),
+            ),
+            const SizedBox(height: 12),
+            if (giftPool == null)
+              _BirthdayEmptyNote(l10n.giftPoolEmpty)
+            else
+              _GiftPoolCard(
+                pool: giftPool,
+                authUid: widget.authUid,
+                isOrganizer: widget.isOrganizer,
+                onAddPledge: () => _showAddPledgeSheet(giftPool),
+                eventId: widget.event.id,
+              ),
+            if (widget.isOrganizer && giftPool == null) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.createGiftPool),
+                onPressed: _showCreateGiftPoolSheet,
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _WishlistItemRow extends StatelessWidget {
+  final EventWishlistItem item;
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final String myName;
+
+  const _WishlistItemRow({
+    required this.item,
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.myName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final provider = context.read<EventProvider>();
+    final isMyClaim = item.claimedBy == authUid;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: item.isReceived
+            ? Border.all(
+                color: const Color(0xFF388E3C).withValues(alpha: 0.5), width: 1.5)
+            : null,
+      ),
+      child: ListTile(
+        leading: Text(
+          item.isReceived ? '✅' : (item.isClaimed ? '🎁' : '⬜'),
+          style: const TextStyle(fontSize: 22),
+        ),
+        title: Text(
+          item.label,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            decoration: item.isReceived ? TextDecoration.lineThrough : null,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (item.priceRange != null)
+              Text(item.priceRange!,
+                  style: TextStyle(
+                      fontSize: 12, color: colorScheme.onSurfaceVariant)),
+            if (item.isClaimed && isOrganizer)
+              Text(l10n.itemClaimedBy(item.claimedByName ?? '?'),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF388E3C)))
+            else if (item.isClaimed && !isMyClaim)
+              Text(l10n.itemClaimed,
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF388E3C))),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (action) async {
+            if (action == 'claim') {
+              await provider.claimWishlistItem(item.id, event.id, myName);
+            } else if (action == 'unclaim') {
+              await provider.unclaimWishlistItem(item.id, event.id);
+            } else if (action == 'received') {
+              await provider.markWishlistItemReceived(
+                  item.id, event.id, !item.isReceived);
+            } else if (action == 'delete') {
+              await provider.deleteWishlistItem(item.id, event.id);
+            } else if (action == 'link') {
+              if (item.link != null) {
+                final uri = Uri.tryParse(item.link!);
+                if (uri != null) launchUrl(uri);
+              }
+            }
+          },
+          itemBuilder: (_) => [
+            if (!item.isClaimed)
+              PopupMenuItem(value: 'claim', child: Text(l10n.claimItem)),
+            if (isMyClaim || isOrganizer)
+              PopupMenuItem(value: 'unclaim', child: Text(l10n.unclaimItem)),
+            if (isOrganizer)
+              PopupMenuItem(
+                value: 'received',
+                child: Text(l10n.markReceived),
+              ),
+            if (item.link != null)
+              const PopupMenuItem(
+                  value: 'link', child: Text('Open link 🔗')),
+            if (isOrganizer || item.createdBy == authUid)
+              PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete',
+                      style: TextStyle(color: AppTheme.danger))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GiftPoolCard extends StatelessWidget {
+  final EventGiftPool pool;
+  final String? authUid;
+  final bool isOrganizer;
+  final VoidCallback onAddPledge;
+  final String eventId;
+
+  const _GiftPoolCard({
+    required this.pool,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.onAddPledge,
+    required this.eventId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final progress = pool.targetAmount > 0
+        ? (pool.totalPledged / pool.targetAmount).clamp(0.0, 1.0)
+        : 0.0;
+    final myPledge = pool.pledges
+        .where((p) => p.pledgedBy == authUid)
+        .firstOrNull;
+    final fmt = NumberFormat.simpleCurrency();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('💸', style: TextStyle(fontSize: 24)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  pool.giftName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              if (isOrganizer)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: AppTheme.danger, size: 20),
+                  onPressed: () =>
+                      context.read<EventProvider>().deleteGiftPool(pool.id, eventId),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: colorScheme.outlineVariant,
+              color: const Color(0xFF388E3C),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.giftPoolProgress(
+              fmt.format(pool.totalPledged),
+              fmt.format(pool.targetAmount),
+            ),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            l10n.giftPoolContributors(pool.pledges.length),
+            style: TextStyle(
+                fontSize: 12, color: colorScheme.onSurfaceVariant),
+          ),
+          if (myPledge != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  '${l10n.myPledge}: ${fmt.format(myPledge.amount)}',
+                  style: const TextStyle(
+                      color: Color(0xFF388E3C),
+                      fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => context
+                      .read<EventProvider>()
+                      .deletePledge(myPledge.id, eventId),
+                  child: Text(l10n.removePledge,
+                      style: const TextStyle(color: AppTheme.danger)),
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            AppButton(
+              label: l10n.addPledge,
+              onPressed: onAddPledge,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Memories tab group (Birthday: Wishes | Predictions | Wall | Toasts) ───────
+
+class _MemoriesTabGroup extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventWishlistItem> wishlistItems;
+  final EventGiftPool? giftPool;
+  final List<EventPrediction> predictions;
+  final List<EventWish> wishes;
+  final List<EventToast> toasts;
+
+  const _MemoriesTabGroup({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.wishlistItems,
+    required this.giftPool,
+    required this.predictions,
+    required this.wishes,
+    required this.toasts,
+  });
+
+  @override
+  State<_MemoriesTabGroup> createState() => _MemoriesTabGroupState();
+}
+
+class _MemoriesTabGroupState extends State<_MemoriesTabGroup>
+    with SingleTickerProviderStateMixin {
+  late TabController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  String get _honoreeName =>
+      widget.event.honoreeDisplayName ?? widget.event.title;
+
+  String get _myName {
+    final me = widget.event.guests
+        .where((g) => g.userId == widget.authUid)
+        .firstOrNull;
+    return me?.displayName ?? 'Me';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Guard against hot-reload leaving a stale controller with wrong length.
+    if (_ctrl.length != 3) {
+      _ctrl.dispose();
+      _ctrl = TabController(length: 3, vsync: this);
+    }
+
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        Material(
+          color: colorScheme.surfaceContainerLow,
+          child: TabBar(
+            controller: _ctrl,
+            tabAlignment: TabAlignment.fill,
+            labelColor: const Color(0xFFE91E63),
+            unselectedLabelColor: colorScheme.onSurfaceVariant,
+            indicatorColor: const Color(0xFFE91E63),
+            dividerColor: colorScheme.outlineVariant,
+            labelStyle:
+                const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 11),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+            tabs: [
+              Tab(icon: const Text('🕯️', style: TextStyle(fontSize: 14)), text: l10n.wishesTab),
+              Tab(icon: const Text('🔮', style: TextStyle(fontSize: 14)), text: l10n.predictionsTab),
+              Tab(icon: const Text('🥂', style: TextStyle(fontSize: 14)), text: l10n.toastsTitle.split(' ').first),
+            ],
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _ctrl,
+            children: [
+              _WishesTab(
+                event: widget.event,
+                authUid: widget.authUid,
+                isOrganizer: widget.isOrganizer,
+                wishes: widget.wishes,
+                myName: _myName,
+                honoreeName: _honoreeName,
+              ),
+              _PredictionsTab(
+                event: widget.event,
+                authUid: widget.authUid,
+                isOrganizer: widget.isOrganizer,
+                predictions: widget.predictions,
+                myName: _myName,
+                honoreeName: _honoreeName,
+              ),
+              _ToastsTab(
+                event: widget.event,
+                authUid: widget.authUid,
+                isOrganizer: widget.isOrganizer,
+                toasts: widget.toasts,
+                myName: _myName,
+                honoreeName: _honoreeName,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Wishes tab ────────────────────────────────────────────────────────────────
+
+class _WishesTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventWish> wishes;
+  final String myName;
+  final String honoreeName;
+
+  const _WishesTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.wishes,
+    required this.myName,
+    required this.honoreeName,
+  });
+
+  @override
+  State<_WishesTab> createState() => _WishesTabState();
+}
+
+class _WishesTabState extends State<_WishesTab> {
+  bool _revealing = false;
+
+  bool get _isRevealed => widget.event.wishesRevealedAt != null;
+  bool get _alreadySentWish => widget.wishes
+      .any((w) => w.submittedBy == widget.authUid);
+
+  Future<void> _sendWish() async {
+    final l10n = AppLocalizations.of(context);
+    final ctrl = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.addWish,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 4),
+              Text(l10n.wishesSealed(widget.honoreeName),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                maxLines: 4,
+                maxLength: 200,
+                decoration: InputDecoration(
+                  hintText: l10n.wishHint(widget.honoreeName),
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppButton(
+                label: l10n.addWish,
+                onPressed: () {
+                  if (ctrl.text.trim().isEmpty) return;
+                  final text = ctrl.text.trim();
+                  Navigator.pop(ctx);
+                  context.read<EventProvider>().addWish(
+                        eventId: widget.event.id,
+                        wishText: text,
+                        submitterName: widget.myName,
+                      );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    ctrl.dispose();
+  }
+
+  Future<void> _revealWishes() async {
+    setState(() => _revealing = true);
+    try {
+      await context.read<EventProvider>().revealWishes(widget.event.id);
+    } finally {
+      if (mounted) setState(() => _revealing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final wishes = widget.wishes;
+
+    if (!_isRevealed) {
+      // Pre-reveal view
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Text('🕯️', style: TextStyle(fontSize: 64)),
+            const SizedBox(height: 16),
+            Text(
+              l10n.wishesTitle(widget.honoreeName),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 20),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.wishesSealed(widget.honoreeName),
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.wishesHowItWorks,
+              style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${wishes.length} ${l10n.wishesTab.toLowerCase()} so far',
+              style: TextStyle(
+                  color: colorScheme.onSurfaceVariant, fontSize: 13),
+            ),
+            const SizedBox(height: 32),
+            if (!_alreadySentWish)
+              AppButton(
+                label: l10n.addWish,
+                onPressed: _sendWish,
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE91E63).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text('Wish sent! 🎉',
+                    style: TextStyle(
+                        color: Color(0xFFE91E63),
+                        fontWeight: FontWeight.w600)),
+              ),
+            if (widget.isOrganizer) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: _revealing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('🕯️'),
+                label: Text(l10n.blowOutCandles),
+                onPressed: _revealing ? null : _revealWishes,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // Post-reveal view
+    return Stack(
+      children: [
+        wishes.isEmpty
+            ? Center(child: Text(l10n.wishesEmpty))
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                itemCount: wishes.length,
+                itemBuilder: (_, i) {
+                  final wish = wishes[i];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFE91E63).withValues(alpha: 0.08),
+                          const Color(0xFFFF8A65).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: const Color(0xFFE91E63).withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          wish.wishText,
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '— ${wish.submittedByName}',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            heroTag: null,
+            onPressed: _alreadySentWish ? null : _sendWish,
+            backgroundColor: _alreadySentWish
+                ? colorScheme.surfaceContainerLow
+                : const Color(0xFFE91E63),
+            label: Text(
+              _alreadySentWish ? 'Wish sent! 🎉' : l10n.addWish,
+              style: TextStyle(
+                color: _alreadySentWish
+                    ? colorScheme.onSurface
+                    : Colors.white,
+              ),
+            ),
+            icon: Icon(
+              Icons.favorite_rounded,
+              color: _alreadySentWish
+                  ? colorScheme.onSurface
+                  : Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Predictions tab ───────────────────────────────────────────────────────────
+
+class _PredictionsTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventPrediction> predictions;
+  final String myName;
+  final String honoreeName;
+
+  const _PredictionsTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.predictions,
+    required this.myName,
+    required this.honoreeName,
+  });
+
+  @override
+  State<_PredictionsTab> createState() => _PredictionsTabState();
+}
+
+class _PredictionsTabState extends State<_PredictionsTab> {
+  bool _revealing = false;
+  bool get _isRevealed => widget.event.predictionsRevealedAt != null;
+  bool get _alreadySent =>
+      widget.predictions.any((p) => p.submittedBy == widget.authUid);
+  bool get _canReveal =>
+      widget.isOrganizer &&
+      !DateTime.now().isBefore(widget.event.startAt);
+
+  Future<void> _addPrediction() async {
+    final l10n = AppLocalizations.of(context);
+    final ctrl = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.addPrediction,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                maxLines: 3,
+                maxLength: 200,
+                decoration: InputDecoration(
+                  hintText: l10n.predictionHint(widget.honoreeName),
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppButton(
+                label: l10n.addPrediction,
+                onPressed: () {
+                  if (ctrl.text.trim().isEmpty) return;
+                  final text = ctrl.text.trim();
+                  Navigator.pop(ctx);
+                  context.read<EventProvider>().addPrediction(
+                        eventId: widget.event.id,
+                        predictionText: text,
+                        submitterName: widget.myName,
+                      );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    ctrl.dispose();
+  }
+
+  Future<void> _revealPredictions() async {
+    setState(() => _revealing = true);
+    try {
+      await context
+          .read<EventProvider>()
+          .revealPredictions(widget.event.id);
+    } finally {
+      if (mounted) setState(() => _revealing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final predictions = widget.predictions;
+
+    return Stack(
+      children: [
+        if (!_isRevealed && predictions.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🔮', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.predictionsHowItWorks,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.predictionsEmpty(widget.honoreeName),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+            itemCount: predictions.length +
+                (!_isRevealed ? 2 : 0),
+            itemBuilder: (_, i) {
+              if (!_isRevealed && i == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.predictionsHowItWorks,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic),
+                  ),
+                );
+              }
+              if (!_isRevealed && i == 1) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7B1FA2).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      l10n.predictionsSealed(predictions.length),
+                      style: const TextStyle(
+                          color: Color(0xFF7B1FA2),
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                );
+              }
+              final pred = predictions[_isRevealed ? i : i - 2];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🔮', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _isRevealed ? pred.predictionText : '???',
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                        ),
+                        if ((pred.submittedBy == widget.authUid ||
+                                widget.isOrganizer) &&
+                            !_isRevealed)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: AppTheme.danger, size: 18),
+                            onPressed: () => context
+                                .read<EventProvider>()
+                                .deletePrediction(pred.id, widget.event.id),
+                          ),
+                      ],
+                    ),
+                    if (_isRevealed) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '— ${pred.submittedByName}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (_canReveal && !_isRevealed)
+                FloatingActionButton.extended(
+                  heroTag: null,
+                  onPressed: _revealing ? null : _revealPredictions,
+                  backgroundColor: const Color(0xFF7B1FA2),
+                  label: Text(
+                    l10n.revealPredictions,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  icon: _revealing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text('🔮'),
+                ),
+              if (!_alreadySent) ...[
+                const SizedBox(height: 8),
+                FloatingActionButton.extended(
+                  heroTag: null,
+                  onPressed: _addPrediction,
+                  backgroundColor: const Color(0xFF7B1FA2).withValues(alpha: 0.85),
+                  label: Text(l10n.addPrediction,
+                      style: const TextStyle(color: Colors.white)),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Toasts tab ────────────────────────────────────────────────────────────────
+
+class _ToastsTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventToast> toasts;
+  final String myName;
+  final String honoreeName;
+
+  const _ToastsTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.toasts,
+    required this.myName,
+    required this.honoreeName,
+  });
+
+  @override
+  State<_ToastsTab> createState() => _ToastsTabState();
+}
+
+class _ToastsTabState extends State<_ToastsTab> {
+  Future<void> _addToast() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AddToastSheet(
+        event: widget.event,
+        myName: widget.myName,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final toasts = widget.toasts;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    String toastEmoji(String type) => switch (type) {
+          'funny' => '🔥',
+          'poem' => '📜',
+          _ => '🥂',
+        };
+
+    String toastLabel(String type) => switch (type) {
+          'funny' => l10n.toastTypeFunny,
+          'poem' => l10n.toastTypePoem,
+          _ => l10n.toastTypeSweet,
+        };
+
+    return Stack(
+      children: [
+        toasts.isEmpty
+            ? Center(
+                child: _ToastCueCard(
+                  honoreeName: widget.honoreeName,
+                  onTap: _addToast,
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                itemCount: toasts.length,
+                itemBuilder: (_, i) {
+                  final toast = toasts[i];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(toastEmoji(toast.toastType),
+                                style: const TextStyle(fontSize: 20)),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE91E63)
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                toastLabel(toast.toastType),
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFFE91E63),
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const Spacer(),
+                            if (toast.submittedBy == widget.authUid ||
+                                widget.isOrganizer)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline,
+                                    color: AppTheme.danger, size: 18),
+                                onPressed: () => context
+                                    .read<EventProvider>()
+                                    .deleteToast(toast.id, widget.event.id),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(toast.toastText,
+                            style: const TextStyle(
+                                fontSize: 15, height: 1.5)),
+                        const SizedBox(height: 8),
+                        Text(
+                          '— ${toast.submittedByName}',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+        if (toasts.isNotEmpty)
+          Positioned(
+            bottom: 20,
+            right: 16,
+            child: AppTappable(
+              onTap: _addToast,
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFAD1457), Color(0xFFE91E63)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE91E63).withValues(alpha: 0.45),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Text('🥂', style: TextStyle(fontSize: 22)),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Birthday shared helpers ───────────────────────────────────────────────────
+
+class _BirthdaySectionHeader extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final Color color;
+
+  const _BirthdaySectionHeader({
+    required this.emoji,
+    required this.title,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      );
+}
+
+class _BirthdayEmptyNote extends StatelessWidget {
+  final String text;
+  const _BirthdayEmptyNote(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          text,
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13),
+        ),
+      );
+}
+
+class _SimplePollOptionRow extends StatelessWidget {
+  final EventPollOption option;
+  final EventPoll poll;
+  final String? authUid;
+  final String eventId;
+  final Color accentColor;
+
+  const _SimplePollOptionRow({
+    required this.option,
+    required this.poll,
+    required this.authUid,
+    required this.eventId,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final votes = poll.votesFor(option.id);
+    final total = poll.totalVotes;
+    final fraction = total > 0 ? votes / total : 0.0;
+    final myVote = poll.myVoteOptionId(authUid ?? '') == option.id;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AppTappable(
+      onTap: () {
+        if (myVote) return;
+        context.read<EventProvider>().vote(poll.id, option.id, eventId);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          border: myVote
+              ? Border.all(color: accentColor, width: 2)
+              : null,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    option.text,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: myVote ? accentColor : null,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: fraction,
+                      minHeight: 6,
+                      backgroundColor: colorScheme.outlineVariant,
+                      color: accentColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              children: [
+                Text(
+                  '$votes',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                    fontSize: 16,
+                  ),
+                ),
+                if (myVote)
+                  Icon(Icons.check_circle_rounded,
+                      color: accentColor, size: 16),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Toast cue card (animated floating invitation) ─────────────────────────────
+
+class _ToastCueCard extends StatefulWidget {
+  final String honoreeName;
+  final VoidCallback onTap;
+  const _ToastCueCard({required this.honoreeName, required this.onTap});
+
+  @override
+  State<_ToastCueCard> createState() => _ToastCueCardState();
+}
+
+class _ToastCueCardState extends State<_ToastCueCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _float;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
+    _float = Tween<double>(begin: -8, end: 8).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTappable(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _float,
+        builder: (_, child) => Transform.translate(
+          offset: Offset(0, _float.value),
+          child: child,
+        ),
+        child: Transform.rotate(
+          angle: -0.04, // 2.3° tilt — looks like a card being handed to you
+          child: Container(
+            width: 260,
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFAD1457), Color(0xFFE91E63), Color(0xFFFF8A80)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE91E63).withValues(alpha: 0.45),
+                  blurRadius: 28,
+                  offset: const Offset(4, 12),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 8,
+                  offset: const Offset(-2, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Decorative dots like a real card
+                Row(
+                  children: List.generate(
+                    3,
+                    (i) => Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('🎙️', style: TextStyle(fontSize: 40)),
+                const SizedBox(height: 12),
+                Text(
+                  "It's your turn!",
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 13,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Raise a glass\nfor ${widget.honoreeName} 🥂',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Dotted separator
+                Row(
+                  children: List.generate(
+                    18,
+                    (_) => Expanded(
+                      child: Container(
+                        height: 1,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        color: Colors.white.withValues(alpha: 0.3),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('✍️', style: TextStyle(fontSize: 14)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Tap to compose',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Add Toast sheet (proper StatefulWidget to avoid cross-context issues) ─────
+
+class _AddToastSheet extends StatefulWidget {
+  final Event event;
+  final String myName;
+  const _AddToastSheet({required this.event, required this.myName});
+
+  @override
+  State<_AddToastSheet> createState() => _AddToastSheetState();
+}
+
+class _AddToastSheetState extends State<_AddToastSheet> {
+  final _ctrl = TextEditingController();
+  String _type = 'sweet';
+
+  static const _kTypes = [
+    ('sweet', '🥂', 'Sweet', Color(0xFFE91E63)),
+    ('funny', '🔥', 'Funny', Color(0xFFFF6D00)),
+    ('poem', '📜', 'Poem', Color(0xFF7B1FA2)),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Color get _accentColor =>
+      _kTypes.firstWhere((t) => t.$1 == _type).$4;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final charCount = _ctrl.text.length;
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Gradient header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _accentColor.withValues(alpha: 0.85),
+                  _accentColor,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text('🥂',
+                    style: TextStyle(fontSize: 32)),
+                const SizedBox(height: 6),
+                const Text(
+                  'Write a toast',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Say something sweet, funny, or poetic for ${widget.event.honoreeDisplayName ?? 'the birthday person'}!',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Body
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Type selector — big tappable cards
+                Row(
+                  children: _kTypes.map((t) {
+                    final isSelected = _type == t.$1;
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: AppTappable(
+                          onTap: () => setState(() => _type = t.$1),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? t.$4.withValues(alpha: 0.12)
+                                  : colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isSelected
+                                    ? t.$4
+                                    : colorScheme.outlineVariant,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(t.$2,
+                                    style:
+                                        const TextStyle(fontSize: 22)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  t.$3,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? t.$4
+                                        : colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                // Text field
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _ctrl.text.isEmpty
+                          ? colorScheme.outlineVariant
+                          : _accentColor.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _ctrl,
+                    autofocus: true,
+                    maxLines: 5,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: switch (_type) {
+                        'funny' => 'Make them laugh 😂',
+                        'poem' => 'Roses are red... 🌹',
+                        _ => 'From the heart... 💕',
+                      },
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(14),
+                      counterStyle: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Submit button
+                SizedBox(
+                  width: double.infinity,
+                  child: AppTappable(
+                    onTap: () {
+                      if (_ctrl.text.trim().isEmpty) return;
+                      final text = _ctrl.text.trim();
+                      final type = _type;
+                      Navigator.pop(context);
+                      context.read<EventProvider>().addToast(
+                            eventId: widget.event.id,
+                            toastText: text,
+                            toastType: type,
+                            submitterName: widget.myName,
+                          );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: _ctrl.text.trim().isEmpty
+                            ? null
+                            : LinearGradient(
+                                colors: [
+                                  _accentColor,
+                                  _accentColor.withValues(alpha: 0.75),
+                                ],
+                              ),
+                        color: _ctrl.text.trim().isEmpty
+                            ? colorScheme.surfaceContainerLow
+                            : null,
+                        boxShadow: _ctrl.text.trim().isEmpty
+                            ? null
+                            : [
+                                BoxShadow(
+                                  color: _accentColor
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _kTypes
+                                .firstWhere((t) => t.$1 == _type)
+                                .$2,
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            charCount == 0
+                                ? 'Write something first'
+                                : 'Send toast',
+                            style: TextStyle(
+                              color: charCount == 0
+                                  ? colorScheme.onSurfaceVariant
+                                  : Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
           ),
         ],

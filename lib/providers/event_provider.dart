@@ -6,10 +6,15 @@ import 'package:uuid/uuid.dart';
 import '../models/event.dart';
 import '../models/event_bring_item.dart';
 import '../models/event_expense.dart';
+import '../models/event_gift_pool.dart';
 import '../models/event_poll.dart';
 import '../models/event_guest.dart';
 import '../models/event_photo.dart';
+import '../models/event_prediction.dart';
 import '../models/event_stop.dart';
+import '../models/event_toast.dart';
+import '../models/event_wish.dart';
+import '../models/event_wishlist_item.dart';
 import '../services/connectivity_service.dart';
 import '../services/local_cache.dart';
 import '../services/offline_queue.dart';
@@ -38,6 +43,13 @@ class EventProvider extends ChangeNotifier {
   final Map<String, List<EventExpense>> _expenses = {};
   final Map<String, List<EventBringItem>> _bringItems = {};
   final Map<String, List<EventPoll>> _polls = {};
+
+  // Birthday-specific caches (fetched on demand for birthday events only).
+  final Map<String, List<EventWishlistItem>> _wishlistItems = {};
+  final Map<String, EventGiftPool?> _giftPools = {};
+  final Map<String, List<EventPrediction>> _predictions = {};
+  final Map<String, List<EventWish>> _wishes = {};
+  final Map<String, List<EventToast>> _toasts = {};
 
   final ConnectivityService? _connectivity;
   final OfflineQueue? _queue;
@@ -80,6 +92,14 @@ class EventProvider extends ChangeNotifier {
       _bringItems[eventId] ?? [];
   List<EventPoll> pollsFor(String eventId) => _polls[eventId] ?? [];
 
+  List<EventWishlistItem> wishlistFor(String eventId) =>
+      _wishlistItems[eventId] ?? [];
+  EventGiftPool? giftPoolFor(String eventId) => _giftPools[eventId];
+  List<EventPrediction> predictionsFor(String eventId) =>
+      _predictions[eventId] ?? [];
+  List<EventWish> wishesFor(String eventId) => _wishes[eventId] ?? [];
+  List<EventToast> toastsFor(String eventId) => _toasts[eventId] ?? [];
+
   // ─── Cache serialization ───────────────────────────────────────────────────
 
   static Map<String, dynamic> _eventToCacheJson(Event e) => {
@@ -104,6 +124,10 @@ class EventProvider extends ChangeNotifier {
         'cuisine_tags': e.cuisineTags,
         'rsvp_deadline': e.rsvpDeadline?.toUtc().toIso8601String(),
         'vibe': e.vibe,
+        'honoree_name': e.honoreeDisplayName,
+        'birth_year': e.birthYear,
+        'predictions_revealed_at': e.predictionsRevealedAt?.toUtc().toIso8601String(),
+        'wishes_revealed_at': e.wishesRevealedAt?.toUtc().toIso8601String(),
         'event_guests': e.guests
             .map((g) => {
                   'id': g.id,
@@ -869,6 +893,8 @@ class EventProvider extends ChangeNotifier {
     List<String> cuisineTags = const [],
     DateTime? rsvpDeadline,
     String? vibe,
+    String? honoreeDisplayName,
+    int? birthYear,
   }) async {
     final session = _db.auth.currentSession;
     if (session == null) throw Exception('Not authenticated');
@@ -901,6 +927,8 @@ class EventProvider extends ChangeNotifier {
       'p_cuisine_tags': cuisineTags,
       'p_rsvp_deadline': ?rsvpDeadline?.toUtc().toIso8601String(),
       'p_vibe': ?vibe,
+      'p_honoree_name': ?honoreeDisplayName,
+      'p_birth_year': ?birthYear,
     }) as List<dynamic>;
     if (rows.isEmpty) throw Exception('Event creation returned no data.');
     final eventId = (rows.first as Map)['id'] as String;
@@ -939,6 +967,8 @@ class EventProvider extends ChangeNotifier {
       'cuisine_tags': updated.cuisineTags,
       'rsvp_deadline': updated.rsvpDeadline?.toUtc().toIso8601String(),
       'vibe': updated.vibe,
+      'honoree_name': updated.honoreeDisplayName,
+      'birth_year': updated.birthYear,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', updated.id);
 
@@ -957,6 +987,11 @@ class EventProvider extends ChangeNotifier {
     _expenses.remove(eventId);
     _bringItems.remove(eventId);
     _polls.remove(eventId);
+    _wishlistItems.remove(eventId);
+    _giftPools.remove(eventId);
+    _predictions.remove(eventId);
+    _wishes.remove(eventId);
+    _toasts.remove(eventId);
     notifyListeners();
     unawaited(_saveCache());
     unawaited(_saveOrder());
@@ -1666,15 +1701,16 @@ class EventProvider extends ChangeNotifier {
   Future<void> createPoll(
     String eventId,
     String question,
-    List<String> options,
-  ) async {
+    List<String> options, {
+    String pollType = 'general',
+  }) async {
     final pollData = await _db
         .from('event_polls')
         .insert({
           'event_id': eventId,
           'question': question.trim(),
           'created_by': _userId,
-          'poll_type': 'general',
+          'poll_type': pollType,
         })
         .select()
         .single();
@@ -1686,6 +1722,21 @@ class EventProvider extends ChangeNotifier {
         'sort_order': i,
       });
     }
+    unawaited(fetchPolls(eventId));
+  }
+
+  Future<void> addPollOption(
+    String pollId,
+    String eventId,
+    String text,
+  ) async {
+    final existing = (_polls[eventId] ?? []).where((p) => p.id == pollId).firstOrNull;
+    final sortOrder = existing?.options.length ?? 0;
+    await _db.from('event_poll_options').insert({
+      'poll_id': pollId,
+      'text': text.trim(),
+      'sort_order': sortOrder,
+    });
     unawaited(fetchPolls(eventId));
   }
 
@@ -1938,6 +1989,318 @@ class EventProvider extends ChangeNotifier {
   void _removeOptimisticReaction(
       String eventId, String optionId, String reactionId) {
     _revertOptimisticReaction(eventId, optionId, reactionId);
+  }
+
+  // ─── Birthday: Wishlist ────────────────────────────────────────────────────
+
+  Future<List<EventWishlistItem>> fetchWishlist(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_wishlist_items')
+          .select()
+          .eq('event_id', eventId)
+          .order('created_at', ascending: true);
+      final items = (data as List)
+          .map((r) => EventWishlistItem.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _wishlistItems[eventId] = items;
+      notifyListeners();
+      return items;
+    } catch (e) {
+      debugPrint('EventProvider.fetchWishlist error: $e');
+      return [];
+    }
+  }
+
+  Future<void> addWishlistItem({
+    required String eventId,
+    required String label,
+    String? priceRange,
+    String? link,
+  }) async {
+    await _db.from('event_wishlist_items').insert({
+      'event_id': eventId,
+      'label': label.trim(),
+      'price_range': priceRange?.trim().isEmpty == true ? null : priceRange?.trim(),
+      'link': link?.trim().isEmpty == true ? null : link?.trim(),
+      'created_by': _userId,
+    });
+    unawaited(fetchWishlist(eventId));
+  }
+
+  Future<void> claimWishlistItem(
+      String itemId, String eventId, String claimerName) async {
+    await _db.from('event_wishlist_items').update({
+      'claimed_by': _userId,
+      'claimed_by_name': claimerName,
+      'claimed_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', itemId);
+    unawaited(fetchWishlist(eventId));
+  }
+
+  Future<void> unclaimWishlistItem(String itemId, String eventId) async {
+    await _db.from('event_wishlist_items').update({
+      'claimed_by': null,
+      'claimed_by_name': null,
+      'claimed_at': null,
+    }).eq('id', itemId);
+    unawaited(fetchWishlist(eventId));
+  }
+
+  Future<void> markWishlistItemReceived(
+      String itemId, String eventId, bool received) async {
+    await _db
+        .from('event_wishlist_items')
+        .update({'is_received': received}).eq('id', itemId);
+    final items = _wishlistItems[eventId];
+    if (items != null) {
+      final idx = items.indexWhere((i) => i.id == itemId);
+      if (idx >= 0) {
+        _wishlistItems[eventId]![idx] = EventWishlistItem(
+          id: items[idx].id,
+          eventId: items[idx].eventId,
+          label: items[idx].label,
+          priceRange: items[idx].priceRange,
+          link: items[idx].link,
+          createdBy: items[idx].createdBy,
+          createdAt: items[idx].createdAt,
+          claimedBy: items[idx].claimedBy,
+          claimedByName: items[idx].claimedByName,
+          claimedAt: items[idx].claimedAt,
+          isReceived: received,
+        );
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> deleteWishlistItem(String itemId, String eventId) async {
+    await _db.from('event_wishlist_items').delete().eq('id', itemId);
+    _wishlistItems[eventId]?.removeWhere((i) => i.id == itemId);
+    notifyListeners();
+  }
+
+  // ─── Birthday: Gift Pool ───────────────────────────────────────────────────
+
+  Future<void> fetchGiftPool(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_gift_pools')
+          .select('*, event_gift_pledges(*)')
+          .eq('event_id', eventId)
+          .maybeSingle();
+      if (data == null) {
+        _giftPools[eventId] = null;
+      } else {
+        _giftPools[eventId] = EventGiftPool.fromJson(data);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('EventProvider.fetchGiftPool error: $e');
+    }
+  }
+
+  Future<void> createGiftPool({
+    required String eventId,
+    required String giftName,
+    required double targetAmount,
+  }) async {
+    await _db.from('event_gift_pools').insert({
+      'event_id': eventId,
+      'gift_name': giftName.trim(),
+      'target_amount': targetAmount,
+      'created_by': _userId,
+    });
+    unawaited(fetchGiftPool(eventId));
+  }
+
+  Future<void> addPledge({
+    required String poolId,
+    required String eventId,
+    required double amount,
+    required String pledgerName,
+  }) async {
+    await _db.from('event_gift_pledges').insert({
+      'pool_id': poolId,
+      'pledged_by': _userId,
+      'pledged_by_name': pledgerName,
+      'amount': amount,
+    });
+    unawaited(fetchGiftPool(eventId));
+  }
+
+  Future<void> deletePledge(String pledgeId, String eventId) async {
+    await _db.from('event_gift_pledges').delete().eq('id', pledgeId);
+    unawaited(fetchGiftPool(eventId));
+  }
+
+  Future<void> deleteGiftPool(String poolId, String eventId) async {
+    await _db.from('event_gift_pools').delete().eq('id', poolId);
+    _giftPools[eventId] = null;
+    notifyListeners();
+  }
+
+  // ─── Birthday: Predictions ─────────────────────────────────────────────────
+
+  Future<List<EventPrediction>> fetchPredictions(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_predictions')
+          .select()
+          .eq('event_id', eventId)
+          .order('created_at', ascending: true);
+      final items = (data as List)
+          .map((r) => EventPrediction.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _predictions[eventId] = items;
+      notifyListeners();
+      return items;
+    } catch (e) {
+      debugPrint('EventProvider.fetchPredictions error: $e');
+      return [];
+    }
+  }
+
+  Future<void> addPrediction({
+    required String eventId,
+    required String predictionText,
+    required String submitterName,
+  }) async {
+    await _db.from('event_predictions').insert({
+      'event_id': eventId,
+      'submitted_by': _userId,
+      'submitted_by_name': submitterName,
+      'prediction_text': predictionText.trim(),
+    });
+    unawaited(fetchPredictions(eventId));
+  }
+
+  Future<void> deletePrediction(String predictionId, String eventId) async {
+    await _db.from('event_predictions').delete().eq('id', predictionId);
+    _predictions[eventId]?.removeWhere((p) => p.id == predictionId);
+    notifyListeners();
+  }
+
+  Future<void> revealPredictions(String eventId) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await _db.from('events').update({
+      'predictions_revealed_at': now,
+      'updated_at': now,
+    }).eq('id', eventId);
+    unawaited(fetchPredictions(eventId));
+    unawaited(_reloadEvent(eventId));
+  }
+
+  // ─── Birthday: Wishes ─────────────────────────────────────────────────────
+
+  Future<List<EventWish>> fetchWishes(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_wishes')
+          .select()
+          .eq('event_id', eventId)
+          .order('created_at', ascending: true);
+      final items = (data as List)
+          .map((r) => EventWish.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _wishes[eventId] = items;
+      notifyListeners();
+      return items;
+    } catch (e) {
+      debugPrint('EventProvider.fetchWishes error: $e');
+      return [];
+    }
+  }
+
+  Future<void> addWish({
+    required String eventId,
+    required String wishText,
+    required String submitterName,
+  }) async {
+    await _db.from('event_wishes').insert({
+      'event_id': eventId,
+      'submitted_by': _userId,
+      'submitted_by_name': submitterName,
+      'wish_text': wishText.trim(),
+    });
+    unawaited(fetchWishes(eventId));
+  }
+
+  Future<void> deleteWish(String wishId, String eventId) async {
+    await _db.from('event_wishes').delete().eq('id', wishId);
+    _wishes[eventId]?.removeWhere((w) => w.id == wishId);
+    notifyListeners();
+  }
+
+  Future<void> revealWishes(String eventId) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    await _db.from('events').update({
+      'wishes_revealed_at': now,
+      'updated_at': now,
+    }).eq('id', eventId);
+    unawaited(fetchWishes(eventId));
+    unawaited(_reloadEvent(eventId));
+  }
+
+  // ─── Birthday: Toasts ─────────────────────────────────────────────────────
+
+  Future<List<EventToast>> fetchToasts(String eventId) async {
+    try {
+      final data = await _db
+          .from('event_toasts')
+          .select()
+          .eq('event_id', eventId)
+          .order('sort_order', ascending: true)
+          .order('created_at', ascending: true);
+      final items = (data as List)
+          .map((r) => EventToast.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _toasts[eventId] = items;
+      notifyListeners();
+      return items;
+    } catch (e) {
+      debugPrint('EventProvider.fetchToasts error: $e');
+      return [];
+    }
+  }
+
+  Future<void> addToast({
+    required String eventId,
+    required String toastText,
+    required String toastType,
+    required String submitterName,
+  }) async {
+    final existing = _toasts[eventId] ?? [];
+    await _db.from('event_toasts').insert({
+      'event_id': eventId,
+      'submitted_by': _userId,
+      'submitted_by_name': submitterName,
+      'toast_text': toastText.trim(),
+      'toast_type': toastType,
+      'sort_order': existing.length,
+    });
+    unawaited(fetchToasts(eventId));
+  }
+
+  Future<void> deleteToast(String toastId, String eventId) async {
+    await _db.from('event_toasts').delete().eq('id', toastId);
+    _toasts[eventId]?.removeWhere((t) => t.id == toastId);
+    notifyListeners();
+  }
+
+  Future<void> reorderToasts(String eventId, List<String> orderedIds) async {
+    for (var i = 0; i < orderedIds.length; i++) {
+      unawaited(_db
+          .from('event_toasts')
+          .update({'sort_order': i}).eq('id', orderedIds[i]));
+    }
+    final current = _toasts[eventId] ?? [];
+    final byId = {for (final t in current) t.id: t};
+    _toasts[eventId] = orderedIds
+        .where(byId.containsKey)
+        .map((id) => byId[id]!)
+        .toList();
+    notifyListeners();
   }
 
 }

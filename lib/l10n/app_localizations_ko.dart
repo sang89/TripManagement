@@ -1213,4 +1213,262 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get vibePickerLabel => '분위기 (선택)';
+
+  @override
+  String get honoreeNameLabel => '누구의 생일인가요?';
+
+  @override
+  String get honoreeNameHint => '이름을 입력하세요';
+
+  @override
+  String get birthYearLabel => '출생 연도 (선택)';
+
+  @override
+  String get birthYearHint => '예: 1996';
+
+  @override
+  String get celebrateTab => '파티';
+
+  @override
+  String get giftsTab => '선물';
+
+  @override
+  String get memoriesTab => '추억';
+
+  @override
+  String birthdayHeroTitle(String name) {
+    return '$name의 생일';
+  }
+
+  @override
+  String turningAge(int age) {
+    return '$age살이 됩니다';
+  }
+
+  @override
+  String birthdayCountdownDays(int count) {
+    return '$count일 남았어요';
+  }
+
+  @override
+  String birthdayCountdownHours(int count) {
+    return '$count시간 남았어요';
+  }
+
+  @override
+  String get birthdayToday => '오늘이 그날이에요!';
+
+  @override
+  String activityVoteTitle(String name) {
+    return '$name의 파티에서 뭘 할까요?';
+  }
+
+  @override
+  String get activityVoteEmpty => '아직 활동이 없습니다.';
+
+  @override
+  String get addActivityOption => '활동 추가';
+
+  @override
+  String cakeVoteTitle(String name) {
+    return '$name는 어떤 케이크를 원할까요?';
+  }
+
+  @override
+  String get cakeVoteEmpty => '아직 케이크 옵션이 없습니다.';
+
+  @override
+  String get addCakeOption => '맛 추가';
+
+  @override
+  String wishlistTitle(String name) {
+    return '$name의 위시리스트';
+  }
+
+  @override
+  String wishlistEmpty(String name) {
+    return '아직 항목이 없습니다. $name이 좋아할 것을 추가해보세요!';
+  }
+
+  @override
+  String get addWishlistItem => '선물 아이디어 추가';
+
+  @override
+  String get wishlistItemLabel => '선물 아이디어';
+
+  @override
+  String get wishlistPriceRange => '가격대 (선택)';
+
+  @override
+  String get wishlistLink => '링크 (선택)';
+
+  @override
+  String get claimItem => '내가 할게요!';
+
+  @override
+  String get unclaimItem => '취소';
+
+  @override
+  String get itemClaimed => '누군가 담당 중';
+
+  @override
+  String itemClaimedBy(String name) {
+    return '$name이 담당 중';
+  }
+
+  @override
+  String get markReceived => '수령 완료 표시';
+
+  @override
+  String get giftPoolTitle => '공동 선물';
+
+  @override
+  String get giftPoolEmpty => '아직 공동 선물이 없습니다.';
+
+  @override
+  String get createGiftPool => '공동 선물 시작';
+
+  @override
+  String get giftPoolName => '선물 이름';
+
+  @override
+  String get giftPoolTarget => '목표 금액';
+
+  @override
+  String giftPoolProgress(String pledged, String target) {
+    return '$target 중 $pledged 약속됨';
+  }
+
+  @override
+  String giftPoolContributors(int count) {
+    return '$count명 참여';
+  }
+
+  @override
+  String get pledgeAmount => '약속 금액';
+
+  @override
+  String get addPledge => '참여하기';
+
+  @override
+  String get myPledge => '내 약속';
+
+  @override
+  String get removePledge => '약속 취소';
+
+  @override
+  String predictionsTitle(String name) {
+    return '$name에 대한 예언';
+  }
+
+  @override
+  String predictionsSealed(int count) {
+    return '$count개 예언 봉인 중';
+  }
+
+  @override
+  String get revealPredictions => '예언 공개';
+
+  @override
+  String get predictionsHowItWorks =>
+      '예측은 이벤트 날짜까지 잠겨 있습니다 — 그 후 누가 맞혔는지 알게 됩니다!';
+
+  @override
+  String predictionsEmpty(String name) {
+    return '$name에 대한 예언이 아직 없습니다.';
+  }
+
+  @override
+  String get addPrediction => '예언 추가';
+
+  @override
+  String predictionHint(String name) {
+    return '$name의 내년에 대해 예언해보세요...';
+  }
+
+  @override
+  String wishesTitle(String name) {
+    return '$name에게 보내는 소원';
+  }
+
+  @override
+  String wishesSealed(String name) {
+    return '$name은 아직 볼 수 없어요';
+  }
+
+  @override
+  String get wishesHowItWorks => '소원은 주최자가 특별한 날에 공개할 때까지 비밀로 유지됩니다!';
+
+  @override
+  String get wishesEmpty => '아직 소원이 없습니다. 첫 번째가 되세요!';
+
+  @override
+  String get addWish => '소원 보내기';
+
+  @override
+  String wishHint(String name) {
+    return '$name에게 소원을 써보세요...';
+  }
+
+  @override
+  String get blowOutCandles => '초를 끄세요!';
+
+  @override
+  String get wishesRevealed => '소원이 공개되었습니다!';
+
+  @override
+  String memoryWallTitle(String name) {
+    return '$name의 추억 벽';
+  }
+
+  @override
+  String memoryWallEmpty(String name) {
+    return '$name과의 추억을 공유해보세요!';
+  }
+
+  @override
+  String get addMemory => '추억 추가';
+
+  @override
+  String memoryCaptionHint(String name) {
+    return '$name과의 가장 좋은 추억을 적어주세요...';
+  }
+
+  @override
+  String get toastsTitle => '축사 & 스피치';
+
+  @override
+  String toastsEmpty(String name) {
+    return '$name을 위한 축사가 아직 없습니다.';
+  }
+
+  @override
+  String get addToast => '축사 작성';
+
+  @override
+  String get toastTypeSweet => '감동적';
+
+  @override
+  String get toastTypeFunny => '재미있는';
+
+  @override
+  String get toastTypePoem => '시';
+
+  @override
+  String get toastTextHint => '여기에 스피치를 작성해주세요...';
+
+  @override
+  String get exportToasts => '스피치 내보내기';
+
+  @override
+  String get wishesTab => '소원';
+
+  @override
+  String get predictionsTab => '예언';
+
+  @override
+  String get wallTab => '추억 벽';
+
+  @override
+  String get pleaseSelectEventType => '이벤트 유형을 선택해 주세요';
 }

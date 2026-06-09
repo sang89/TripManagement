@@ -1212,4 +1212,261 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get vibePickerLabel => '雰囲気（任意）';
+
+  @override
+  String get honoreeNameLabel => '誰の誕生日ですか？';
+
+  @override
+  String get honoreeNameHint => '名前を入力';
+
+  @override
+  String get birthYearLabel => '生年（任意）';
+
+  @override
+  String get birthYearHint => '例：1996';
+
+  @override
+  String get celebrateTab => 'パーティー';
+
+  @override
+  String get giftsTab => 'ギフト';
+
+  @override
+  String get memoriesTab => '思い出';
+
+  @override
+  String birthdayHeroTitle(String name) {
+    return '$nameの誕生日';
+  }
+
+  @override
+  String turningAge(int age) {
+    return '$age歳になります';
+  }
+
+  @override
+  String birthdayCountdownDays(int count) {
+    return 'あと$count日';
+  }
+
+  @override
+  String birthdayCountdownHours(int count) {
+    return 'あと$count時間';
+  }
+
+  @override
+  String get birthdayToday => '今日が当日！';
+
+  @override
+  String activityVoteTitle(String name) {
+    return '$nameのパーティーで何をする？';
+  }
+
+  @override
+  String get activityVoteEmpty => 'アクティビティがまだありません。';
+
+  @override
+  String get addActivityOption => 'アクティビティを追加';
+
+  @override
+  String cakeVoteTitle(String name) {
+    return '$nameはどんなケーキが欲しい？';
+  }
+
+  @override
+  String get cakeVoteEmpty => 'ケーキの選択肢がまだありません。';
+
+  @override
+  String get addCakeOption => 'フレーバーを追加';
+
+  @override
+  String wishlistTitle(String name) {
+    return '$nameのウィッシュリスト';
+  }
+
+  @override
+  String wishlistEmpty(String name) {
+    return 'まだアイテムがありません。$nameが喜ぶものを追加して！';
+  }
+
+  @override
+  String get addWishlistItem => 'ギフトアイデアを追加';
+
+  @override
+  String get wishlistItemLabel => 'ギフトアイデア';
+
+  @override
+  String get wishlistPriceRange => '価格帯（任意）';
+
+  @override
+  String get wishlistLink => 'リンク（任意）';
+
+  @override
+  String get claimItem => '私が担当します！';
+
+  @override
+  String get unclaimItem => '取り消す';
+
+  @override
+  String get itemClaimed => '誰かが担当中';
+
+  @override
+  String itemClaimedBy(String name) {
+    return '$nameが担当中';
+  }
+
+  @override
+  String get markReceived => '受け取り済みにする';
+
+  @override
+  String get giftPoolTitle => 'グループギフト';
+
+  @override
+  String get giftPoolEmpty => 'グループギフトはまだありません。';
+
+  @override
+  String get createGiftPool => 'グループギフトを始める';
+
+  @override
+  String get giftPoolName => 'ギフト名';
+
+  @override
+  String get giftPoolTarget => '目標金額';
+
+  @override
+  String giftPoolProgress(String pledged, String target) {
+    return '$target中$pledgedが約束済み';
+  }
+
+  @override
+  String giftPoolContributors(int count) {
+    return '$count人が参加';
+  }
+
+  @override
+  String get pledgeAmount => '約束金額';
+
+  @override
+  String get addPledge => '参加する';
+
+  @override
+  String get myPledge => '私の約束';
+
+  @override
+  String get removePledge => '約束を取り消す';
+
+  @override
+  String predictionsTitle(String name) {
+    return '$nameへの予言';
+  }
+
+  @override
+  String predictionsSealed(int count) {
+    return '$count件の予言がシール中';
+  }
+
+  @override
+  String get revealPredictions => '予言を公開';
+
+  @override
+  String get predictionsHowItWorks => '予測はイベント日まで封印されます — 誰が当てたかはその後のお楽しみ！';
+
+  @override
+  String predictionsEmpty(String name) {
+    return '$nameへの予言はまだありません。';
+  }
+
+  @override
+  String get addPrediction => '予言を追加';
+
+  @override
+  String predictionHint(String name) {
+    return '$nameの来年について予言してみて...';
+  }
+
+  @override
+  String wishesTitle(String name) {
+    return '$nameへのお祝いの言葉';
+  }
+
+  @override
+  String wishesSealed(String name) {
+    return '$nameにはまだ見えません';
+  }
+
+  @override
+  String get wishesHowItWorks => '願い事はオーガナイザーが当日に公開するまで秘密に保たれます！';
+
+  @override
+  String get wishesEmpty => 'まだお祝いの言葉がありません。';
+
+  @override
+  String get addWish => 'お祝いの言葉を送る';
+
+  @override
+  String wishHint(String name) {
+    return '$nameへのお祝いの言葉を書いて...';
+  }
+
+  @override
+  String get blowOutCandles => 'ろうそくを吹き消して！';
+
+  @override
+  String get wishesRevealed => 'お祝いの言葉が公開されました！';
+
+  @override
+  String memoryWallTitle(String name) {
+    return '$nameの思い出の壁';
+  }
+
+  @override
+  String memoryWallEmpty(String name) {
+    return '$nameとの思い出をシェアして！';
+  }
+
+  @override
+  String get addMemory => '思い出を追加';
+
+  @override
+  String memoryCaptionHint(String name) {
+    return '$nameとの一番好きな思い出を書いて...';
+  }
+
+  @override
+  String get toastsTitle => 'スピーチ & トースト';
+
+  @override
+  String toastsEmpty(String name) {
+    return '$nameへのスピーチはまだありません。';
+  }
+
+  @override
+  String get addToast => 'スピーチを書く';
+
+  @override
+  String get toastTypeSweet => 'ハート';
+
+  @override
+  String get toastTypeFunny => '面白い';
+
+  @override
+  String get toastTypePoem => '詩';
+
+  @override
+  String get toastTextHint => 'スピーチをここに書いて...';
+
+  @override
+  String get exportToasts => 'スピーチをエクスポート';
+
+  @override
+  String get wishesTab => 'ウィッシュ';
+
+  @override
+  String get predictionsTab => '予言';
+
+  @override
+  String get wallTab => 'ウォール';
+
+  @override
+  String get pleaseSelectEventType => 'イベントの種類を選択してください';
 }

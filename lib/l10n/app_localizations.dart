@@ -2375,6 +2375,432 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vibe (optional)'**
   String get vibePickerLabel;
+
+  /// No description provided for @honoreeNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Whose birthday is it?'**
+  String get honoreeNameLabel;
+
+  /// No description provided for @honoreeNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter their name'**
+  String get honoreeNameHint;
+
+  /// No description provided for @birthYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Birth year (optional)'**
+  String get birthYearLabel;
+
+  /// No description provided for @birthYearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 1996'**
+  String get birthYearHint;
+
+  /// No description provided for @celebrateTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Party'**
+  String get celebrateTab;
+
+  /// No description provided for @giftsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifts'**
+  String get giftsTab;
+
+  /// No description provided for @memoriesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Memories'**
+  String get memoriesTab;
+
+  /// No description provided for @birthdayHeroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s Birthday'**
+  String birthdayHeroTitle(String name);
+
+  /// No description provided for @turningAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning {age}'**
+  String turningAge(int age);
+
+  /// No description provided for @birthdayCountdownDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days away'**
+  String birthdayCountdownDays(int count);
+
+  /// No description provided for @birthdayCountdownHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hours away'**
+  String birthdayCountdownHours(int count);
+
+  /// No description provided for @birthdayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s the day!'**
+  String get birthdayToday;
+
+  /// No description provided for @activityVoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What should we do at {name}\'s party?'**
+  String activityVoteTitle(String name);
+
+  /// No description provided for @activityVoteEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities added yet. The organizer can add options to vote on.'**
+  String get activityVoteEmpty;
+
+  /// No description provided for @addActivityOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Add activity'**
+  String get addActivityOption;
+
+  /// No description provided for @cakeVoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What cake does {name} want?'**
+  String cakeVoteTitle(String name);
+
+  /// No description provided for @cakeVoteEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No cake options yet. Add flavors for everyone to vote on!'**
+  String get cakeVoteEmpty;
+
+  /// No description provided for @addCakeOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Add flavor'**
+  String get addCakeOption;
+
+  /// No description provided for @wishlistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s Wishlist'**
+  String wishlistTitle(String name);
+
+  /// No description provided for @wishlistEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No items yet. Add something {name} would love!'**
+  String wishlistEmpty(String name);
+
+  /// No description provided for @addWishlistItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add gift idea'**
+  String get addWishlistItem;
+
+  /// No description provided for @wishlistItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift idea'**
+  String get wishlistItemLabel;
+
+  /// No description provided for @wishlistPriceRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Price range (optional)'**
+  String get wishlistPriceRange;
+
+  /// No description provided for @wishlistLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Link (optional)'**
+  String get wishlistLink;
+
+  /// No description provided for @claimItem.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ll get this!'**
+  String get claimItem;
+
+  /// No description provided for @unclaimItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Unclaim'**
+  String get unclaimItem;
+
+  /// No description provided for @itemClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone\'s on it'**
+  String get itemClaimed;
+
+  /// No description provided for @itemClaimedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed by {name}'**
+  String itemClaimedBy(String name);
+
+  /// No description provided for @markReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark received'**
+  String get markReceived;
+
+  /// No description provided for @giftPoolTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Group Gift Pool'**
+  String get giftPoolTitle;
+
+  /// No description provided for @giftPoolEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No group gift yet. The organizer can start one.'**
+  String get giftPoolEmpty;
+
+  /// No description provided for @createGiftPool.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a group gift'**
+  String get createGiftPool;
+
+  /// No description provided for @giftPoolName.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift name'**
+  String get giftPoolName;
+
+  /// No description provided for @giftPoolTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target amount'**
+  String get giftPoolTarget;
+
+  /// No description provided for @giftPoolProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{pledged} of {target} pledged'**
+  String giftPoolProgress(String pledged, String target);
+
+  /// No description provided for @giftPoolContributors.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} contributors'**
+  String giftPoolContributors(int count);
+
+  /// No description provided for @pledgeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Pledge amount'**
+  String get pledgeAmount;
+
+  /// No description provided for @addPledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Pledge'**
+  String get addPledge;
+
+  /// No description provided for @myPledge.
+  ///
+  /// In en, this message translates to:
+  /// **'My pledge'**
+  String get myPledge;
+
+  /// No description provided for @removePledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove pledge'**
+  String get removePledge;
+
+  /// No description provided for @predictionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s Predictions'**
+  String predictionsTitle(String name);
+
+  /// No description provided for @predictionsSealed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} predictions sealed until the event date'**
+  String predictionsSealed(int count);
+
+  /// No description provided for @revealPredictions.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal Predictions'**
+  String get revealPredictions;
+
+  /// No description provided for @predictionsHowItWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'Predictions are locked until the event date — then everyone finds out who called it!'**
+  String get predictionsHowItWorks;
+
+  /// No description provided for @predictionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No predictions yet. What do you think {name}\'s year will bring?'**
+  String predictionsEmpty(String name);
+
+  /// No description provided for @addPrediction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add prediction'**
+  String get addPrediction;
+
+  /// No description provided for @predictionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Predict something for {name}\'s next year...'**
+  String predictionHint(String name);
+
+  /// No description provided for @wishesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishes for {name}'**
+  String wishesTitle(String name);
+
+  /// No description provided for @wishesSealed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} can\'t see these yet'**
+  String wishesSealed(String name);
+
+  /// No description provided for @wishesHowItWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishes are kept secret until the organizer reveals them on the big day!'**
+  String get wishesHowItWorks;
+
+  /// No description provided for @wishesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No wishes yet. Be the first to send one!'**
+  String get wishesEmpty;
+
+  /// No description provided for @addWish.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a wish'**
+  String get addWish;
+
+  /// No description provided for @wishHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your wish for {name}...'**
+  String wishHint(String name);
+
+  /// No description provided for @blowOutCandles.
+  ///
+  /// In en, this message translates to:
+  /// **'Blow out the candles!'**
+  String get blowOutCandles;
+
+  /// No description provided for @wishesRevealed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishes revealed!'**
+  String get wishesRevealed;
+
+  /// No description provided for @memoryWallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s Memory Wall'**
+  String memoryWallTitle(String name);
+
+  /// No description provided for @memoryWallEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your memories with {name}!'**
+  String memoryWallEmpty(String name);
+
+  /// No description provided for @addMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a memory'**
+  String get addMemory;
+
+  /// No description provided for @memoryCaptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your favorite memory with {name}...'**
+  String memoryCaptionHint(String name);
+
+  /// No description provided for @toastsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Toasts & Speeches'**
+  String get toastsTitle;
+
+  /// No description provided for @toastsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No toasts yet. Share something sweet or funny for {name}!'**
+  String toastsEmpty(String name);
+
+  /// No description provided for @addToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a toast'**
+  String get addToast;
+
+  /// No description provided for @toastTypeSweet.
+  ///
+  /// In en, this message translates to:
+  /// **'Sweet'**
+  String get toastTypeSweet;
+
+  /// No description provided for @toastTypeFunny.
+  ///
+  /// In en, this message translates to:
+  /// **'Funny'**
+  String get toastTypeFunny;
+
+  /// No description provided for @toastTypePoem.
+  ///
+  /// In en, this message translates to:
+  /// **'Poem'**
+  String get toastTypePoem;
+
+  /// No description provided for @toastTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your speech here...'**
+  String get toastTextHint;
+
+  /// No description provided for @exportToasts.
+  ///
+  /// In en, this message translates to:
+  /// **'Export speeches'**
+  String get exportToasts;
+
+  /// No description provided for @wishesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishes'**
+  String get wishesTab;
+
+  /// No description provided for @predictionsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Predictions'**
+  String get predictionsTab;
+
+  /// No description provided for @wallTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Wall'**
+  String get wallTab;
+
+  /// No description provided for @pleaseSelectEventType.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an event type'**
+  String get pleaseSelectEventType;
 }
 
 class _AppLocalizationsDelegate

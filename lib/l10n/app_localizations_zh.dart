@@ -1209,4 +1209,261 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get vibePickerLabel => '氛围（可选）';
+
+  @override
+  String get honoreeNameLabel => '这是谁的生日？';
+
+  @override
+  String get honoreeNameHint => '输入他/她的名字';
+
+  @override
+  String get birthYearLabel => '出生年份（可选）';
+
+  @override
+  String get birthYearHint => '例如：1996';
+
+  @override
+  String get celebrateTab => '派对';
+
+  @override
+  String get giftsTab => '礼物';
+
+  @override
+  String get memoriesTab => '回忆';
+
+  @override
+  String birthdayHeroTitle(String name) {
+    return '$name的生日';
+  }
+
+  @override
+  String turningAge(int age) {
+    return '即将$age岁';
+  }
+
+  @override
+  String birthdayCountdownDays(int count) {
+    return '还有$count天';
+  }
+
+  @override
+  String birthdayCountdownHours(int count) {
+    return '还有$count小时';
+  }
+
+  @override
+  String get birthdayToday => '今天就是那一天！';
+
+  @override
+  String activityVoteTitle(String name) {
+    return '在$name的派对上做什么？';
+  }
+
+  @override
+  String get activityVoteEmpty => '还没有活动。';
+
+  @override
+  String get addActivityOption => '添加活动';
+
+  @override
+  String cakeVoteTitle(String name) {
+    return '$name想要什么蛋糕？';
+  }
+
+  @override
+  String get cakeVoteEmpty => '还没有蛋糕选项。';
+
+  @override
+  String get addCakeOption => '添加口味';
+
+  @override
+  String wishlistTitle(String name) {
+    return '$name的心愿单';
+  }
+
+  @override
+  String wishlistEmpty(String name) {
+    return '还没有项目。添加$name会喜欢的东西！';
+  }
+
+  @override
+  String get addWishlistItem => '添加礼物想法';
+
+  @override
+  String get wishlistItemLabel => '礼物想法';
+
+  @override
+  String get wishlistPriceRange => '价格范围（可选）';
+
+  @override
+  String get wishlistLink => '链接（可选）';
+
+  @override
+  String get claimItem => '我来买！';
+
+  @override
+  String get unclaimItem => '取消';
+
+  @override
+  String get itemClaimed => '有人正在处理';
+
+  @override
+  String itemClaimedBy(String name) {
+    return '$name正在处理';
+  }
+
+  @override
+  String get markReceived => '标记已收到';
+
+  @override
+  String get giftPoolTitle => '团体礼物';
+
+  @override
+  String get giftPoolEmpty => '还没有团体礼物。';
+
+  @override
+  String get createGiftPool => '发起团体礼物';
+
+  @override
+  String get giftPoolName => '礼物名称';
+
+  @override
+  String get giftPoolTarget => '目标金额';
+
+  @override
+  String giftPoolProgress(String pledged, String target) {
+    return '$target中已承诺$pledged';
+  }
+
+  @override
+  String giftPoolContributors(int count) {
+    return '$count人参与';
+  }
+
+  @override
+  String get pledgeAmount => '承诺金额';
+
+  @override
+  String get addPledge => '参与';
+
+  @override
+  String get myPledge => '我的承诺';
+
+  @override
+  String get removePledge => '取消承诺';
+
+  @override
+  String predictionsTitle(String name) {
+    return '对$name的预言';
+  }
+
+  @override
+  String predictionsSealed(int count) {
+    return '$count条预言已封存';
+  }
+
+  @override
+  String get revealPredictions => '揭示预言';
+
+  @override
+  String get predictionsHowItWorks => '预测将锁定至活动日期——届时看看谁猜对了！';
+
+  @override
+  String predictionsEmpty(String name) {
+    return '还没有对$name的预言。';
+  }
+
+  @override
+  String get addPrediction => '添加预言';
+
+  @override
+  String predictionHint(String name) {
+    return '预测$name明年会发生什么...';
+  }
+
+  @override
+  String wishesTitle(String name) {
+    return '送给$name的祝福';
+  }
+
+  @override
+  String wishesSealed(String name) {
+    return '$name还不能看到这些';
+  }
+
+  @override
+  String get wishesHowItWorks => '心愿将保密，直到主办人在大日子揭晓！';
+
+  @override
+  String get wishesEmpty => '还没有祝福。成为第一个！';
+
+  @override
+  String get addWish => '送上祝福';
+
+  @override
+  String wishHint(String name) {
+    return '写下你对$name的祝福...';
+  }
+
+  @override
+  String get blowOutCandles => '吹蜡烛！';
+
+  @override
+  String get wishesRevealed => '祝福已揭示！';
+
+  @override
+  String memoryWallTitle(String name) {
+    return '$name的回忆墙';
+  }
+
+  @override
+  String memoryWallEmpty(String name) {
+    return '和$name分享你的回忆！';
+  }
+
+  @override
+  String get addMemory => '添加回忆';
+
+  @override
+  String memoryCaptionHint(String name) {
+    return '分享你和$name最美好的回忆...';
+  }
+
+  @override
+  String get toastsTitle => '祝酒词 & 演讲';
+
+  @override
+  String toastsEmpty(String name) {
+    return '还没有对$name的祝酒词。';
+  }
+
+  @override
+  String get addToast => '写祝酒词';
+
+  @override
+  String get toastTypeSweet => '温馨';
+
+  @override
+  String get toastTypeFunny => '幽默';
+
+  @override
+  String get toastTypePoem => '诗歌';
+
+  @override
+  String get toastTextHint => '在这里写下你的演讲...';
+
+  @override
+  String get exportToasts => '导出演讲';
+
+  @override
+  String get wishesTab => '祝福';
+
+  @override
+  String get predictionsTab => '预言';
+
+  @override
+  String get wallTab => '回忆墙';
+
+  @override
+  String get pleaseSelectEventType => '请选择活动类型';
 }

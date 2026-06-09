@@ -49,6 +49,12 @@ class Event {
   final DateTime? rsvpDeadline;
   final String? vibe;
 
+  // Birthday fields (only populated when eventType == EventType.birthday).
+  final String? honoreeDisplayName;
+  final int? birthYear;
+  final DateTime? predictionsRevealedAt;
+  final DateTime? wishesRevealedAt;
+
   final List<EventGuest> guests;
   final List<EventStop> stops;
 
@@ -77,6 +83,10 @@ class Event {
     this.cuisineTags = const [],
     this.rsvpDeadline,
     this.vibe,
+    this.honoreeDisplayName,
+    this.birthYear,
+    this.predictionsRevealedAt,
+    this.wishesRevealedAt,
     required this.guests,
     this.stops = const [],
     this.organizerName,
@@ -84,6 +94,10 @@ class Event {
 
   bool get isTrip => eventType == EventType.trip;
   bool get isQuickBites => eventType == EventType.quickBites;
+  bool get isBirthday => eventType == EventType.birthday;
+
+  int? get honoreeAge =>
+      birthYear == null ? null : DateTime.now().year - birthYear!;
 
   factory Event.fromJson(Map<String, dynamic> json) {
     final rawStops = (json['event_stops'] as List<dynamic>? ?? [])
@@ -119,6 +133,14 @@ class Event {
           ? DateTime.parse(json['rsvp_deadline'] as String)
           : null,
       vibe: json['vibe'] as String?,
+      honoreeDisplayName: json['honoree_name'] as String?,
+      birthYear: json['birth_year'] as int?,
+      predictionsRevealedAt: json['predictions_revealed_at'] != null
+          ? DateTime.parse(json['predictions_revealed_at'] as String)
+          : null,
+      wishesRevealedAt: json['wishes_revealed_at'] != null
+          ? DateTime.parse(json['wishes_revealed_at'] as String)
+          : null,
       guests: (json['event_guests'] as List<dynamic>? ?? [])
           .map((g) => EventGuest.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -143,6 +165,8 @@ class Event {
         'cuisine_tags': cuisineTags,
         if (rsvpDeadline != null) 'rsvp_deadline': rsvpDeadline!.toUtc().toIso8601String(),
         if (vibe != null) 'vibe': vibe,
+        if (honoreeDisplayName != null) 'honoree_name': honoreeDisplayName,
+        if (birthYear != null) 'birth_year': birthYear,
       };
 
   Event copyWith({
@@ -172,6 +196,14 @@ class Event {
     bool clearRsvpDeadline = false,
     String? vibe,
     bool clearVibe = false,
+    String? honoreeDisplayName,
+    bool clearHonoreeName = false,
+    int? birthYear,
+    bool clearBirthYear = false,
+    DateTime? predictionsRevealedAt,
+    bool clearPredictionsRevealedAt = false,
+    DateTime? wishesRevealedAt,
+    bool clearWishesRevealedAt = false,
     List<EventGuest>? guests,
     List<EventStop>? stops,
     String? organizerName,
@@ -198,6 +230,10 @@ class Event {
         cuisineTags: cuisineTags ?? this.cuisineTags,
         rsvpDeadline: clearRsvpDeadline ? null : (rsvpDeadline ?? this.rsvpDeadline),
         vibe: clearVibe ? null : (vibe ?? this.vibe),
+        honoreeDisplayName: clearHonoreeName ? null : (honoreeDisplayName ?? this.honoreeDisplayName),
+        birthYear: clearBirthYear ? null : (birthYear ?? this.birthYear),
+        predictionsRevealedAt: clearPredictionsRevealedAt ? null : (predictionsRevealedAt ?? this.predictionsRevealedAt),
+        wishesRevealedAt: clearWishesRevealedAt ? null : (wishesRevealedAt ?? this.wishesRevealedAt),
         guests: guests ?? this.guests,
         stops: stops ?? this.stops,
         organizerName: organizerName ?? this.organizerName,

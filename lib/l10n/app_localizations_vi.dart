@@ -1227,4 +1227,263 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get vibePickerLabel => 'Không khí (tuỳ chọn)';
+
+  @override
+  String get honoreeNameLabel => 'Sinh nhật của ai?';
+
+  @override
+  String get honoreeNameHint => 'Nhập tên của họ';
+
+  @override
+  String get birthYearLabel => 'Năm sinh (tùy chọn)';
+
+  @override
+  String get birthYearHint => 'ví dụ: 1996';
+
+  @override
+  String get celebrateTab => 'Tiệc';
+
+  @override
+  String get giftsTab => 'Quà tặng';
+
+  @override
+  String get memoriesTab => 'Kỷ niệm';
+
+  @override
+  String birthdayHeroTitle(String name) {
+    return 'Sinh nhật của $name';
+  }
+
+  @override
+  String turningAge(int age) {
+    return 'Tròn $age tuổi';
+  }
+
+  @override
+  String birthdayCountdownDays(int count) {
+    return 'Còn $count ngày';
+  }
+
+  @override
+  String birthdayCountdownHours(int count) {
+    return 'Còn $count giờ';
+  }
+
+  @override
+  String get birthdayToday => 'Hôm nay là ngày trọng đại!';
+
+  @override
+  String activityVoteTitle(String name) {
+    return 'Làm gì tại tiệc của $name?';
+  }
+
+  @override
+  String get activityVoteEmpty => 'Chưa có hoạt động nào.';
+
+  @override
+  String get addActivityOption => 'Thêm hoạt động';
+
+  @override
+  String cakeVoteTitle(String name) {
+    return '$name muốn bánh gì?';
+  }
+
+  @override
+  String get cakeVoteEmpty => 'Chưa có tùy chọn bánh nào.';
+
+  @override
+  String get addCakeOption => 'Thêm hương vị';
+
+  @override
+  String wishlistTitle(String name) {
+    return 'Danh sách của $name';
+  }
+
+  @override
+  String wishlistEmpty(String name) {
+    return 'Chưa có mục nào. Thêm thứ gì đó $name sẽ thích!';
+  }
+
+  @override
+  String get addWishlistItem => 'Thêm ý tưởng quà';
+
+  @override
+  String get wishlistItemLabel => 'Ý tưởng quà';
+
+  @override
+  String get wishlistPriceRange => 'Mức giá (tùy chọn)';
+
+  @override
+  String get wishlistLink => 'Liên kết (tùy chọn)';
+
+  @override
+  String get claimItem => 'Tôi sẽ mua!';
+
+  @override
+  String get unclaimItem => 'Hủy';
+
+  @override
+  String get itemClaimed => 'Ai đó đang lo';
+
+  @override
+  String itemClaimedBy(String name) {
+    return 'Được nhận bởi $name';
+  }
+
+  @override
+  String get markReceived => 'Đánh dấu đã nhận';
+
+  @override
+  String get giftPoolTitle => 'Quà tập thể';
+
+  @override
+  String get giftPoolEmpty => 'Chưa có quà tập thể nào.';
+
+  @override
+  String get createGiftPool => 'Bắt đầu quà tập thể';
+
+  @override
+  String get giftPoolName => 'Tên quà';
+
+  @override
+  String get giftPoolTarget => 'Số tiền mục tiêu';
+
+  @override
+  String giftPoolProgress(String pledged, String target) {
+    return '$pledged trong $target đã cam kết';
+  }
+
+  @override
+  String giftPoolContributors(int count) {
+    return '$count người tham gia';
+  }
+
+  @override
+  String get pledgeAmount => 'Số tiền cam kết';
+
+  @override
+  String get addPledge => 'Cam kết';
+
+  @override
+  String get myPledge => 'Cam kết của tôi';
+
+  @override
+  String get removePledge => 'Xóa cam kết';
+
+  @override
+  String predictionsTitle(String name) {
+    return 'Dự đoán cho $name';
+  }
+
+  @override
+  String predictionsSealed(int count) {
+    return '$count dự đoán đang được niêm phong';
+  }
+
+  @override
+  String get revealPredictions => 'Tiết lộ dự đoán';
+
+  @override
+  String get predictionsHowItWorks =>
+      'Dự đoán bị khóa đến ngày sự kiện — sau đó mọi người sẽ biết ai đoán đúng!';
+
+  @override
+  String predictionsEmpty(String name) {
+    return 'Chưa có dự đoán nào cho $name.';
+  }
+
+  @override
+  String get addPrediction => 'Thêm dự đoán';
+
+  @override
+  String predictionHint(String name) {
+    return 'Dự đoán điều gì cho năm tới của $name...';
+  }
+
+  @override
+  String wishesTitle(String name) {
+    return 'Lời chúc cho $name';
+  }
+
+  @override
+  String wishesSealed(String name) {
+    return '$name chưa thể thấy những lời này';
+  }
+
+  @override
+  String get wishesHowItWorks =>
+      'Những lời chúc được giữ bí mật cho đến khi người tổ chức tiết lộ vào ngày trọng đại!';
+
+  @override
+  String get wishesEmpty => 'Chưa có lời chúc nào. Hãy là người đầu tiên!';
+
+  @override
+  String get addWish => 'Gửi lời chúc';
+
+  @override
+  String wishHint(String name) {
+    return 'Viết lời chúc của bạn cho $name...';
+  }
+
+  @override
+  String get blowOutCandles => 'Thổi nến!';
+
+  @override
+  String get wishesRevealed => 'Lời chúc đã được tiết lộ!';
+
+  @override
+  String memoryWallTitle(String name) {
+    return 'Tường kỷ niệm của $name';
+  }
+
+  @override
+  String memoryWallEmpty(String name) {
+    return 'Chia sẻ kỷ niệm với $name!';
+  }
+
+  @override
+  String get addMemory => 'Thêm kỷ niệm';
+
+  @override
+  String memoryCaptionHint(String name) {
+    return 'Chia sẻ kỷ niệm yêu thích với $name...';
+  }
+
+  @override
+  String get toastsTitle => 'Lời chúc mừng & Bài phát biểu';
+
+  @override
+  String toastsEmpty(String name) {
+    return 'Chưa có lời chúc nào cho $name.';
+  }
+
+  @override
+  String get addToast => 'Viết lời chúc';
+
+  @override
+  String get toastTypeSweet => 'Cảm động';
+
+  @override
+  String get toastTypeFunny => 'Vui';
+
+  @override
+  String get toastTypePoem => 'Thơ';
+
+  @override
+  String get toastTextHint => 'Viết bài phát biểu ở đây...';
+
+  @override
+  String get exportToasts => 'Xuất bài phát biểu';
+
+  @override
+  String get wishesTab => 'Lời chúc';
+
+  @override
+  String get predictionsTab => 'Dự đoán';
+
+  @override
+  String get wallTab => 'Tường';
+
+  @override
+  String get pleaseSelectEventType => 'Vui lòng chọn loại sự kiện';
 }
