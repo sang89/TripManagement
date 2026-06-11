@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'dart:math' show Random, min;
+import 'dart:math' show Random, min, cos, sin, pi;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +19,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_keys.dart';
@@ -29,7 +30,9 @@ import '../../models/event_expense.dart';
 import '../../models/event_gift_pool.dart';
 import '../../models/event_poll.dart';
 import '../../models/event_guest.dart';
+import '../../models/event_session.dart';
 import '../../models/event_message.dart';
+import 'session_scan_screen.dart';
 import '../../models/event_photo.dart';
 import '../../models/event_prediction.dart';
 import '../../models/event_stop.dart';
@@ -576,12 +579,22 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
     with SingleTickerProviderStateMixin {
   late TabController _ctrl;
 
-  int get _tabCount => widget.event.isTrip ? 3 : 2;
+  int get _tabCount => widget.event.isTrip ? 3 : widget.event.isSignup ? 3 : 2;
 
   @override
   void initState() {
     super.initState();
     _ctrl = TabController(length: _tabCount, vsync: this);
+  }
+
+  @override
+  void didUpdateWidget(_InfoTabGroup old) {
+    super.didUpdateWidget(old);
+    if (old.event.isTrip != widget.event.isTrip ||
+        old.event.isSignup != widget.event.isSignup) {
+      _ctrl.dispose();
+      _ctrl = TabController(length: _tabCount, vsync: this);
+    }
   }
 
   @override
@@ -594,6 +607,12 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final event = widget.event;
+
+    // Guard against hot-reload leaving a stale controller with wrong length.
+    if (_ctrl.length != _tabCount) {
+      _ctrl.dispose();
+      _ctrl = TabController(length: _tabCount, vsync: this);
+    }
 
     final colorScheme = Theme.of(context).colorScheme;
     return Column(
@@ -614,6 +633,7 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
               Tab(icon: const Icon(Icons.info_outline_rounded, size: 18), text: l10n.detailsTab),
               if (event.isTrip) Tab(icon: const Icon(Icons.route_outlined, size: 18), text: l10n.routeTab),
               Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.guestsTab),
+              if (event.isSignup) const Tab(icon: Icon(Icons.help_outline_rounded, size: 18), text: 'Guide'),
             ],
           ),
         ),
@@ -630,6 +650,8 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
                 canInvite: widget.canInvite,
                 authUid: widget.authUid,
               ),
+              if (event.isSignup)
+                _SignupGuideTab(isOrganizer: widget.isOrganizer),
             ],
           ),
         ),
@@ -666,9 +688,11 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
     with SingleTickerProviderStateMixin {
   late TabController _ctrl;
 
-  int get _tabCount => widget.event.isQuickBites
+  int get _tabCount => widget.event.isSignup
       ? 4
-      : (widget.event.isBirthday ? 5 : 3);
+      : widget.event.isQuickBites
+          ? 4
+          : (widget.event.isBirthday ? 5 : 3);
 
   @override
   void initState() {
@@ -679,7 +703,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
   @override
   void didUpdateWidget(_OrganizeTabGroup old) {
     super.didUpdateWidget(old);
-    if (old.event.isQuickBites != widget.event.isQuickBites ||
+    if (old.event.isSignup != widget.event.isSignup ||
+        old.event.isQuickBites != widget.event.isQuickBites ||
         old.event.isBirthday != widget.event.isBirthday) {
       _ctrl.dispose();
       _ctrl = TabController(length: _tabCount, vsync: this);
@@ -721,9 +746,14 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
             unselectedLabelStyle: TextStyle(
                 fontSize: _tabCount > 4 ? 11 : 13),
             tabs: [
-              Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
+              if (widget.event.isSignup)
+                Tab(icon: const Icon(Icons.format_list_numbered_outlined, size: 18), text: l10n.signupRosterTab)
+              else
+                Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
               Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
               Tab(icon: const Icon(Icons.how_to_vote_outlined, size: 18), text: l10n.pollsTab),
+              if (widget.event.isSignup)
+                Tab(icon: const Icon(Icons.qr_code_outlined, size: 18), text: l10n.signupInviteTab),
               if (widget.event.isQuickBites)
                 Tab(icon: const Icon(Icons.ramen_dining_outlined, size: 18), text: l10n.cravingsTab),
               if (widget.event.isBirthday) ...[
@@ -737,12 +767,19 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
           child: TabBarView(
             controller: _ctrl,
             children: [
-              _TodoTab(
-                event: widget.event,
-                authUid: widget.authUid,
-                items: widget.items,
-                isOrganizer: widget.isOrganizer,
-              ),
+              if (widget.event.isSignup)
+                _SignupRosterTab(
+                  event: widget.event,
+                  authUid: widget.authUid,
+                  isOrganizer: widget.isOrganizer,
+                )
+              else
+                _TodoTab(
+                  event: widget.event,
+                  authUid: widget.authUid,
+                  items: widget.items,
+                  isOrganizer: widget.isOrganizer,
+                ),
               _ExpensesTab(
                 event: widget.event,
                 expenses: widget.expenses,
@@ -755,6 +792,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                 polls: widget.polls,
                 isOrganizer: widget.isOrganizer,
               ),
+              if (widget.event.isSignup)
+                _SignupInviteTab(event: widget.event),
               if (widget.event.isQuickBites)
                 _CravingsTab(
                   event: widget.event,
@@ -780,6 +819,265 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
       ],
     );
   }
+}
+
+// ── Signup Guide tab ──────────────────────────────────────────────────────────
+
+class _SignupGuideTab extends StatelessWidget {
+  final bool isOrganizer;
+  const _SignupGuideTab({required this.isOrganizer});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      children: [
+        Text(
+          'How this works',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          isOrganizer
+              ? 'Everything you need to run your recurring sessions.'
+              : 'Here\'s how to sign up and what to expect.',
+          style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.4),
+        ),
+        const SizedBox(height: 20),
+
+        if (isOrganizer) ...[
+          _GuideSectionExpansion(
+            title: 'For organisers',
+            color: const Color(0xFFEA580C),
+            icon: Icons.manage_accounts_rounded,
+            steps: [
+              _GuideStep(
+                emoji: '📅',
+                title: 'Create sessions',
+                body: 'Tap Organize → Roster → "+ Add session". Pick a date and time. Session #1 is created automatically when you first make the event.',
+                color: const Color(0xFFEA580C),
+              ),
+              _GuideStep(
+                emoji: '📲',
+                title: 'Share the QR code',
+                body: 'Go to Organize → Invite. Select a session, then share its unique QR code or copy the invite code. Each session has its own code.',
+                color: const Color(0xFFEA580C),
+              ),
+              _GuideStep(
+                emoji: '👥',
+                title: 'Manage the roster',
+                body: 'Expand any session in the Roster tab to see who\'s signed up. Swipe a row left to promote, demote, or remove. Drag to reorder.',
+                color: const Color(0xFFEA580C),
+              ),
+              _GuideStep(
+                emoji: '✅',
+                title: 'Mark attendance',
+                body: 'After the session ends, tap each roster entry\'s attendance chip to mark "Attended" or "No-show". Only available once the session has ended.',
+                color: const Color(0xFFEA580C),
+              ),
+              _GuideStep(
+                emoji: '🔒',
+                title: 'Signup lock',
+                body: 'If you set a lock window (e.g. 2 hours), signups and cancellations are disabled that many hours before the session starts.',
+                color: const Color(0xFFEA580C),
+                isLast: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        _GuideSectionExpansion(
+          title: 'For members',
+          color: const Color(0xFFDB2777),
+          icon: Icons.groups_rounded,
+          steps: [
+            _GuideStep(
+              emoji: '🎟️',
+              title: 'Claim your spot',
+              body: 'Scan the session QR code (tap the Invite tab, then "Scan a QR code") or paste the invite code someone shared with you.',
+              color: const Color(0xFFDB2777),
+            ),
+            _GuideStep(
+              emoji: '⏳',
+              title: 'Waitlist',
+              body: 'If the session is full, you join the waitlist. When someone cancels their confirmed spot, the first person on the waitlist is promoted automatically.',
+              color: const Color(0xFFDB2777),
+            ),
+            _GuideStep(
+              emoji: '🔁',
+              title: 'Sign up each session',
+              body: 'The roster resets for every session. Being signed up for session #3 doesn\'t carry over to #4 — you need to sign up for each one separately.',
+              color: const Color(0xFFDB2777),
+            ),
+            _GuideStep(
+              emoji: '❌',
+              title: 'Cancel your spot',
+              body: 'Expand the session in the Roster tab and tap "Cancel my spot". If there\'s a lock window, cancellation closes at the same time as signups.',
+              color: const Color(0xFFDB2777),
+              isLast: true,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        _GuideSectionExpansion(
+          title: 'Chat & photos',
+          color: const Color(0xFF7C3AED),
+          icon: Icons.chat_bubble_rounded,
+          initiallyExpanded: false,
+          steps: [
+            _GuideStep(
+              emoji: '💬',
+              title: 'Shared across all sessions',
+              body: 'The Chat and Photos tabs belong to the whole event — one conversation and one photo album for the entire community, not per session.',
+              color: const Color(0xFF7C3AED),
+              isLast: true,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _GuideSectionExpansion extends StatelessWidget {
+  final String title;
+  final Color color;
+  final IconData icon;
+  final List<_GuideStep> steps;
+  final bool initiallyExpanded;
+
+  const _GuideSectionExpansion({
+    required this.title,
+    required this.color,
+    required this.icon,
+    required this.steps,
+    this.initiallyExpanded = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          initiallyExpanded: initiallyExpanded,
+          iconColor: color,
+          collapsedIconColor: color.withValues(alpha: 0.6),
+          shape: const RoundedRectangleBorder(),
+          collapsedShape: const RoundedRectangleBorder(),
+          title: Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
+          ),
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: steps,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuideStep extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final String body;
+  final Color color;
+  final bool isLast;
+
+  const _GuideStep({
+    required this.emoji,
+    required this.title,
+    required this.body,
+    required this.color,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timeline line + dot
+            SizedBox(
+              width: 36,
+              child: Column(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.10),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: color.withValues(alpha: 0.30), width: 1.5),
+                    ),
+                    child: Center(
+                      child: Text(emoji,
+                          style: const TextStyle(fontSize: 16)),
+                    ),
+                  ),
+                  if (!isLast)
+                    Expanded(
+                      child: Container(
+                        width: 1.5,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        color: color.withValues(alpha: 0.18),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(body,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                            height: 1.45)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 // ── Info tab ─────────────────────────────────────────────────────────────────
@@ -8756,4 +9054,2331 @@ class _AddToastSheetState extends State<_AddToastSheet> {
       ),
     );
   }
+}
+
+// ── Signup Roster tab ─────────────────────────────────────────────────────────
+
+class _SignupRosterTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+
+  const _SignupRosterTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+  });
+
+  @override
+  State<_SignupRosterTab> createState() => _SignupRosterTabState();
+}
+
+class _SignupRosterTabState extends State<_SignupRosterTab> {
+  bool _loadingUpcoming = true;
+  bool _showPast = false;
+  String? _error;
+  // Track by session ID (stable across list refreshes).
+  String? _expandedSessionId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUpcoming();
+  }
+
+  Future<void> _fetchUpcoming() async {
+    try {
+      await context.read<EventProvider>().fetchUpcomingSessions(widget.event.id);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingUpcoming = false;
+          // Auto-expand the nearest upcoming session on first load.
+          final upcoming = context
+              .read<EventProvider>()
+              .upcomingSessionsFor(widget.event.id);
+          if (upcoming.isNotEmpty) _expandedSessionId = upcoming.first.id;
+        });
+      }
+    }
+  }
+
+  Future<void> _addSession(BuildContext context) async {
+    final provider = context.read<EventProvider>();
+    final upcoming = provider.upcomingSessionsFor(widget.event.id);
+    final past = provider.pastSessionsFor(widget.event.id);
+    final allKnown = [...upcoming, ...past];
+    allKnown.sort((a, b) => b.startAt.compareTo(a.startAt));
+    final suggestion = allKnown.isNotEmpty
+        ? allKnown.first.startAt.add(const Duration(days: 7))
+        : widget.event.startAt.add(const Duration(days: 7));
+
+    if (!context.mounted) return;
+    final start = await showDatePicker(
+      context: context,
+      initialDate: suggestion,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+    );
+    if (start == null || !context.mounted) return;
+
+    final startTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(suggestion),
+    );
+    if (startTime == null || !context.mounted) return;
+
+    final startAt = DateTime(
+        start.year, start.month, start.day, startTime.hour, startTime.minute);
+    DateTime? endAt;
+    if (widget.event.endAt != null) {
+      final dur = widget.event.endAt!.difference(widget.event.startAt);
+      endAt = startAt.add(dur);
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final session = await provider.addSession(widget.event.id, startAt, endAt);
+      if (mounted) setState(() => _expandedSessionId = session.id);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<EventProvider>();
+    final upcoming = provider.upcomingSessionsFor(widget.event.id);
+    final past = provider.pastSessionsFor(widget.event.id);
+    final hasMorePast = provider.hasMorePastFor(widget.event.id);
+
+    if (_loadingUpcoming) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+          child: Text(_error!, style: const TextStyle(color: AppTheme.danger)));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      children: [
+        // ── Header ────────────────────────────────────────────────────────
+        Row(
+          children: [
+            const Text('📅', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${upcoming.length} upcoming session${upcoming.length == 1 ? '' : 's'}',
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+            if (widget.isOrganizer)
+              AppTappable(
+                onTap: () => _addSession(context),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text('Add session',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // ── Upcoming sessions ─────────────────────────────────────────────
+        if (upcoming.isEmpty)
+          _EmptyState(
+              emoji: '📋',
+              message: widget.isOrganizer
+                  ? 'No upcoming sessions — tap "Add session" to schedule one.'
+                  : 'No upcoming sessions scheduled yet.')
+        else
+          ...upcoming.map((session) => _SessionCard(
+                key: ValueKey(session.id),
+                session: session,
+                event: widget.event,
+                authUid: widget.authUid,
+                isOrganizer: widget.isOrganizer,
+                isExpanded: _expandedSessionId == session.id,
+                onToggle: () => setState(() => _expandedSessionId =
+                    _expandedSessionId == session.id ? null : session.id),
+              )),
+
+        // ── Past sessions ─────────────────────────────────────────────────
+        const SizedBox(height: 20),
+        _PastSessionsSection(
+          event: widget.event,
+          authUid: widget.authUid,
+          isOrganizer: widget.isOrganizer,
+          sessions: past,
+          hasMore: hasMorePast,
+          isVisible: _showPast,
+          expandedSessionId: _expandedSessionId,
+          onToggleVisible: () {
+            setState(() => _showPast = !_showPast);
+            if (!_showPast) return;
+            if (past.isEmpty) {
+              context.read<EventProvider>().fetchPastSessions(widget.event.id);
+            }
+          },
+          onToggleSession: (id) => setState(() =>
+              _expandedSessionId = _expandedSessionId == id ? null : id),
+          onLoadMore: () =>
+              context.read<EventProvider>().loadMorePastSessions(widget.event.id),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Past sessions section ─────────────────────────────────────────────────────
+
+class _PastSessionsSection extends StatelessWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final List<EventSession> sessions;
+  final bool hasMore;
+  final bool isVisible;
+  final String? expandedSessionId;
+  final VoidCallback onToggleVisible;
+  final void Function(String sessionId) onToggleSession;
+  final VoidCallback onLoadMore;
+
+  const _PastSessionsSection({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.sessions,
+    required this.hasMore,
+    required this.isVisible,
+    required this.expandedSessionId,
+    required this.onToggleVisible,
+    required this.onToggleSession,
+    required this.onLoadMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppTappable(
+          onTap: onToggleVisible,
+          child: Row(
+            children: [
+              Icon(
+                isVisible
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 18,
+                color: Colors.grey[500],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Past sessions',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+        if (isVisible) ...[
+          const SizedBox(height: 12),
+          if (sessions.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text('No past sessions.',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+              ),
+            )
+          else
+            ...sessions.map((session) => _SessionCard(
+                  key: ValueKey(session.id),
+                  session: session,
+                  event: event,
+                  authUid: authUid,
+                  isOrganizer: isOrganizer,
+                  isExpanded: expandedSessionId == session.id,
+                  onToggle: () => onToggleSession(session.id),
+                )),
+          if (hasMore) ...[
+            const SizedBox(height: 8),
+            Center(
+              child: AppTappable(
+                onTap: onLoadMore,
+                child: Text('Load more past sessions',
+                    style: TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+// ── Session card (lazy roster loading) ───────────────────────────────────────
+
+class _SessionCard extends StatefulWidget {
+  final EventSession session;
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  const _SessionCard({
+    super.key,
+    required this.session,
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  @override
+  State<_SessionCard> createState() => _SessionCardState();
+}
+
+class _SessionCardState extends State<_SessionCard>
+    with TickerProviderStateMixin {
+  bool _rosterLoading = false;
+  String? _cancellingId;       // roster entry id currently animating out
+  AnimationController? _cancelCtrl;
+
+  @override
+  void didUpdateWidget(_SessionCard old) {
+    super.didUpdateWidget(old);
+    // Always refresh from DB when the card is expanded — avoids showing
+    // stale cached data after server-side changes (migrations, other devices).
+    if (widget.isExpanded && !old.isExpanded) {
+      _loadRoster(forceRefresh: true);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isExpanded) _loadRoster();
+  }
+
+  @override
+  void dispose() {
+    _cancelCtrl?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadRoster({bool forceRefresh = false}) async {
+    final provider = context.read<EventProvider>();
+    // On initial widget creation use cache if available (avoids redundant
+    // fetches when the provider already has fresh data from a recent signup).
+    // On every subsequent expand always go to the DB.
+    if (!forceRefresh && provider.rosterFor(widget.session.id) != null) return;
+    setState(() => _rosterLoading = true);
+    try {
+      await provider.refreshSessionRoster(widget.session.id);
+    } finally {
+      if (mounted) setState(() => _rosterLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final fmt = DateFormat('EEE, MMM d · h:mm a');
+    final provider = context.watch<EventProvider>();
+    final cap = widget.event.capacity;
+    final going = widget.session.goingCount;
+    final waitlisted = widget.session.waitlistCount;
+    final isLocked = widget.session.isLockedFor(widget.event.signupLockHours);
+    final hasEnded = widget.session.hasEnded;
+    final fillFraction =
+        cap != null && cap > 0 ? (going / cap).clamp(0.0, 1.0) : 0.0;
+
+    // Roster is loaded on demand.
+    final roster = provider.rosterFor(widget.session.id);
+    final confirmed =
+        roster?.where((r) => r.status == 'going').toList() ?? [];
+    final waitlist =
+        roster?.where((r) => r.status == 'waitlisted').toList() ?? [];
+    final myEntry = roster?.where((r) => r.userId == widget.authUid).firstOrNull;
+    final hasMoreRoster = provider.hasMoreRosterFor(widget.session.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF2E7D32).withValues(alpha: 0.18),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.07),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Header (always visible, counts from DB columns) ──────────────
+          AppTappable(
+            onTap: widget.onToggle,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Session badge — jewel teal, distinct from app's primary green
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF003D33), Color(0xFF00695C), Color(0xFF00897B)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            // Depth shadow
+                            BoxShadow(
+                              color: const Color(0xFF00695C).withValues(alpha: 0.50),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                            // Top-edge highlight — gives raised look
+                            BoxShadow(
+                              color: const Color(0xFF4DB6AC).withValues(alpha: 0.30),
+                              blurRadius: 1,
+                              offset: const Offset(0, -1),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: const Color(0xFF4DB6AC).withValues(alpha: 0.25),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'SESSION',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.60),
+                                fontSize: 7,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            Text(
+                              '${widget.session.sessionNumber}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                height: 1.05,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fmt.format(widget.session.startAt.toLocal()),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              cap != null
+                                  ? '$going / $cap spots'
+                                  : '$going going${waitlisted > 0 ? '  ·  $waitlisted waiting' : ''}',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isLocked)
+                            _StatusChip(label: 'Locked', color: Colors.orange),
+                          if (hasEnded)
+                            _StatusChip(label: 'Ended', color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Icon(
+                            widget.isExpanded
+                                ? Icons.expand_less_rounded
+                                : Icons.expand_more_rounded,
+                            size: 20,
+                            color: Colors.grey[400],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (cap != null) ...[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: fillFraction,
+                        minHeight: 5,
+                        backgroundColor:
+                            const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          fillFraction >= 1.0
+                              ? Colors.redAccent
+                              : const Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // ── Expanded roster (loaded lazily on first expand) ──────────────
+          if (widget.isExpanded) ...[
+            Divider(
+                height: 1,
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.12)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: _rosterLoading || roster == null
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Confirmed list ────────────────────────────────
+                        if (confirmed.isEmpty)
+                          _EmptyState(emoji: '🪑', message: 'No one signed up yet.')
+                        else if (widget.isOrganizer && !hasEnded)
+                          ReorderableListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            buildDefaultDragHandles: false,
+                            onReorderItem: (oldIdx, newIdx) {
+                              final reordered =
+                                  List<EventSessionRosterEntry>.from(confirmed);
+                              reordered.insert(
+                                  newIdx, reordered.removeAt(oldIdx));
+                              context.read<EventProvider>().reorderSessionRoster(
+                                    widget.event.id,
+                                    widget.session.id,
+                                    reordered.map((r) => r.id).toList(),
+                                  );
+                            },
+                            children: confirmed.asMap().entries.map((e) =>
+                                _SessionRosterRow(
+                                  key: ValueKey(e.value.id),
+                                  position: e.key + 1,
+                                  index: e.key,
+                                  entry: e.value,
+                                  isOrganizer: true,
+                                  showDragHandle: true,
+                                  showAttendance: hasEnded,
+                                  onDemote: widget.event.waitlistEnabled
+                                      ? () async {
+                                          try {
+                                            await context
+                                                .read<EventProvider>()
+                                                .demoteSessionRosterEntry(
+                                                    e.value.id,
+                                                    widget.session.id,
+                                                    widget.event.id);
+                                          } catch (err) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(SnackBar(
+                                                    content:
+                                                        Text(err.toString())));
+                                          }
+                                        }
+                                      : null,
+                                  onRemove: () => _confirmRemoveEntry(
+                                      context, e.value, l10n),
+                                  onMarkAttendance: hasEnded
+                                      ? (att) => context
+                                          .read<EventProvider>()
+                                          .markSessionAttendance(
+                                              e.value.id,
+                                              widget.session.id,
+                                              widget.event.id,
+                                              att)
+                                      : null,
+                                  onToggleConfirmed: !hasEnded
+                                      ? (c) => context
+                                          .read<EventProvider>()
+                                          .toggleSessionConfirmed(
+                                              e.value.id,
+                                              widget.session.id,
+                                              widget.event.id,
+                                              c)
+                                      : null,
+                                )).toList(),
+                          )
+                        else
+                          ...confirmed.asMap().entries.map((e) =>
+                              _cancelAnimWrapper(
+                                id: e.value.id,
+                                child: _SessionRosterRow(
+                                  key: ValueKey(e.value.id),
+                                  position: e.key + 1,
+                                  index: e.key,
+                                  entry: e.value,
+                                  isOrganizer: false,
+                                  showAttendance: false,
+                                  onToggleConfirmed: !hasEnded &&
+                                          e.value.userId == widget.authUid
+                                      ? (c) => context
+                                          .read<EventProvider>()
+                                          .toggleSessionConfirmed(
+                                              e.value.id,
+                                              widget.session.id,
+                                              widget.event.id,
+                                              c)
+                                      : null,
+                                ),
+                              )),
+
+                        // ── Load more confirmed ──────────────────────────
+                        if (hasMoreRoster) ...[
+                          const SizedBox(height: 8),
+                          Center(
+                            child: AppTappable(
+                              onTap: () => context
+                                  .read<EventProvider>()
+                                  .loadMoreRoster(widget.session.id),
+                              child: Text('Load more',
+                                  style: TextStyle(
+                                      color: AppTheme.primary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        ],
+
+                        // ── Waitlist ──────────────────────────────────────
+                        if (widget.event.waitlistEnabled) ...[
+                          const SizedBox(height: 12),
+                          _WaitlistDivider(count: waitlist.length),
+                          const SizedBox(height: 8),
+                          if (waitlist.isEmpty)
+                            _EmptyState(
+                                emoji: '🎉',
+                                message: 'Waitlist is empty — all good!')
+                          else if (widget.isOrganizer && !hasEnded)
+                            ReorderableListView(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              buildDefaultDragHandles: false,
+                              onReorderItem: (oldIdx, newIdx) {
+                                final reordered =
+                                    List<EventSessionRosterEntry>.from(
+                                        waitlist);
+                                reordered.insert(
+                                    newIdx, reordered.removeAt(oldIdx));
+                                context
+                                    .read<EventProvider>()
+                                    .reorderSessionRoster(
+                                  widget.event.id,
+                                  widget.session.id,
+                                  reordered.map((r) => r.id).toList(),
+                                  startOrder: 1,
+                                );
+                              },
+                              children: waitlist.asMap().entries.map((e) =>
+                                  _SessionRosterRow(
+                                    key: ValueKey(e.value.id),
+                                    position: e.key + 1,
+                                    index: e.key,
+                                    entry: e.value,
+                                    isWaitlist: true,
+                                    isOrganizer: true,
+                                    showDragHandle: true,
+                                    showAttendance: false,
+                                    onPromote: (cap == null ||
+                                            confirmed.length < cap)
+                                        ? () async {
+                                            try {
+                                              await context
+                                                  .read<EventProvider>()
+                                                  .promoteSessionRosterEntry(
+                                                      e.value.id,
+                                                      widget.session.id,
+                                                      widget.event.id);
+                                            } catch (err) {
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                content: Text(
+                                                  err
+                                                          .toString()
+                                                          .contains(
+                                                              'session_full')
+                                                      ? l10n.signupEventFull
+                                                      : err.toString(),
+                                                ),
+                                              ));
+                                            }
+                                          }
+                                        : null,
+                                    onRemove: () => _confirmRemoveEntry(
+                                        context, e.value, l10n),
+                                  )).toList(),
+                            )
+                          else
+                            ...waitlist.asMap().entries.map((e) =>
+                                _cancelAnimWrapper(
+                                  id: e.value.id,
+                                  child: _SessionRosterRow(
+                                    key: ValueKey(e.value.id),
+                                    position: e.key + 1,
+                                    index: e.key,
+                                    entry: e.value,
+                                    isWaitlist: true,
+                                    isOrganizer: false,
+                                    showAttendance: false,
+                                  ),
+                                )),
+                        ],
+
+                        // ── Current user CTA ──────────────────────────────
+                        const SizedBox(height: 16),
+                        if (myEntry == null && !widget.isOrganizer) ...[
+                          if (isLocked)
+                            _LockedBanner(message: l10n.signupLocked)
+                          else if (widget.session.isFullFor(cap) &&
+                              !widget.event.waitlistEnabled)
+                            _LockedBanner(
+                                message: l10n.signupEventFull,
+                                color: AppTheme.danger)
+                          else
+                            _SignupCTAButton(
+                              label: widget.session.isFullFor(cap)
+                                  ? '⏳  ${l10n.signupJoinWaitlist}'
+                                  : '🎟️  ${l10n.signupClaimSpot}',
+                              isWaitlist: widget.session.isFullFor(cap),
+                              onPressed: () => _signupForSession(context, l10n),
+                            ),
+                        ] else if (myEntry != null && !widget.isOrganizer) ...[
+                          if (!isLocked)
+                            _CancelSpotButton(
+                              label: l10n.signupCancelSpot,
+                              isWaitlist: myEntry.status == 'waitlisted',
+                              onPressed: () => _cancelForSession(
+                                  context, myEntry, l10n),
+                            )
+                          else
+                            _LockedBanner(message: l10n.signupLockedMessage),
+                        ],
+                      ],
+                    ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _signupForSession(
+      BuildContext context, AppLocalizations l10n) async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn) {
+      context.push('/login');
+      return;
+    }
+    final provider = context.read<EventProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final rows = await Supabase.instance.client.rpc('rsvp_session', params: {
+        'p_invite_code': widget.session.inviteCode,
+        'p_display_name': auth.userName,
+      }) as List<dynamic>;
+      if (rows.isNotEmpty && context.mounted) {
+        final r = rows.first as Map<String, dynamic>;
+        final status = r['rsvp_status'] as String?;
+        final pos = r['signup_position'] as int? ?? 0;
+        messenger.showSnackBar(SnackBar(
+          content: Text(status == 'waitlisted'
+              ? l10n.signupWaitlistPosition(pos)
+              : l10n.signupConfirmedPosition(pos)),
+        ));
+      }
+      await provider.refreshSessionRoster(widget.session.id);
+    } catch (e) {
+      final msg = e.toString();
+      messenger.showSnackBar(SnackBar(
+        content: Text(msg.contains('signup_locked')
+            ? l10n.signupLocked
+            : msg.contains('already_signed_up')
+                ? 'You are already signed up for this session.'
+                : msg),
+      ));
+    }
+  }
+
+  /// Wraps [child] with slide-right + fade + height-collapse when this entry
+  /// is the one currently being cancelled.
+  Widget _cancelAnimWrapper({required String id, required Widget child}) {
+    final ctrl = _cancelCtrl;
+    if (_cancellingId != id || ctrl == null) return child;
+
+    final slide = Tween<Offset>(begin: Offset.zero, end: const Offset(1.5, 0))
+        .animate(CurvedAnimation(parent: ctrl, curve: Curves.easeIn));
+    final fade = Tween<double>(begin: 1.0, end: 0.0)
+        .animate(CurvedAnimation(
+            parent: ctrl, curve: const Interval(0.0, 0.6)));
+    final size = Tween<double>(begin: 1.0, end: 0.0)
+        .animate(CurvedAnimation(
+            parent: ctrl, curve: const Interval(0.55, 1.0, curve: Curves.easeOut)));
+
+    return SizeTransition(
+      sizeFactor: size,
+      alignment: Alignment.topCenter,
+      child: FadeTransition(
+        opacity: fade,
+        child: SlideTransition(position: slide, child: child),
+      ),
+    );
+  }
+
+  Future<void> _cancelForSession(BuildContext context,
+      EventSessionRosterEntry entry, AppLocalizations l10n) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.signupCancelSpot),
+        content: const Text('Are you sure you want to cancel your spot?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.signupCancelSpot,
+                  style: const TextStyle(color: AppTheme.danger))),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+
+    // Animate the row out before the API call so the user sees it "leave".
+    _cancelCtrl?.dispose();
+    final ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _cancelCtrl = ctrl;
+    setState(() => _cancellingId = entry.id);
+    await ctrl.forward();
+
+    try {
+      if (!context.mounted) return;
+      await context.read<EventProvider>().cancelSessionSignup(
+          entry.id, widget.session.id, widget.event.id);
+    } catch (e) {
+      // Roll back animation state on failure
+      setState(() => _cancellingId = null);
+      ctrl.dispose();
+      _cancelCtrl = null;
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _confirmRemoveEntry(BuildContext context,
+      EventSessionRosterEntry entry, AppLocalizations l10n) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.signupRemoveGuest),
+        content: Text(
+            'Remove ${entry.displayName} from session #${widget.session.sessionNumber}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.remove,
+                  style: const TextStyle(color: AppTheme.danger))),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    await context.read<EventProvider>().removeSessionRosterEntry(
+        entry.id, widget.session.id, widget.event.id);
+  }
+}
+
+
+// ── Signup empty state ────────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  final String emoji;
+  final String message;
+
+  const _EmptyState({required this.emoji, required this.message});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+            ),
+          ],
+        ),
+      );
+}
+
+// ── Signup CTA button ─────────────────────────────────────────────────────────
+
+class _SignupCTAButton extends StatefulWidget {
+  final String label;
+  final bool isWaitlist;
+  final VoidCallback onPressed;
+
+  const _SignupCTAButton({
+    required this.label,
+    required this.isWaitlist,
+    required this.onPressed,
+  });
+
+  @override
+  State<_SignupCTAButton> createState() => _SignupCTAButtonState();
+}
+
+class _SignupCTAButtonState extends State<_SignupCTAButton>
+    with TickerProviderStateMixin {
+  final _key = GlobalKey();
+
+  // Continuous float loop on the big emoji
+  late final AnimationController _floatCtrl;
+  late final Animation<double> _floatAnim;
+
+  // One-shot press squeeze
+  late final AnimationController _pressCtrl;
+  late final Animation<double> _pressAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _floatAnim = Tween(begin: -6.0, end: 6.0).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
+    );
+
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+    );
+    _pressAnim = Tween(begin: 1.0, end: 0.93).animate(
+      CurvedAnimation(parent: _pressCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _floatCtrl.dispose();
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    await _pressCtrl.forward();
+    _pressCtrl.reverse();
+
+    final box = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (box != null && mounted) {
+      final offset = box.localToGlobal(Offset.zero);
+      final size = box.size;
+      _launchParticles(
+        context,
+        Offset(offset.dx + size.width / 2, offset.dy + size.height / 2),
+      );
+    }
+
+    widget.onPressed();
+  }
+
+  void _launchParticles(BuildContext context, Offset origin) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => _CTAParticleBurst(
+        origin: origin,
+        isWaitlist: widget.isWaitlist,
+        onDone: entry.remove,
+      ),
+    );
+    overlay.insert(entry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWaitlist = widget.isWaitlist;
+    final colors = isWaitlist
+        ? [const Color(0xFFFFB300), const Color(0xFFE65100)]
+        : [const Color(0xFF43A047), const Color(0xFF1B5E20)];
+    final glowColor =
+        isWaitlist ? const Color(0xFFFFB300) : const Color(0xFF43A047);
+    final bigEmoji = isWaitlist ? '⏳' : '🎟️';
+    final label = isWaitlist ? 'Join the waitlist' : 'Claim your spot';
+
+    return ScaleTransition(
+      scale: _pressAnim,
+      child: Container(
+        key: _key,
+        width: double.infinity,
+        height: 96,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.55),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.20),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Glossy top-half shine
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withValues(alpha: 0.20),
+                      Colors.white.withValues(alpha: 0.0),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.center,
+                  ),
+                ),
+              ),
+            ),
+            // Tappable content
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _handleTap,
+                borderRadius: BorderRadius.circular(20),
+                splashColor: Colors.white24,
+                highlightColor: Colors.white10,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      // Big floating emoji
+                      AnimatedBuilder(
+                        animation: _floatAnim,
+                        builder: (_, _) => Transform.translate(
+                          offset: Offset(0, _floatAnim.value),
+                          child: Text(bigEmoji,
+                              style: const TextStyle(fontSize: 46)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Label + tap hint
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              isWaitlist
+                                  ? 'You\'ll be notified when a spot opens'
+                                  : 'Tap to reserve your place',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.80),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          color: Colors.white.withValues(alpha: 0.70),
+                          size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── CTA particle burst overlay ────────────────────────────────────────────────
+
+class _CTAParticleBurst extends StatefulWidget {
+  final Offset origin;
+  final bool isWaitlist;
+  final VoidCallback onDone;
+
+  const _CTAParticleBurst({
+    required this.origin,
+    required this.isWaitlist,
+    required this.onDone,
+  });
+
+  @override
+  State<_CTAParticleBurst> createState() => _CTAParticleBurstState();
+}
+
+class _CTAParticleBurstState extends State<_CTAParticleBurst>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  // 8 sparkles evenly spread around the button centre
+  static const _angles = [0.0, pi * 0.25, pi * 0.5, pi * 0.75,
+                           pi, pi * 1.25, pi * 1.5, pi * 1.75];
+  static const _sparkles = ['✨', '⭐', '💫', '🌟', '✨', '💫', '⭐', '🌟'];
+  static const _distances = [70.0, 55.0, 80.0, 60.0, 72.0, 58.0, 75.0, 52.0];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..forward().then((_) => widget.onDone());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final heroEmoji = widget.isWaitlist ? '⏳' : '🎟️';
+
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, _) {
+        final t = _ctrl.value;
+        // Hero: rises 160px, scales 1→1.8, fades out in last 40%
+        final heroY = widget.origin.dy - 30 - Curves.easeOut.transform(t) * 160;
+        final heroScale = 1.0 + Curves.elasticOut.transform(t.clamp(0.0, 0.6)) * 0.8;
+        final heroOpacity = t < 0.6 ? 1.0 : (1.0 - (t - 0.6) / 0.4).clamp(0.0, 1.0);
+
+        return Stack(
+          children: [
+            // Hero emoji flies upward
+            Positioned(
+              left: widget.origin.dx - 22,
+              top: heroY - 22,
+              child: Opacity(
+                opacity: heroOpacity,
+                child: Transform.scale(
+                  scale: heroScale,
+                  child: Text(heroEmoji,
+                      style: const TextStyle(fontSize: 36)),
+                ),
+              ),
+            ),
+
+            // Sparkle burst
+            for (var i = 0; i < _angles.length; i++)
+              Builder(builder: (_) {
+                final delay = i * 0.04;
+                final localT = ((t - delay) / 0.7).clamp(0.0, 1.0);
+                final dist = _distances[i] * Curves.easeOut.transform(localT);
+                final dx = cos(_angles[i]) * dist;
+                final dy = sin(_angles[i]) * dist;
+                final opacity = localT < 0.5
+                    ? localT * 2
+                    : (1.0 - (localT - 0.5) * 2).clamp(0.0, 1.0);
+                return Positioned(
+                  left: widget.origin.dx + dx - 10,
+                  top: widget.origin.dy + dy - 10,
+                  child: Opacity(
+                    opacity: opacity,
+                    child: Text(_sparkles[i],
+                        style: const TextStyle(fontSize: 18)),
+                  ),
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Cancel spot button ────────────────────────────────────────────────────────
+
+class _CancelSpotButton extends StatefulWidget {
+  final String label;
+  final bool isWaitlist;
+  final VoidCallback onPressed;
+
+  const _CancelSpotButton({
+    required this.label,
+    required this.isWaitlist,
+    required this.onPressed,
+  });
+
+  @override
+  State<_CancelSpotButton> createState() => _CancelSpotButtonState();
+}
+
+class _CancelSpotButtonState extends State<_CancelSpotButton>
+    with TickerProviderStateMixin {
+  final _key = GlobalKey();
+
+  // Side-to-side run loop
+  late final AnimationController _runCtrl;
+  late final Animation<double> _runAnim;
+
+  // Press squeeze
+  late final AnimationController _pressCtrl;
+  late final Animation<double> _pressAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _runCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat(reverse: true);
+    _runAnim = Tween(begin: -5.0, end: 5.0).animate(
+      CurvedAnimation(parent: _runCtrl, curve: Curves.easeInOut),
+    );
+
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 110),
+    );
+    _pressAnim = Tween(begin: 1.0, end: 0.93).animate(
+      CurvedAnimation(parent: _pressCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _runCtrl.dispose();
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleTap() async {
+    await _pressCtrl.forward();
+    _pressCtrl.reverse();
+
+    final box = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (box != null && mounted) {
+      final offset = box.localToGlobal(Offset.zero);
+      final size = box.size;
+      _launchRunAwayBurst(
+        context,
+        Offset(offset.dx + size.width / 2, offset.dy + size.height / 2),
+      );
+    }
+
+    widget.onPressed();
+  }
+
+  void _launchRunAwayBurst(BuildContext context, Offset origin) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => _RunAwayBurst(
+        origin: origin,
+        isWaitlist: widget.isWaitlist,
+        onDone: entry.remove,
+      ),
+    );
+    overlay.insert(entry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Slightly translucent danger red gradient — premium but clearly destructive
+    const colors = [Color(0xFFEF5350), Color(0xFFC62828)];
+    const glowColor = Color(0xFFEF5350);
+    final emoji = widget.isWaitlist ? '🏃' : '🚪';
+    final subtitle = widget.isWaitlist
+        ? 'You\'ll lose your place in line'
+        : 'Your confirmed spot will be released';
+
+    return ScaleTransition(
+      scale: _pressAnim,
+      child: Container(
+        key: _key,
+        width: double.infinity,
+        height: 88,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.45),
+              blurRadius: 18,
+              offset: const Offset(0, 7),
+            ),
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.18),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Glossy top shine
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.white.withValues(alpha: 0.15),
+                      Colors.white.withValues(alpha: 0.0),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.center,
+                  ),
+                ),
+              ),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _handleTap,
+                borderRadius: BorderRadius.circular(20),
+                splashColor: Colors.white24,
+                highlightColor: Colors.white10,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      // Running emoji bobbing side-to-side
+                      AnimatedBuilder(
+                        animation: _runAnim,
+                        builder: (_, _) => Transform.translate(
+                          offset: Offset(_runAnim.value, 0),
+                          child: Text(emoji,
+                              style: const TextStyle(fontSize: 42)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.label,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.80),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Run-away particle burst ───────────────────────────────────────────────────
+
+class _RunAwayBurst extends StatefulWidget {
+  final Offset origin;
+  final bool isWaitlist;
+  final VoidCallback onDone;
+
+  const _RunAwayBurst({
+    required this.origin,
+    required this.isWaitlist,
+    required this.onDone,
+  });
+
+  @override
+  State<_RunAwayBurst> createState() => _RunAwayBurstState();
+}
+
+class _RunAwayBurstState extends State<_RunAwayBurst>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  // Particles fan out mostly rightward (runner fleeing to the right)
+  static const _data = [
+    ('💨', 0.0,   80.0),   // right
+    ('💨', 0.2,   60.0),   // slight up-right
+    ('👋', -0.3,  55.0),   // slight down-right
+    ('👟', 0.5,   70.0),   // upper-right
+    ('✨',  pi,    45.0),   // left (trailing)
+    ('💫', pi * 0.7, 50.0), // lower-left trail
+    ('👟', -0.5,  65.0),   // lower-right
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..forward().then((_) => widget.onDone());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final heroEmoji = widget.isWaitlist ? '🏃' : '🚪';
+
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, _) {
+        final t = _ctrl.value;
+        // Hero: runner slides right and fades
+        final heroX = Curves.easeIn.transform(t) * 220;
+        final heroOpacity = t < 0.5 ? 1.0 : (1.0 - (t - 0.5) * 2).clamp(0.0, 1.0);
+
+        return Stack(
+          children: [
+            // Hero emoji runs off to the right
+            Positioned(
+              left: widget.origin.dx - 22 + heroX,
+              top: widget.origin.dy - 22,
+              child: Opacity(
+                opacity: heroOpacity,
+                child: Text(heroEmoji,
+                    style: const TextStyle(fontSize: 38)),
+              ),
+            ),
+
+            // Trailing particles
+            for (final (emoji, angle, dist) in _data)
+              Builder(builder: (_) {
+                final localT = (t / 0.7).clamp(0.0, 1.0);
+                final dx = cos(angle) * dist * Curves.easeOut.transform(localT);
+                final dy = sin(angle) * dist * Curves.easeOut.transform(localT);
+                final opacity = localT < 0.4
+                    ? localT / 0.4
+                    : (1.0 - (localT - 0.4) / 0.6).clamp(0.0, 1.0);
+                return Positioned(
+                  left: widget.origin.dx + dx - 10,
+                  top: widget.origin.dy + dy - 10,
+                  child: Opacity(
+                    opacity: opacity,
+                    child: Text(emoji,
+                        style: const TextStyle(fontSize: 18)),
+                  ),
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Signup locked banner ──────────────────────────────────────────────────────
+
+class _LockedBanner extends StatelessWidget {
+  final String message;
+  final Color color;
+
+  const _LockedBanner(
+      {required this.message, this.color = Colors.orange});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lock_clock_rounded, color: color, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message,
+                  style: TextStyle(color: color, fontSize: 13)),
+            ),
+          ],
+        ),
+      );
+}
+
+// ── Waitlist divider (replaces the removed SectionHeader for waitlist) ────────
+
+class _WaitlistDivider extends StatelessWidget {
+  final int count;
+  const _WaitlistDivider({required this.count});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Expanded(
+            child: Divider(
+                color: Colors.orange.withValues(alpha: 0.35), thickness: 1),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            '⏳  $count on the waitlist',
+            style: TextStyle(
+              color: Colors.orange[700],
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Divider(
+                color: Colors.orange.withValues(alpha: 0.35), thickness: 1),
+          ),
+        ],
+      );
+}
+
+// ── Session roster row ────────────────────────────────────────────────────────
+
+class _SessionRosterRow extends StatelessWidget {
+  final int position;
+  final int index;
+  final EventSessionRosterEntry entry;
+  final bool isWaitlist;
+  final bool isOrganizer;
+  final bool showDragHandle;
+  final bool showAttendance;
+  final VoidCallback? onRemove;
+  final VoidCallback? onPromote;
+  final VoidCallback? onDemote;
+  final void Function(bool)? onMarkAttendance;
+  final void Function(bool)? onToggleConfirmed;
+
+  const _SessionRosterRow({
+    super.key,
+    required this.position,
+    required this.index,
+    required this.entry,
+    this.isWaitlist = false,
+    required this.isOrganizer,
+    this.showDragHandle = false,
+    this.showAttendance = false,
+    this.onRemove,
+    this.onPromote,
+    this.onDemote,
+    this.onMarkAttendance,
+    this.onToggleConfirmed,
+  });
+
+  String? get _medal => isWaitlist
+      ? null
+      : switch (position) { 1 => '🥇', 2 => '🥈', 3 => '🥉', _ => null };
+
+  @override
+  Widget build(BuildContext context) {
+    final posGlow = isWaitlist
+        ? const Color(0xFFFFA000)
+        : const Color(0xFF2E7D32);
+    final isConfirmed = entry.signupConfirmed;
+
+    Widget card = Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isConfirmed
+              ? const Color(0xFF2E7D32).withValues(alpha: 0.45)
+              : isWaitlist
+                  ? const Color(0xFFFFA000).withValues(alpha: 0.20)
+                  : const Color(0xFF2E7D32).withValues(alpha: 0.12),
+          width: isConfirmed ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: posGlow.withValues(alpha: 0.07),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            // Roster position badge — outlined circle, distinct from the session pill
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: posGlow.withValues(alpha: 0.08),
+                    border: Border.all(color: posGlow.withValues(alpha: 0.55), width: 2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '#$position',
+                      style: TextStyle(
+                          color: posGlow,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13),
+                    ),
+                  ),
+                ),
+                if (_medal != null)
+                  Positioned(
+                    top: -6,
+                    right: -6,
+                    child: Text(_medal!,
+                        style: const TextStyle(fontSize: 16)),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+
+            // Name + email
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(entry.displayName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14)),
+                  if (entry.email != null)
+                    Text(entry.email!,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey[500])),
+                ],
+              ),
+            ),
+
+            // Confirmation toggle + attendance toggles + drag handle
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Pre-event confirmation (not shown on waitlist or after event)
+                if (!isWaitlist && !showAttendance) ...[
+                  Tooltip(
+                    message: isConfirmed ? 'Confirmed' : 'Not confirmed',
+                    child: AppTappable(
+                      onTap: onToggleConfirmed != null
+                          ? () => onToggleConfirmed!(!isConfirmed)
+                          : null,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          isConfirmed
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          key: ValueKey(isConfirmed),
+                          size: 24,
+                          color: isConfirmed
+                              ? const Color(0xFF2E7D32)
+                              : onToggleConfirmed != null
+                                  ? Colors.grey[350]
+                                  : Colors.grey[250],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (showAttendance) ...[
+                  _AttendanceChip(
+                    attended: entry.attended,
+                    onMarkAttendance: onMarkAttendance,
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                if (showDragHandle)
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 8),
+                      child: Icon(
+                        Icons.drag_handle_rounded,
+                        color: Colors.grey[350],
+                        size: 22,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!isOrganizer) return card;
+
+    return Slidable(
+      endActionPane: ActionPane(
+        motion: const StretchMotion(),
+        extentRatio: 0.56,
+        children: [
+          if (onPromote != null)
+            _SlideAction(
+              onPressed: onPromote!,
+              icon: Icons.arrow_upward_rounded,
+              label: 'Promote',
+              color: const Color(0xFF2E7D32),
+            ),
+          if (onDemote != null)
+            _SlideAction(
+              onPressed: onDemote!,
+              icon: Icons.arrow_downward_rounded,
+              label: 'Demote',
+              color: const Color(0xFFE65100),
+            ),
+          _SlideAction(
+            onPressed: onRemove!,
+            icon: Icons.delete_outline_rounded,
+            label: 'Remove',
+            color: const Color(0xFFC62828),
+          ),
+        ],
+      ),
+      child: card,
+    );
+  }
+}
+
+// ── Attendance dot — post-event check/cross toggle ───────────────────────────
+
+// ── Attendance chip — single tappable chip cycling attended / no-show / unset ──
+
+class _AttendanceChip extends StatelessWidget {
+  final bool? attended; // null = not marked, true = attended, false = no-show
+  final void Function(bool)? onMarkAttendance;
+
+  const _AttendanceChip({this.attended, this.onMarkAttendance});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bg;
+    final Color textColor;
+    final IconData icon;
+    final String label;
+
+    if (attended == true) {
+      bg = const Color(0xFF2E7D32).withValues(alpha: 0.12);
+      textColor = const Color(0xFF2E7D32);
+      icon = Icons.check_circle_rounded;
+      label = 'Attended';
+    } else if (attended == false) {
+      bg = AppTheme.danger.withValues(alpha: 0.10);
+      textColor = AppTheme.danger;
+      icon = Icons.cancel_rounded;
+      label = 'No-show';
+    } else {
+      bg = Colors.grey.withValues(alpha: 0.10);
+      textColor = Colors.grey;
+      icon = Icons.radio_button_unchecked_rounded;
+      label = 'Mark';
+    }
+
+    Widget chip = AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: attended == null
+                ? Colors.grey.withValues(alpha: 0.20)
+                : textColor.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: textColor),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: textColor)),
+        ],
+      ),
+    );
+
+    if (onMarkAttendance == null) return chip;
+
+    // Organizer taps to cycle: unset → attended → no-show → unset
+    return AppTappable(
+      onTap: () {
+        if (attended == null) {
+          onMarkAttendance!(true);
+        } else if (attended == true) {
+          onMarkAttendance!(false);
+        } else {
+          // no-show → reset: re-tap attended cycles back
+          onMarkAttendance!(true);
+        }
+      },
+      child: chip,
+    );
+  }
+}
+
+// ── Premium floating pill slide action ───────────────────────────────────────
+
+class _SlideAction extends StatelessWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _SlideAction({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => CustomSlidableAction(
+        onPressed: (_) => onPressed(),
+        backgroundColor: Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          // FittedBox.scaleDown lets the pill shrink its content
+          // proportionally when the action panel is narrow, preventing
+          // both text wrapping and vertical overflow.
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 26),
+                    const SizedBox(height: 5),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+// ── Signup Invite tab (per-session QR codes) ──────────────────────────────────
+
+class _SignupInviteTab extends StatefulWidget {
+  final Event event;
+
+  const _SignupInviteTab({required this.event});
+
+  @override
+  State<_SignupInviteTab> createState() => _SignupInviteTabState();
+}
+
+class _SignupInviteTabState extends State<_SignupInviteTab> {
+  int _selectedIdx = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    // Invite tab shows upcoming sessions — those are the ones to share QR codes for.
+    final upcoming = context.watch<EventProvider>().upcomingSessionsFor(widget.event.id);
+    final past = context.read<EventProvider>().pastSessionsFor(widget.event.id);
+    final sessions = upcoming.isNotEmpty ? upcoming : past;
+
+    if (sessions.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('📋', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text('No sessions yet.',
+                style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+            const SizedBox(height: 6),
+            Text('Create a session first, then share its QR code.',
+                style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+            const SizedBox(height: 24),
+            _ScanToJoinButton(),
+          ],
+        ),
+      );
+    }
+
+    final idx = _selectedIdx.clamp(0, sessions.length - 1);
+    final session = sessions[idx];
+    // App-only deep link — scanned with the in-app QR scanner on the same tab.
+    final inviteUrl = '$kAppBaseUrl/session/invite/${session.inviteCode}';
+    final inviteMessage =
+        'Join "${widget.event.title}" — Session #${session.sessionNumber} on '
+        'TripManagement! 🎟️\nOpen the app → Organize → Invite → Scan a QR code '
+        '→ Enter code, and paste this invite code:\n${session.inviteCode}';
+    final fmt = DateFormat('EEE, MMM d · h:mm a');
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      children: [
+        const Text('Session QR Code',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Text(
+          'Each session has a unique QR code. Anyone with the app can scan it to claim a spot instantly.',
+          style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.45),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── Session picker ──────────────────────────────────────────────
+        if (sessions.length > 1) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: sessions.asMap().entries.map((e) {
+                final selected = e.key == idx;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: AppTappable(
+                    onTap: () => setState(() => _selectedIdx = e.key),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: selected
+                            ? const LinearGradient(
+                                colors: [
+                                  Color(0xFF003D33),
+                                  Color(0xFF00695C),
+                                  Color(0xFF00897B),
+                                ],
+                              )
+                            : null,
+                        color: selected
+                            ? null
+                            : Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected
+                              ? const Color(0xFF4DB6AC).withValues(alpha: 0.30)
+                              : const Color(0xFF00695C).withValues(alpha: 0.25),
+                        ),
+                        boxShadow: selected
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF00695C)
+                                      .withValues(alpha: 0.40),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        '#${e.value.sessionNumber}  ·  ${DateFormat('MMM d').format(e.value.startAt.toLocal())}',
+                        style: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // ── Session info ────────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              const Text('📅', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Session #${session.sessionNumber} · ${fmt.format(session.startAt.toLocal())}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── QR card ─────────────────────────────────────────────────────
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: QrImageView(
+              data: inviteUrl,
+              version: QrVersions.auto,
+              size: 210,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Color(0xFF2E7D32),
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Color(0xFF1B5E20),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            'Point a phone camera at this code',
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        AppButton(
+          label: 'Copy invite code',
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: inviteMessage));
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Invite copied — share it anywhere!')),
+            );
+          },
+        ),
+
+        const SizedBox(height: 28),
+        const Divider(),
+        const SizedBox(height: 16),
+
+        // ── Scan to join ────────────────────────────────────────────────
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Join a session',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            SizedBox(height: 2),
+            Text('Scan someone else\'s session QR code to claim a spot.',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _ScanToJoinButton(),
+
+        const SizedBox(height: 28),
+        const Divider(),
+        const SizedBox(height: 16),
+
+        // ── Manual add ──────────────────────────────────────────────────
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add manually',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            SizedBox(height: 2),
+            Text('For walk-ins or guests without a phone.',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _AddSessionGuestButton(event: widget.event, session: session),
+      ],
+    );
+  }
+}
+
+// ── Scan to join button ───────────────────────────────────────────────────────
+
+class _ScanToJoinButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => AppTappable(
+        onTap: () => Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(builder: (_) => const SessionScanScreen()),
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.55),
+                width: 1.5),
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.06),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.qr_code_scanner_rounded,
+                  size: 20, color: Color(0xFF2E7D32)),
+              SizedBox(width: 8),
+              Text('Scan a QR code',
+                  style: TextStyle(
+                      color: Color(0xFF2E7D32),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+      );
+}
+
+// ── Add guest manually to a session ──────────────────────────────────────────
+
+class _AddSessionGuestButton extends StatefulWidget {
+  final Event event;
+  final EventSession session;
+  const _AddSessionGuestButton(
+      {required this.event, required this.session});
+
+  @override
+  State<_AddSessionGuestButton> createState() =>
+      _AddSessionGuestButtonState();
+}
+
+class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _show() async {
+    final l10n = AppLocalizations.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Add to Session #${widget.session.sessionNumber}',
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: InputDecoration(labelText: l10n.publicRsvpName),
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _emailCtrl,
+              decoration:
+                  InputDecoration(labelText: l10n.publicRsvpEmail),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 20),
+            AppButton(
+              label: 'Add',
+              onPressed: () async {
+                if (_nameCtrl.text.trim().isEmpty) return;
+                final provider = ctx.read<EventProvider>();
+                try {
+                  await Supabase.instance.client
+                      .rpc('rsvp_session', params: {
+                    'p_invite_code': widget.session.inviteCode,
+                    'p_display_name': _nameCtrl.text.trim(),
+                    'p_email': _emailCtrl.text.trim().isEmpty
+                        ? null
+                        : _emailCtrl.text.trim(),
+                  });
+                  await provider.fetchUpcomingSessions(widget.event.id);
+                } catch (_) {}
+                _nameCtrl.clear();
+                _emailCtrl.clear();
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AppButton(
+        label: 'Add Guest Manually',
+        onPressed: _show,
+      );
 }

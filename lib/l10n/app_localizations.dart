@@ -2166,6 +2166,192 @@ abstract class AppLocalizations {
   /// **'Quick Bites'**
   String get eventTypeQuickBites;
 
+  /// No description provided for @eventTypeSignup.
+  ///
+  /// In en, this message translates to:
+  /// **'Signup'**
+  String get eventTypeSignup;
+
+  /// No description provided for @signupSpotsFilled.
+  ///
+  /// In en, this message translates to:
+  /// **'{filled} / {total} spots filled'**
+  String signupSpotsFilled(int filled, int total);
+
+  /// No description provided for @signupWaitlistCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} on the waitlist'**
+  String signupWaitlistCount(int count);
+
+  /// No description provided for @signupEventFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Event full'**
+  String get signupEventFull;
+
+  /// No description provided for @signupJoinWaitlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the waitlist'**
+  String get signupJoinWaitlist;
+
+  /// No description provided for @signupClaimSpot.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim a Spot'**
+  String get signupClaimSpot;
+
+  /// No description provided for @signupConfirmedPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re #{pos} on the list!'**
+  String signupConfirmedPosition(int pos);
+
+  /// No description provided for @signupWaitlistPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re #{pos} on the waitlist'**
+  String signupWaitlistPosition(int pos);
+
+  /// No description provided for @signupWaitlistEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable waitlist'**
+  String get signupWaitlistEnabled;
+
+  /// No description provided for @signupWaitlistDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Guests over capacity join an ordered waitlist'**
+  String get signupWaitlistDescription;
+
+  /// No description provided for @signupRosterTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Roster'**
+  String get signupRosterTab;
+
+  /// No description provided for @signupInviteTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite'**
+  String get signupInviteTab;
+
+  /// No description provided for @signupPromoteGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote to confirmed'**
+  String get signupPromoteGuest;
+
+  /// No description provided for @signupRemoveGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from event'**
+  String get signupRemoveGuest;
+
+  /// No description provided for @signupCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy invite link'**
+  String get signupCopyLink;
+
+  /// No description provided for @signupShowQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Show QR Code'**
+  String get signupShowQr;
+
+  /// No description provided for @signupLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Signups are locked'**
+  String get signupLocked;
+
+  /// No description provided for @signupLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Signups are locked. Contact the organiser to be removed.'**
+  String get signupLockedMessage;
+
+  /// No description provided for @signupCancelSpot.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel my spot'**
+  String get signupCancelSpot;
+
+  /// No description provided for @signupMarkAttended.
+  ///
+  /// In en, this message translates to:
+  /// **'Attended'**
+  String get signupMarkAttended;
+
+  /// No description provided for @signupMarkNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'No-show'**
+  String get signupMarkNoShow;
+
+  /// No description provided for @signupAttendanceHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get signupAttendanceHeader;
+
+  /// No description provided for @signupRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get signupRepeat;
+
+  /// No description provided for @signupRepeatNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get signupRepeatNone;
+
+  /// No description provided for @signupRepeatWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get signupRepeatWeekly;
+
+  /// No description provided for @signupRepeatBiweekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 2 weeks'**
+  String get signupRepeatBiweekly;
+
+  /// No description provided for @signupRepeatMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get signupRepeatMonthly;
+
+  /// No description provided for @signupNextSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Create next session'**
+  String get signupNextSession;
+
+  /// No description provided for @signupCarryOverGuests.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-enroll confirmed guests'**
+  String get signupCarryOverGuests;
+
+  /// No description provided for @signupCarryOverGuestsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Guests will receive a notification and can opt out'**
+  String get signupCarryOverGuestsHint;
+
+  /// No description provided for @signupPartOfSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Part of a {interval} series'**
+  String signupPartOfSeries(String interval);
+
   /// No description provided for @eventTypePicker.
   ///
   /// In en, this message translates to:

@@ -45,6 +45,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
   DateTime? _rsvpDeadline;
   String? _vibe;
 
+  // Signup fields
+  bool _waitlistEnabled = true;
+  int? _signupLockHours;
+
   bool _loading = false;
   String? _error;
   bool _triedToSave = false;
@@ -55,6 +59,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   bool get _isTrip => _eventType == EventType.trip;
   bool get _isQuickBites => _eventType == EventType.quickBites;
   bool get _isBirthday => _eventType == EventType.birthday;
+  bool get _isSignup => _eventType == EventType.signup;
 
   static const _kCuisineTags = [
     'Asian', 'Italian', 'Mexican', 'Japanese', 'Chinese',
@@ -104,6 +109,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
       _cuisineTags = List<String>.from(event.cuisineTags);
       _rsvpDeadline = event.rsvpDeadline;
       _vibe = event.vibe;
+      _waitlistEnabled = event.waitlistEnabled;
+      _signupLockHours = event.signupLockHours;
     });
   }
 
@@ -244,6 +251,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
           clearHonoreeName: !_isBirthday || honoreeDisplayName == null,
           birthYear: birthYear,
           clearBirthYear: !_isBirthday || birthYear == null,
+          waitlistEnabled: _isSignup ? _waitlistEnabled : true,
+          signupLockHours: _isSignup ? _signupLockHours : null,
+          clearSignupLockHours: !_isSignup || _signupLockHours == null,
         );
         await provider.updateEvent(updated);
         if (mounted) context.pop();
@@ -267,6 +277,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
           vibe: _isQuickBites ? _vibe : null,
           honoreeDisplayName: _isBirthday ? honoreeDisplayName : null,
           birthYear: _isBirthday ? birthYear : null,
+          waitlistEnabled: _isSignup ? _waitlistEnabled : true,
+          signupLockHours: _isSignup ? _signupLockHours : null,
         );
         if (mounted) context.go('/event/${event.id}');
       }
@@ -286,6 +298,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         EventType.wedding => l10n.eventTypeWedding,
         EventType.social => l10n.eventTypeSocial,
         EventType.quickBites => l10n.eventTypeQuickBites,
+        EventType.signup => l10n.eventTypeSignup,
       };
 
   IconData _eventTypeIcon(EventType type) => switch (type) {
@@ -294,6 +307,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         EventType.wedding => Icons.favorite_outline,
         EventType.social => Icons.celebration_outlined,
         EventType.quickBites => Icons.restaurant_outlined,
+        EventType.signup => Icons.how_to_reg_outlined,
       };
 
   @override
@@ -571,6 +585,43 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     ),
                   ],
 
+                  // ── Signup-only fields ───────────────────────────────────
+                  if (_isSignup) ...[
+                    const SizedBox(height: 16),
+
+                    // Waitlist toggle
+                    SwitchListTile(
+                      value: _waitlistEnabled,
+                      onChanged: (v) => setState(() => _waitlistEnabled = v),
+                      title: Text(l10n.signupWaitlistEnabled),
+                      subtitle: Text(l10n.signupWaitlistDescription,
+                          style: const TextStyle(fontSize: 12)),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Lock hours
+                    TextFormField(
+                      initialValue: _signupLockHours?.toString() ?? '',
+                      decoration: InputDecoration(
+                        labelText: 'Lock signups (hours before start)',
+                        hintText: 'e.g. 2 — no changes 2 h before start',
+                        prefixIcon: const Icon(Icons.lock_clock_outlined),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) => setState(() {
+                        _signupLockHours =
+                            v.trim().isEmpty ? null : int.tryParse(v.trim());
+                      }),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final n = int.tryParse(v.trim());
+                        if (n == null || n < 1) return l10n.required;
+                        return null;
+                      },
+                    ),
+                  ],
+
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Text(_error!,
@@ -658,6 +709,7 @@ class _EventTypePicker extends StatelessWidget {
     EventType.wedding: Icons.favorite_rounded,
     EventType.social: Icons.celebration_rounded,
     EventType.quickBites: Icons.restaurant_rounded,
+    EventType.signup: Icons.how_to_reg_rounded,
   };
 
   // Full grid shown before any selection.

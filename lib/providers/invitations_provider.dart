@@ -36,9 +36,12 @@ class InvitationsProvider extends ChangeNotifier {
   List<InvitationItem> _invites = [];
   RealtimeChannel? _channel;
   String? _userId;
+  bool _clockError = false; // set to true on PGRST303, reset on successful fetch
 
   int get pendingCount => _invites.length;
   List<InvitationItem> get invites => List.unmodifiable(_invites);
+  /// True when the last fetch failed due to device clock skew (PGRST303).
+  bool get clockError => _clockError;
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -84,7 +87,11 @@ class InvitationsProvider extends ChangeNotifier {
           organiserName: 'Someone',
         );
       }).toList();
+      _clockError = false;
     } catch (e, st) {
+      if (e is PostgrestException && e.code == 'PGRST303') {
+        _clockError = true;
+      }
       debugPrint('InvitationsProvider._fetch error: $e\n$st');
     }
     notifyListeners();

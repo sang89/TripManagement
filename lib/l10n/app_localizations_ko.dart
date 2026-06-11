@@ -1105,6 +1105,109 @@ class AppLocalizationsKo extends AppLocalizations {
   String get eventTypeQuickBites => '퀵 바이츠';
 
   @override
+  String get eventTypeSignup => '신청';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total 자리 사용 중';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count명 대기 중';
+  }
+
+  @override
+  String get signupEventFull => '자리가 꽉 찼습니다';
+
+  @override
+  String get signupJoinWaitlist => '대기 명단에 등록';
+
+  @override
+  String get signupClaimSpot => '자리 확보';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return '목록의 #$pos번째입니다!';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return '대기 명단 #$pos번째입니다';
+  }
+
+  @override
+  String get signupWaitlistEnabled => '대기 명단 활성화';
+
+  @override
+  String get signupWaitlistDescription => '정원 초과 게스트는 순서가 있는 대기 명단에 추가됩니다';
+
+  @override
+  String get signupRosterTab => '명단';
+
+  @override
+  String get signupInviteTab => '초대';
+
+  @override
+  String get signupPromoteGuest => '확정으로 승격';
+
+  @override
+  String get signupRemoveGuest => '이벤트에서 제거';
+
+  @override
+  String get signupCopyLink => '초대 링크 복사';
+
+  @override
+  String get signupShowQr => 'QR 코드 보기';
+
+  @override
+  String get signupLocked => '신청이 마감되었습니다';
+
+  @override
+  String get signupLockedMessage => '신청이 마감되었습니다. 주최자에게 문의하세요.';
+
+  @override
+  String get signupCancelSpot => '자리 취소';
+
+  @override
+  String get signupMarkAttended => '출석';
+
+  @override
+  String get signupMarkNoShow => '결석';
+
+  @override
+  String get signupAttendanceHeader => '출석';
+
+  @override
+  String get signupRepeat => '반복';
+
+  @override
+  String get signupRepeatNone => '없음';
+
+  @override
+  String get signupRepeatWeekly => '매주';
+
+  @override
+  String get signupRepeatBiweekly => '격주';
+
+  @override
+  String get signupRepeatMonthly => '매월';
+
+  @override
+  String get signupNextSession => '다음 세션 만들기';
+
+  @override
+  String get signupCarryOverGuests => '확정 게스트 자동 등록';
+
+  @override
+  String get signupCarryOverGuestsHint => '게스트에게 알림이 전송되며 취소할 수 있습니다';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return '$interval 시리즈의 일부';
+  }
+
+  @override
   String get eventTypePicker => '이벤트 유형';
 
   @override

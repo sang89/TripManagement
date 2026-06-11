@@ -57,6 +57,7 @@ class EventGuest {
 
   bool get isPending => status == 'pending';
   bool get isAccepted => status == 'accepted' || status == 'going';
+  bool get isWaitlisted => status == 'waitlisted';
 
   EventGuest copyWith({
     String? status,

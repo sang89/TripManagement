@@ -1117,6 +1117,112 @@ class AppLocalizationsVi extends AppLocalizations {
   String get eventTypeQuickBites => 'Bữa Ăn Nhanh';
 
   @override
+  String get eventTypeSignup => 'Đăng ký';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total chỗ đã được đặt';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count người trong danh sách chờ';
+  }
+
+  @override
+  String get signupEventFull => 'Sự kiện đã đầy';
+
+  @override
+  String get signupJoinWaitlist => 'Tham gia danh sách chờ';
+
+  @override
+  String get signupClaimSpot => 'Đặt chỗ';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return 'Bạn đứng thứ #$pos trong danh sách!';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return 'Bạn đứng thứ #$pos trong danh sách chờ';
+  }
+
+  @override
+  String get signupWaitlistEnabled => 'Bật danh sách chờ';
+
+  @override
+  String get signupWaitlistDescription =>
+      'Khách vượt quá số lượng sẽ vào danh sách chờ theo thứ tự';
+
+  @override
+  String get signupRosterTab => 'Danh sách';
+
+  @override
+  String get signupInviteTab => 'Mời';
+
+  @override
+  String get signupPromoteGuest => 'Chuyển sang đã xác nhận';
+
+  @override
+  String get signupRemoveGuest => 'Xóa khỏi sự kiện';
+
+  @override
+  String get signupCopyLink => 'Sao chép liên kết mời';
+
+  @override
+  String get signupShowQr => 'Hiển thị mã QR';
+
+  @override
+  String get signupLocked => 'Đăng ký đã bị khóa';
+
+  @override
+  String get signupLockedMessage =>
+      'Đăng ký đã bị khóa. Liên hệ người tổ chức.';
+
+  @override
+  String get signupCancelSpot => 'Hủy chỗ của tôi';
+
+  @override
+  String get signupMarkAttended => 'Đã tham dự';
+
+  @override
+  String get signupMarkNoShow => 'Vắng mặt';
+
+  @override
+  String get signupAttendanceHeader => 'Điểm danh';
+
+  @override
+  String get signupRepeat => 'Lặp lại';
+
+  @override
+  String get signupRepeatNone => 'Không';
+
+  @override
+  String get signupRepeatWeekly => 'Hàng tuần';
+
+  @override
+  String get signupRepeatBiweekly => 'Hai tuần một lần';
+
+  @override
+  String get signupRepeatMonthly => 'Hàng tháng';
+
+  @override
+  String get signupNextSession => 'Tạo buổi tiếp theo';
+
+  @override
+  String get signupCarryOverGuests => 'Tự động đăng ký khách đã xác nhận';
+
+  @override
+  String get signupCarryOverGuestsHint =>
+      'Khách sẽ nhận được thông báo và có thể hủy';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return 'Một phần của chuỗi $interval';
+  }
+
+  @override
   String get eventTypePicker => 'Loại sự kiện';
 
   @override

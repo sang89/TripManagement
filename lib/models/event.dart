@@ -6,13 +6,15 @@ enum EventType {
   birthday,
   wedding,
   social,
-  quickBites;
+  quickBites,
+  signup;
 
   static EventType fromString(String? s) => switch (s) {
         'trip'        => EventType.trip,
         'birthday'    => EventType.birthday,
         'wedding'     => EventType.wedding,
         'quick_bites' => EventType.quickBites,
+        'signup'      => EventType.signup,
         _             => EventType.social,
       };
 
@@ -55,6 +57,10 @@ class Event {
   final DateTime? predictionsRevealedAt;
   final DateTime? wishesRevealedAt;
 
+  // Signup fields (only populated when eventType == EventType.signup).
+  final bool waitlistEnabled;
+  final int? signupLockHours;
+
   final List<EventGuest> guests;
   final List<EventStop> stops;
 
@@ -87,6 +93,8 @@ class Event {
     this.birthYear,
     this.predictionsRevealedAt,
     this.wishesRevealedAt,
+    this.waitlistEnabled = true,
+    this.signupLockHours,
     required this.guests,
     this.stops = const [],
     this.organizerName,
@@ -95,6 +103,11 @@ class Event {
   bool get isTrip => eventType == EventType.trip;
   bool get isQuickBites => eventType == EventType.quickBites;
   bool get isBirthday => eventType == EventType.birthday;
+  bool get isSignup => eventType == EventType.signup;
+  bool get isSignupLocked =>
+      isSignup &&
+      signupLockHours != null &&
+      startAt.subtract(Duration(hours: signupLockHours!)).isBefore(DateTime.now());
 
   int? get honoreeAge =>
       birthYear == null ? null : DateTime.now().year - birthYear!;
@@ -141,6 +154,8 @@ class Event {
       wishesRevealedAt: json['wishes_revealed_at'] != null
           ? DateTime.parse(json['wishes_revealed_at'] as String)
           : null,
+      waitlistEnabled: json['waitlist_enabled'] as bool? ?? true,
+      signupLockHours: json['signup_lock_hours'] as int?,
       guests: (json['event_guests'] as List<dynamic>? ?? [])
           .map((g) => EventGuest.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -167,6 +182,8 @@ class Event {
         if (vibe != null) 'vibe': vibe,
         if (honoreeDisplayName != null) 'honoree_name': honoreeDisplayName,
         if (birthYear != null) 'birth_year': birthYear,
+        if (isSignup) 'waitlist_enabled': waitlistEnabled,
+        if (isSignup && signupLockHours != null) 'signup_lock_hours': signupLockHours,
       };
 
   Event copyWith({
@@ -204,6 +221,9 @@ class Event {
     bool clearPredictionsRevealedAt = false,
     DateTime? wishesRevealedAt,
     bool clearWishesRevealedAt = false,
+    bool? waitlistEnabled,
+    int? signupLockHours,
+    bool clearSignupLockHours = false,
     List<EventGuest>? guests,
     List<EventStop>? stops,
     String? organizerName,
@@ -234,6 +254,8 @@ class Event {
         birthYear: clearBirthYear ? null : (birthYear ?? this.birthYear),
         predictionsRevealedAt: clearPredictionsRevealedAt ? null : (predictionsRevealedAt ?? this.predictionsRevealedAt),
         wishesRevealedAt: clearWishesRevealedAt ? null : (wishesRevealedAt ?? this.wishesRevealedAt),
+        waitlistEnabled: waitlistEnabled ?? this.waitlistEnabled,
+        signupLockHours: clearSignupLockHours ? null : (signupLockHours ?? this.signupLockHours),
         guests: guests ?? this.guests,
         stops: stops ?? this.stops,
         organizerName: organizerName ?? this.organizerName,
@@ -244,6 +266,7 @@ class Event {
   int get maybeCount => guests.where((g) => g.status == 'maybe').length;
   int get declinedCount => guests.where((g) => g.status == 'declined').length;
   int get pendingCount => guests.where((g) => g.status == 'pending').length;
+  int get waitlistCount => guests.where((g) => g.status == 'waitlisted').length;
 
   bool get isFull => capacity != null && goingCount >= capacity!;
 }

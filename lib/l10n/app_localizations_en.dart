@@ -1112,6 +1112,112 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventTypeQuickBites => 'Quick Bites';
 
   @override
+  String get eventTypeSignup => 'Signup';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total spots filled';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count on the waitlist';
+  }
+
+  @override
+  String get signupEventFull => 'Event full';
+
+  @override
+  String get signupJoinWaitlist => 'Join the waitlist';
+
+  @override
+  String get signupClaimSpot => 'Claim a Spot';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return 'You\'re #$pos on the list!';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return 'You\'re #$pos on the waitlist';
+  }
+
+  @override
+  String get signupWaitlistEnabled => 'Enable waitlist';
+
+  @override
+  String get signupWaitlistDescription =>
+      'Guests over capacity join an ordered waitlist';
+
+  @override
+  String get signupRosterTab => 'Roster';
+
+  @override
+  String get signupInviteTab => 'Invite';
+
+  @override
+  String get signupPromoteGuest => 'Promote to confirmed';
+
+  @override
+  String get signupRemoveGuest => 'Remove from event';
+
+  @override
+  String get signupCopyLink => 'Copy invite link';
+
+  @override
+  String get signupShowQr => 'Show QR Code';
+
+  @override
+  String get signupLocked => 'Signups are locked';
+
+  @override
+  String get signupLockedMessage =>
+      'Signups are locked. Contact the organiser to be removed.';
+
+  @override
+  String get signupCancelSpot => 'Cancel my spot';
+
+  @override
+  String get signupMarkAttended => 'Attended';
+
+  @override
+  String get signupMarkNoShow => 'No-show';
+
+  @override
+  String get signupAttendanceHeader => 'Attendance';
+
+  @override
+  String get signupRepeat => 'Repeat';
+
+  @override
+  String get signupRepeatNone => 'None';
+
+  @override
+  String get signupRepeatWeekly => 'Weekly';
+
+  @override
+  String get signupRepeatBiweekly => 'Every 2 weeks';
+
+  @override
+  String get signupRepeatMonthly => 'Monthly';
+
+  @override
+  String get signupNextSession => 'Create next session';
+
+  @override
+  String get signupCarryOverGuests => 'Auto-enroll confirmed guests';
+
+  @override
+  String get signupCarryOverGuestsHint =>
+      'Guests will receive a notification and can opt out';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return 'Part of a $interval series';
+  }
+
+  @override
   String get eventTypePicker => 'Event type';
 
   @override

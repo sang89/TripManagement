@@ -31,6 +31,10 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
   Map<String, dynamic>? _eventData;
   String _rsvpStatus = 'going';
 
+  // Signup-specific result
+  String? _signupStatus;
+  int? _signupPosition;
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +91,9 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
     }
   }
 
+  bool get _isSignupEvent =>
+      (_eventData?['event_type'] as String?) == 'signup';
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -95,20 +102,41 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
     });
 
     try {
-      await Supabase.instance.client.rpc(
-        'rsvp_event_public',
-        params: {
-          'p_invite_code': widget.inviteCode,
-          'p_display_name': _nameCtrl.text.trim(),
-          'p_email': _emailCtrl.text.trim().isEmpty
-              ? null
-              : _emailCtrl.text.trim(),
-          'p_phone': _phoneCtrl.text.trim().isEmpty
-              ? null
-              : _phoneCtrl.text.trim(),
-          'p_rsvp_status': _rsvpStatus,
-        },
-      );
+      if (_isSignupEvent) {
+        final rows = await Supabase.instance.client.rpc(
+          'rsvp_signup_event',
+          params: {
+            'p_invite_code': widget.inviteCode,
+            'p_display_name': _nameCtrl.text.trim(),
+            'p_email': _emailCtrl.text.trim().isEmpty
+                ? null
+                : _emailCtrl.text.trim(),
+            'p_phone': _phoneCtrl.text.trim().isEmpty
+                ? null
+                : _phoneCtrl.text.trim(),
+          },
+        ) as List<dynamic>;
+        if (rows.isNotEmpty) {
+          final r = rows.first as Map<String, dynamic>;
+          _signupStatus = r['rsvp_status'] as String?;
+          _signupPosition = r['signup_position'] as int?;
+        }
+      } else {
+        await Supabase.instance.client.rpc(
+          'rsvp_event_public',
+          params: {
+            'p_invite_code': widget.inviteCode,
+            'p_display_name': _nameCtrl.text.trim(),
+            'p_email': _emailCtrl.text.trim().isEmpty
+                ? null
+                : _emailCtrl.text.trim(),
+            'p_phone': _phoneCtrl.text.trim().isEmpty
+                ? null
+                : _phoneCtrl.text.trim(),
+            'p_rsvp_status': _rsvpStatus,
+          },
+        );
+      }
       setState(() {
         _submitting = false;
         _done = true;
@@ -117,9 +145,11 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
       final msg = e.toString();
       setState(() {
         _submitting = false;
-        _error = msg.contains('event_full')
+        _error = msg.contains('event_full') || msg.contains('event_full')
             ? AppLocalizations.of(context).eventFull
-            : msg;
+            : msg.contains('signup_locked')
+                ? AppLocalizations.of(context).signupLocked
+                : msg;
       });
     }
   }
@@ -141,15 +171,27 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
       );
     }
     if (_done) {
+      final successMsg = _isSignupEvent && _signupPosition != null
+          ? (_signupStatus == 'waitlisted'
+              ? l10n.signupWaitlistPosition(_signupPosition!)
+              : l10n.signupConfirmedPosition(_signupPosition!))
+          : l10n.rsvpSuccess;
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle_rounded,
-                  color: Colors.green, size: 64),
+              Icon(
+                _isSignupEvent && _signupStatus == 'waitlisted'
+                    ? Icons.hourglass_top_rounded
+                    : Icons.check_circle_rounded,
+                color: _isSignupEvent && _signupStatus == 'waitlisted'
+                    ? Colors.orange
+                    : Colors.green,
+                size: 64,
+              ),
               const SizedBox(height: 16),
-              Text(l10n.rsvpSuccess,
+              Text(successMsg,
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
@@ -173,6 +215,17 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
     final organizer = eventData['organizer_name'] as String? ?? '';
     final goingCount = eventData['going_count'] as int? ?? 0;
     final maybeCount = eventData['maybe_count'] as int? ?? 0;
+    final waitlistCount = eventData['waitlist_count'] as int? ?? 0;
+    final capacity = eventData['capacity'] as int?;
+    final waitlistEnabled = eventData['waitlist_enabled'] as bool? ?? true;
+    final signupLockHours = eventData['signup_lock_hours'] as int?;
+    final isSignup = _isSignupEvent;
+    final isFull = capacity != null && goingCount >= capacity;
+    final isLocked = isSignup &&
+        signupLockHours != null &&
+        startAt != null &&
+        DateTime.now()
+            .isAfter(startAt.subtract(Duration(hours: signupLockHours)));
     final fmt = DateFormat('EEE, MMM d · h:mm a');
 
     return Scaffold(
@@ -210,65 +263,134 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
                     icon: Icons.person_outline,
                     text: l10n.organizedBy(organizer),
                   ),
-                _InfoRow(
-                  icon: Icons.people_outline,
-                  text: '${l10n.goingCount(goingCount)}  ·  ${l10n.maybeCount(maybeCount)}',
-                ),
+                if (isSignup && capacity != null)
+                  _InfoRow(
+                    icon: Icons.event_seat_rounded,
+                    text: l10n.signupSpotsFilled(goingCount, capacity),
+                  )
+                else
+                  _InfoRow(
+                    icon: Icons.people_outline,
+                    text: '${l10n.goingCount(goingCount)}  ·  ${l10n.maybeCount(maybeCount)}',
+                  ),
+                if (isSignup && waitlistCount > 0)
+                  _InfoRow(
+                    icon: Icons.hourglass_top_rounded,
+                    text: l10n.signupWaitlistCount(waitlistCount),
+                  ),
 
                 const Divider(height: 32),
 
-                // RSVP selection
-                Text(l10n.changeRsvp,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 16)),
-                const SizedBox(height: 12),
-                _RsvpSelector(
-                  selected: _rsvpStatus,
-                  onChanged: (s) => setState(() => _rsvpStatus = s),
-                  l10n: l10n,
-                ),
+                // Lock banner — shown instead of the form for locked signup events
+                if (isLocked) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_clock_rounded,
+                            color: Colors.orange, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.signupLockedMessage,
+                            style: const TextStyle(
+                                color: Colors.orange, fontSize: 14),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ]
 
-                const SizedBox(height: 20),
-
-                // Guest info fields
-                TextFormField(
-                  controller: _nameCtrl,
-                  decoration: InputDecoration(labelText: l10n.publicRsvpName),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? l10n.required : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailCtrl,
-                  decoration:
-                      InputDecoration(labelText: l10n.publicRsvpEmail),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneCtrl,
-                  decoration:
-                      InputDecoration(labelText: l10n.publicRsvpPhone),
-                  keyboardType: TextInputType.phone,
-                ),
-
-                if (_error != null) ...[
+                // RSVP selection (hidden for signup events)
+                else if (!isSignup) ...[
+                  Text(l10n.changeRsvp,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 16)),
                   const SizedBox(height: 12),
-                  Text(_error!,
-                      style: const TextStyle(color: AppTheme.danger),
-                      textAlign: TextAlign.center),
+                  _RsvpSelector(
+                    selected: _rsvpStatus,
+                    onChanged: (s) => setState(() => _rsvpStatus = s),
+                    l10n: l10n,
+                  ),
+                  const SizedBox(height: 20),
+                ] else if (isFull && !waitlistEnabled) ...[
+                  Center(
+                    child: Text(l10n.signupEventFull,
+                        style: const TextStyle(
+                            color: AppTheme.danger,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                  ),
+                  const SizedBox(height: 20),
+                ] else ...[
+                  Center(
+                    child: Text(
+                      isFull
+                          ? l10n.signupJoinWaitlist
+                          : l10n.signupClaimSpot,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                 ],
 
-                const SizedBox(height: 24),
-                AppButton(
-                  label: switch (_rsvpStatus) {
-                    'going' => l10n.rsvpGoing,
-                    'maybe' => l10n.rsvpMaybe,
-                    _ => l10n.rsvpDeclined,
-                  },
-                  onPressed: _submit,
-                  loading: _submitting,
-                ),
+                // Guest info fields + submit — hidden entirely when locked
+                if (!isLocked) ...[
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration: InputDecoration(labelText: l10n.publicRsvpName),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? l10n.required : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _emailCtrl,
+                    decoration:
+                        InputDecoration(labelText: l10n.publicRsvpEmail),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 12),
+                  if (!isSignup)
+                    TextFormField(
+                      controller: _phoneCtrl,
+                      decoration:
+                          InputDecoration(labelText: l10n.publicRsvpPhone),
+                      keyboardType: TextInputType.phone,
+                    ),
+
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!,
+                        style: const TextStyle(color: AppTheme.danger),
+                        textAlign: TextAlign.center),
+                  ],
+
+                  const SizedBox(height: 24),
+                  if (!isSignup || !(isFull && !waitlistEnabled))
+                    AppButton(
+                      label: isSignup
+                          ? (isFull
+                              ? l10n.signupJoinWaitlist
+                              : l10n.signupClaimSpot)
+                          : switch (_rsvpStatus) {
+                              'going' => l10n.rsvpGoing,
+                              'maybe' => l10n.rsvpMaybe,
+                              _ => l10n.rsvpDeclined,
+                            },
+                      onPressed: _submit,
+                      loading: _submitting,
+                    ),
+                ],
               ],
             ),
           ),

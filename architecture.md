@@ -10,14 +10,30 @@
 
 ## Design Philosophy
 
-**Colorful and fun.** This app should feel vibrant and joyful — not corporate or minimal. Concrete rules:
+**Colorful and fun. This is a hard rule — not a suggestion.**
 
+This app should feel vibrant and joyful — not corporate, not minimal, not grey. Every screen a user touches should feel alive. Concrete rules:
+
+### Colour
 - Use gradients, bright accent colours, and bold icons liberally on cards, tiles, and buttons.
-- Food/category icons must use naturally-coloured emoji (🍣 🌮 🍕 🥩 …) rather than monochrome Material icons wherever possible.
-- Event-type tiles on the home screen use per-type gradient backgrounds (blue, pink, purple, orange, green).
-- Vote/interaction elements should have a fun, tactile feel — gradient circles, animated state transitions, coloured shadows.
+- Event-type tiles use per-type gradient backgrounds (blue, pink, purple, orange, green).
+- Section headers, labels, and icon accents must use the section's identity colour — never fall back to `Colors.grey` as a primary colour.
 - Avoid flat grey placeholders; always give elements a colour hint that matches their category.
 - When adding new UI components, default to "more colourful" rather than "more neutral".
+
+### Buttons and CTAs
+- **Primary action buttons must use a gradient** — never a flat solid fill. Use `LinearGradient` in a `DecoratedBox`/`Container` + `Material`/`InkWell` pattern, not `ElevatedButton.style` (which can't do gradient).
+- Add a coloured `boxShadow` (glow) beneath every gradient button — `blurRadius: 14`, `offset: Offset(0, 5)`, colour = button's dominant colour at `alpha: 0.45`.
+- The glow and gradient colour should reflect the action type: green for positive/join actions, amber/orange for waitlist, red for destructive actions.
+- Secondary/destructive inline actions use `OutlinedButton` with a coloured border matching the action type.
+
+### Icons and emoji
+- Food/category icons must use naturally-coloured emoji rather than monochrome Material icons wherever possible.
+- Vote/interaction elements should have a fun, tactile feel — gradient circles, animated state transitions, coloured shadows.
+
+### Collapsible sections
+- Section tiles (e.g. guide sections) must use a coloured icon and a coloured title — never a plain grey label.
+- Each section gets its own identity colour: organiser = orange, member = pink, utility/info = purple, danger = red.
 
 ---
 
@@ -42,6 +58,7 @@
 | Real road routes | Google Maps Directions API | `http ^1.4.0` (REST) |
 | AI chat (planned) | Google Gemini 2.5 Flash Lite | `http ^1.4.0` |
 | Date / number formatting | intl | `intl ^0.20.2` |
+| QR code rendering | qr_flutter (pure Dart/Canvas, works on iOS/Android/web) | `qr_flutter ^4.1.0` |
 | Swipe-to-delete | flutter_slidable | `flutter_slidable ^3.1.1` |
 | Web interop | package:web | `web ^1.1.1` |
 
@@ -55,8 +72,9 @@ lib/
 ├── config/
 │   └── api_keys.dart       # Supabase URL/anon key, Google Places/Maps key, Gemini key (gitignored)
 ├── models/                 # Pure data classes — toJson/fromJson, no Flutter deps
-│   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social/quickBites); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng); quick-bites fields (budgetPerHead, cuisineTags, rsvpDeadline, vibe); birthday fields (honoreeDisplayName, birthYear, predictionsRevealedAt, wishesRevealedAt); getters isBirthday, honoreeAge
-│   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role, rsvpNote (nullable)
+│   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social/quickBites/signup); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng); quick-bites fields (budgetPerHead, cuisineTags, rsvpDeadline, vibe); birthday fields (honoreeDisplayName, birthYear, predictionsRevealedAt, wishesRevealedAt); signup fields (waitlistEnabled, signupLockHours); getters isBirthday, isSignup, isSignupLocked, honoreeAge
+│   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role, rsvpNote (nullable); isWaitlisted getter
+│   ├── event_session.dart  # EventSession (id, eventId, sessionNumber, startAt, endAt, inviteCode, roster List<EventSessionRosterEntry>); EventSessionRosterEntry (id, sessionId, userId, displayName, status going/waitlisted, signupOrder, attended, signupConfirmed, signedUpAt); helpers goingCount, waitlistCount, isFullFor, isLockedFor, hasEnded
 │   ├── event_stop.dart     # EventStop — id, eventId, title, address, lat/lng, arriveAt, departAt, notes, sortOrder
 │   ├── event_message.dart  # EventMessage — id, eventId, userId, content, enriched senderName
 │   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, caption, publicUrl (resolved at load); photos with captions appear in Memory Wall
@@ -72,7 +90,7 @@ lib/
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart          # Auth session; login/register/logout
-│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param
+│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); signup session CRUD (fetchSessions, addSession, cancelSessionSignup, removeSessionRosterEntry, promoteSessionRosterEntry, demoteSessionRosterEntry, reorderSessionRoster, markSessionAttendance, toggleSessionConfirmed); full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param; _sessions Map cache
 │   ├── event_chat_provider.dart    # Event-scoped chat; paginated load + Realtime INSERT; scoped to /event/:id route
 │   ├── invitations_provider.dart   # Pending trip-event invitations for the current user; Realtime
 │   ├── friends_provider.dart       # Friend list + requests; two Realtime channels; searchUsers RPC
@@ -85,8 +103,10 @@ lib/
 │   ├── events/
 │   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type tiles grid (Trip/Birthday/Wedding/Social/Quick Bites)
 │   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; quick-bites shows budget/vibe/cuisine/rsvp fields; birthday shows honoree name + birth year fields
-│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Organize inner tabs: Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Birthday extras: _BirthdayHeroCard (gradient card with name/age/countdown), _CelebrateTab (Activity Vote + Cake Vote with pollType:'activity'/'cake'), _GiftsTab (_WishlistItemRow claim mechanic + _GiftPoolCard pledge/progress), _MemoriesTabGroup (Wishes/Predictions/Wall/Toasts inner tabs), _WishesTab (sealed until revealWishes(), confetti reveal), _PredictionsTab (sealed until revealPredictions()), _MemoryWallTab (photos with caption grid), _ToastsTab (speech list with type badges)
-│   │   └── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
+│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Organize inner tabs: Roster/Expenses/Polls/Invite (signup); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
+│   │   ├── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
+│   │   ├── session_invite_screen.dart # Public session signup — no auth required; fetches session by invite_code via get_session_by_invite_code; calls rsvp_session; route /session/invite/:code
+│   │   └── session_scan_screen.dart # In-app QR scanner (mobile_scanner) — scans a session QR, shows join sheet (session info + claim/waitlist button), calls rsvp_session; opened from the signup Invite tab "Scan a QR code" button
 │   ├── friends/
 │   │   ├── friends_screen.dart  # Friends tab (shell tab 1): accepted list + search + Requests tab with badge; "From Contacts" AppBar button (non-web)
 │   │   └── contacts_screen.dart # Batch-match device contacts against registered users; "Add to Trip" (opens trip-event picker) + share-sheet invite
@@ -195,6 +215,19 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 
 **Project ref:** `qgeocaectbdfonrorwco` (shared with PropertyManagement)
 
+### Data scope quick-reference
+
+For signup events specifically, data is split across two scopes:
+
+| Scope | Tables | What lives here |
+|---|---|---|
+| **Event-level** | `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_bring_list_items`, `event_polls` / `event_poll_options` / `event_poll_votes`, birthday tables | Identity, settings, capacity rules, member list, shared chat, shared photo album, shared expenses/polls/bring-list, birthday features |
+| **Session-level** | `event_sessions`, `event_session_roster` | Individual occurrences (date/time, QR invite code, going_count, waitlist_count); per-session signup list with attendance and confirmation |
+
+**Key rule:** Chat and photos are **event-scoped** — one shared thread and album for the whole recurring event, not one per session. Sessions only own their date, their QR code, and their attendance roster.
+
+---
+
 ### Tables
 
 #### `events`
@@ -204,7 +237,7 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 | `created_by` | uuid FK→auth.users | organizer |
 | `title` | text | |
 | `description` | text | default '' |
-| `event_type` | event_type enum | `trip` \| `birthday` \| `wedding` \| `social` \| `quick_bites`; default `social` |
+| `event_type` | event_type enum | `trip` \| `birthday` \| `wedding` \| `social` \| `quick_bites` \| `signup`; default `social` |
 | `location` | text | destination for trips; venue for others |
 | `location_lat/lng` | float8 nullable | |
 | `start_location` | text nullable | trip-only — departure point |
@@ -221,6 +254,8 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 | `birth_year` | integer nullable | birthday-only — used to compute age ("Turning 28") |
 | `predictions_revealed_at` | timestamptz nullable | birthday-only — when organizer revealed predictions |
 | `wishes_revealed_at` | timestamptz nullable | birthday-only — when organizer blew out the candles |
+| `waitlist_enabled` | boolean default true | signup-only — whether to put overflow guests on a waitlist |
+| `signup_lock_hours` | integer nullable | signup-only — hours before session `start_at` when signups/cancellations lock |
 | `created_at / updated_at` | timestamptz | |
 
 #### `event_guests`
@@ -242,6 +277,8 @@ Client-side UUID generation (`uuid` package) ensures new records have a stable I
 **Constraints:** Partial UNIQUE INDEX on `(event_id, user_id) WHERE user_id IS NOT NULL`  
 **REPLICA IDENTITY:** FULL (DELETE payloads include event_id for Realtime routing)
 
+**Status values:** `going` | `maybe` | `declined` (non-trip); `pending` | `accepted` | `declined` | `left` (trip). Signup events do not use event_guests for per-session roster — see event_sessions / event_session_roster below.
+
 **Status lifecycle (trip-type events):**
 ```
 INSERT with status='pending'   ← new linked-user invite
@@ -251,6 +288,35 @@ INSERT with status='pending'   ← new linked-user invite
 ```
 
 Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `going`.
+
+#### `event_sessions` (signup events only)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `session_number` | integer | Monotonically increasing per event; UNIQUE(event_id, session_number) |
+| `start_at` | timestamptz | Session date/time |
+| `end_at` | timestamptz nullable | |
+| `invite_code` | uuid UNIQUE | Per-session QR target; QR encodes `{kAppBaseUrl}/session/invite/{invite_code}` — **app-only**: joined by scanning with the in-app scanner (`SessionScanScreen`). A `session-signup` Edge Function serving a public HTML page also exists but is not currently linked from the QR. |
+| `created_at` | timestamptz | |
+
+**RLS:** Organizer full access; event members can SELECT.
+
+#### `event_session_roster` (signup events only)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `session_id` | uuid FK→event_sessions | CASCADE delete |
+| `user_id` | uuid FK→auth.users nullable | Null for anonymous signups |
+| `display_name` | text | |
+| `email / phone` | text nullable | |
+| `status` | text | `going` \| `waitlisted` |
+| `signup_order` | integer nullable | Monotonically increasing; organizer can reorder via batch UPDATE |
+| `attended` | boolean nullable | null=not marked; true=attended; false=no-show; set after session ends |
+| `signup_confirmed` | boolean default false | Pre-session confirmation; organizer or own user can toggle |
+| `signed_up_at` | timestamptz | |
+
+**RLS:** Organizer full access; each entry's own user can SELECT their row.
 
 #### `event_stops`
 | Column | Type | Notes |
@@ -473,19 +539,29 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 **RLS helper:** `auth_user_is_event_member(p_event_id uuid)` — `SECURITY DEFINER` function; returns true if caller is event creator OR has a guest row with `status IN ('going','maybe','accepted','pending')` for that event. `declined`/`left` do not grant access.
 
 **Authenticated RPCs (`authenticated` role only):**
-- `create_event(p_title, p_description, p_location, p_start_at, [p_location_lat, p_location_lng, p_end_at, p_capacity, p_event_type, p_start_location, p_start_lat, p_start_lng, p_budget_per_head, p_cuisine_tags, p_rsvp_deadline, p_vibe])` — `SECURITY DEFINER`; inserts an event row with `created_by = auth.uid()`, bypassing the RLS INSERT check. Used by `EventProvider.addEvent()` to avoid 42501 errors. The last four params are Quick Bites-only fields with safe defaults.
+- `create_event(p_title, p_description, p_location, p_start_at, [p_location_lat, p_location_lng, p_end_at, p_capacity, p_event_type, p_start_location, p_start_lat, p_start_lng, p_budget_per_head, p_cuisine_tags, p_rsvp_deadline, p_vibe, p_honoree_name, p_birth_year, p_waitlist_enabled, p_signup_lock_hours])` — `SECURITY DEFINER`; inserts an event row with `created_by = auth.uid()`; auto-creates `event_sessions` session #1 when `event_type = 'signup'`.
+- `add_event_session(p_event_id, p_start_at, p_end_at)` — organizer creates a new session occurrence; increments session_number; returns the new session row.
+- `rsvp_session(p_invite_code, p_display_name, p_email, p_phone)` — atomic signup for a specific session via its invite_code; locks parent event for capacity check; assigns sequential signup_order; returns (roster_id, signup_position, rsvp_status, confirmed_count, waitlist_count, session_capacity). Grantee: anon + authenticated.
+- `cancel_session_signup(p_roster_id)` — guest self-cancels from a session; enforces signup_lock_hours; auto-promotes first waitlisted guest.
+- `session_remove_roster_entry(p_roster_id)` — organizer removes a roster entry; auto-promotes waitlist.
+- `session_promote_roster_entry(p_roster_id)` — organizer promotes a waitlisted entry to going; raises session_full if no capacity.
+- `session_demote_roster_entry(p_roster_id)` — organizer demotes a confirmed entry to end of waitlist.
+- `session_mark_attendance(p_roster_id, p_attended)` — organizer marks attended/no-show; only callable after session end_at.
+- `toggle_session_confirmed(p_roster_id, p_confirmed)` — toggles signup_confirmed on a session roster entry; organizer or the entry's own user.
+- `get_session_by_invite_code(p_invite_code)` — public read (anon + authenticated); returns session + parent event info + going/waitlist counts + organizer name + capacity settings.
 - `resend_event_invite(p_guest_id uuid)` — resets `status = 'pending'` for a guest row; triggers `on_invite_inserted` for re-notification.
 - `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone, avatar_url)` for a list of user IDs, bypassing `user_profiles` RLS. Called by `EventProvider._enrichGuestNames()`, `FriendsProvider._enrichNames()`, and `BlockedUsersProvider.load()`.
 - `search_users(p_query text)` — returns `(user_id, full_name, email)` for users matching the query by name, email, or phone, excluding the caller and existing friends. Limit 20.
 - `find_users_by_contacts(p_phones text[], p_emails text[])` — batch-lookup used by `ContactsScreen`. Excludes caller, blocked users (either direction), and existing friends.
 
 **Public RPCs (`anon` + `authenticated` access):**
-- `get_event_by_invite_code(p_invite_code uuid)` — returns event info + RSVP counts + organizer name; used by `EventInviteScreen` without auth.
+- `get_event_by_invite_code(p_invite_code uuid)` — returns event info + RSVP counts (going/maybe/declined) + organizer name + `waitlist_enabled` + `signup_lock_hours` + `event_type` text; used by `EventInviteScreen` without auth.
+- `get_session_by_invite_code(p_invite_code uuid)` — returns session + parent event info + going/waitlist counts; used by `SessionInviteScreen` without auth.
 - `rsvp_event_public(p_invite_code, p_display_name, p_email, p_phone, p_rsvp_status)` — inserts an anonymous `event_guests` row (user_id = null); enforces capacity limit; returns event summary.
 
 **Storage:** `event-photos` bucket (public read); path = `{event_id}/{filename}`.
 
-**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`.
+**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items`, `event_sessions`, `event_session_roster` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`.
 
 ---
 
@@ -621,7 +697,7 @@ If the user had set `block_reinvite = true`:
 
 **Event records must be consistent across all members at all times.** Every mutation — to event metadata, stops, or guests — must propagate to every member's device via Supabase Realtime without requiring a reload.
 
-`EventProvider._subscribeRealtime()` uses a single channel (`event_sync_<userId>`) and handles events across 8 tables:
+`EventProvider._subscribeRealtime()` uses a single channel (`event_sync_<userId>`) and handles events across 10 tables:
 
 | Table | Event | Handler | Notes |
 |---|---|---|---|
@@ -638,6 +714,11 @@ If the user had set `block_reinvite = true`:
 | `event_bring_list_items` | INSERT / UPDATE / DELETE | `fetchBringList(eventId)` | Requires `REPLICA IDENTITY FULL`; migration `20260605060000_bringlist_realtime.sql` adds table to publication |
 | `event_polls` (via option/vote tables) | INSERT / DELETE | `_resolveEventIdForPoll(pollId)` DB fallback → `fetchPolls(eventId)` | Handles cache-cold race via DB fallback |
 | `event_poll_reactions` | INSERT / DELETE | `_resolveEventIdForOption(optionId)` DB fallback → `fetchPolls(eventId)` | Reactions with REPLICA IDENTITY FULL carry option_id in DELETE |
+| `event_sessions` | INSERT | `fetchUpcomingSessions(eventId)` + `fetchPastSessions(eventId)` | New session added by organizer on another device |
+| `event_sessions` | UPDATE | `_patchSessionInCache` with new `going_count` / `waitlist_count` | Fired by DB trigger after every roster change; keeps session card counts live |
+| `event_session_roster` | INSERT | `refreshSessionRoster(sessionId)` — only if session already in cache | New signup (QR scan or invite code entry) |
+| `event_session_roster` | UPDATE | `_patchRosterEntry` with new `status` / `signup_order` / `attended` / `signup_confirmed` | Covers promote, demote, attendance, confirmation |
+| `event_session_roster` | DELETE | In-memory remove by id | Cancel or organizer removal; requires `REPLICA IDENTITY FULL` (migration `20260610000001`) |
 
 `InvitationsProvider` subscribes separately (INSERT + UPDATE on `event_guests` filtered by `user_id = currentUser` and `status = 'pending'`) to keep the invite badge current for the invited user's own device.
 

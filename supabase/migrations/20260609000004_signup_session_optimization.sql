@@ -1,0 +1,1 @@
+-- Consolidated into 20260609000005_signup_sessions_migration.sql

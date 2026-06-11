@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/event.dart';
 import '../models/event_bring_item.dart';
+import '../models/event_session.dart';
 import '../models/event_expense.dart';
 import '../models/event_gift_pool.dart';
 import '../models/event_poll.dart';
@@ -493,6 +494,12 @@ class EventProvider extends ChangeNotifier {
               vibe: row.containsKey('vibe')
                   ? row['vibe'] as String?
                   : existing.vibe,
+              waitlistEnabled: row.containsKey('waitlist_enabled')
+                  ? (row['waitlist_enabled'] as bool? ?? true)
+                  : existing.waitlistEnabled,
+              signupLockHours: row.containsKey('signup_lock_hours')
+                  ? row['signup_lock_hours'] as int?
+                  : existing.signupLockHours,
               guests: existing.guests,
               stops: existing.stops,
               organizerName: existing.organizerName,
@@ -850,6 +857,112 @@ class EventProvider extends ChangeNotifier {
           },
         )
 
+        // ── event_sessions ─────────────────────────────────────────────────
+        // INSERT: new session added by organizer on another device.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_sessions',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final eventId = row['event_id'] as String?;
+            if (eventId == null) return;
+            // Refetch upcoming/past so the new card appears without a full reload.
+            unawaited(fetchUpcomingSessions(eventId));
+            unawaited(fetchPastSessions(eventId));
+          },
+        )
+
+        // UPDATE: going_count / waitlist_count changed (trigger fires after
+        //         every roster INSERT/UPDATE/DELETE), or session metadata edited.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'event_sessions',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final sessionId = row['id'] as String?;
+            final eventId = row['event_id'] as String?;
+            if (sessionId == null || eventId == null) return;
+            _patchSessionInCache(
+              eventId,
+              sessionId,
+              (s) => s.copyWithCounts(
+                goingCount: row['going_count'] as int? ?? s.goingCount,
+                waitlistCount: row['waitlist_count'] as int? ?? s.waitlistCount,
+              ),
+            );
+            notifyListeners();
+          },
+        )
+
+        // ── event_session_roster ────────────────────────────────────────────
+        // INSERT: someone signed up (via QR scan or organizer-added).
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'event_session_roster',
+          callback: (payload) {
+            final sessionId = payload.newRecord['session_id'] as String?;
+            if (sessionId == null) return;
+            // Only refresh if this session's roster is already in our cache.
+            if (!_sessionRosters.containsKey(sessionId)) return;
+            unawaited(refreshSessionRoster(sessionId));
+          },
+        )
+
+        // UPDATE: status change (promote/demote), attendance marked,
+        //         or signup_confirmed toggled.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'event_session_roster',
+          callback: (payload) {
+            final row = payload.newRecord;
+            final sessionId = row['session_id'] as String?;
+            final rosterId = row['id'] as String?;
+            if (sessionId == null || rosterId == null) return;
+            if (!_sessionRosters.containsKey(sessionId)) return;
+            _patchRosterEntry(
+              sessionId,
+              rosterId,
+              (r) => EventSessionRosterEntry(
+                id: r.id,
+                sessionId: r.sessionId,
+                userId: r.userId,
+                displayName: r.displayName,
+                email: r.email,
+                phone: r.phone,
+                status: row['status'] as String? ?? r.status,
+                signupOrder: row['signup_order'] as int? ?? r.signupOrder,
+                attended: row.containsKey('attended')
+                    ? row['attended'] as bool?
+                    : r.attended,
+                signupConfirmed:
+                    row['signup_confirmed'] as bool? ?? r.signupConfirmed,
+                signedUpAt: r.signedUpAt,
+              ),
+            );
+          },
+        )
+
+        // DELETE: cancelled or removed by organizer.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_session_roster',
+          callback: (payload) {
+            final sessionId = payload.oldRecord['session_id'] as String?;
+            final rosterId = payload.oldRecord['id'] as String?;
+            if (sessionId == null || rosterId == null) return;
+            final roster = _sessionRosters[sessionId];
+            if (roster == null) return;
+            _sessionRosters[sessionId] =
+                roster.where((r) => r.id != rosterId).toList();
+            notifyListeners();
+          },
+        )
+
         .subscribe();
   }
 
@@ -895,6 +1008,8 @@ class EventProvider extends ChangeNotifier {
     String? vibe,
     String? honoreeDisplayName,
     int? birthYear,
+    bool waitlistEnabled = true,
+    int? signupLockHours,
   }) async {
     final session = _db.auth.currentSession;
     if (session == null) throw Exception('Not authenticated');
@@ -929,6 +1044,8 @@ class EventProvider extends ChangeNotifier {
       'p_vibe': ?vibe,
       'p_honoree_name': ?honoreeDisplayName,
       'p_birth_year': ?birthYear,
+      'p_waitlist_enabled': waitlistEnabled,
+      'p_signup_lock_hours': ?signupLockHours,
     }) as List<dynamic>;
     if (rows.isEmpty) throw Exception('Event creation returned no data.');
     final eventId = (rows.first as Map)['id'] as String;
@@ -969,6 +1086,8 @@ class EventProvider extends ChangeNotifier {
       'vibe': updated.vibe,
       'honoree_name': updated.honoreeDisplayName,
       'birth_year': updated.birthYear,
+      'waitlist_enabled': updated.waitlistEnabled,
+      'signup_lock_hours': updated.signupLockHours,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', updated.id);
 
@@ -1082,6 +1201,332 @@ class EventProvider extends ChangeNotifier {
       notifyListeners();
       unawaited(_saveCache());
     }
+  }
+
+  // ─── Session management (signup events) ──────────────────────────────────
+  //
+  // Design: sessions and rosters are paginated and cached separately.
+  //
+  // Session list:
+  //   • _upcomingSessions[eventId] — start_at >= now, ORDER BY start_at ASC
+  //   • _pastSessions[eventId]     — start_at < now,  ORDER BY start_at DESC
+  //   • Each page is _kSessionsPageSize rows (no roster data, counts from DB columns)
+  //
+  // Roster (per session, loaded on demand):
+  //   • _sessionRosters[sessionId] — ORDER BY signup_order ASC
+  //   • Each page is _kRosterPageSize rows
+  //   • hasMore tracked in _hasMoreRoster[sessionId]
+
+  static const _kSessionsPageSize = 20;
+  static const _kRosterPageSize = 100;
+
+  final Map<String, List<EventSession>> _upcomingSessions = {};
+  final Map<String, List<EventSession>> _pastSessions = {};
+  final Map<String, bool> _hasMorePast = {};
+  final Map<String, bool> _loadingPast = {};
+
+  final Map<String, List<EventSessionRosterEntry>> _sessionRosters = {};
+  final Map<String, bool> _hasMoreRoster = {};
+
+  // ── Public accessors ────────────────────────────────────────────────────
+
+  List<EventSession> upcomingSessionsFor(String eventId) =>
+      _upcomingSessions[eventId] ?? [];
+
+  List<EventSession> pastSessionsFor(String eventId) =>
+      _pastSessions[eventId] ?? [];
+
+  bool hasMorePastFor(String eventId) => _hasMorePast[eventId] ?? false;
+
+  List<EventSessionRosterEntry>? rosterFor(String sessionId) =>
+      _sessionRosters[sessionId];
+
+  bool hasMoreRosterFor(String sessionId) => _hasMoreRoster[sessionId] ?? false;
+
+  // ── Session list fetching ───────────────────────────────────────────────
+
+  /// Fetches upcoming sessions (start_at >= now). Replaces the cache.
+  Future<void> fetchUpcomingSessions(String eventId) async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final rows = await _db
+        .from('event_sessions')
+        .select(
+            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count')
+        .eq('event_id', eventId)
+        .gte('start_at', now)
+        .order('start_at', ascending: true)
+        .limit(_kSessionsPageSize) as List<dynamic>;
+    _upcomingSessions[eventId] =
+        rows.map((r) => EventSession.fromJson(r as Map<String, dynamic>)).toList();
+    notifyListeners();
+  }
+
+  /// Fetches the first page of past sessions (start_at < now, newest first).
+  Future<void> fetchPastSessions(String eventId) async {
+    if (_loadingPast[eventId] == true) return;
+    _loadingPast[eventId] = true;
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      final rows = await _db
+          .from('event_sessions')
+          .select(
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count')
+          .eq('event_id', eventId)
+          .lt('start_at', now)
+          .order('start_at', ascending: true) // oldest first, session numbers go up
+          .limit(_kSessionsPageSize + 1) as List<dynamic>;
+      final hasMore = rows.length > _kSessionsPageSize;
+      _pastSessions[eventId] = rows
+          .take(_kSessionsPageSize)
+          .map((r) => EventSession.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _hasMorePast[eventId] = hasMore;
+    } finally {
+      _loadingPast[eventId] = false;
+      notifyListeners();
+    }
+  }
+
+  /// Loads the next page of past sessions (sessions newer than the last loaded, ascending).
+  Future<void> loadMorePastSessions(String eventId) async {
+    if (_loadingPast[eventId] == true) return;
+    final existing = _pastSessions[eventId] ?? [];
+    if (existing.isEmpty || !(_hasMorePast[eventId] ?? false)) return;
+    _loadingPast[eventId] = true;
+    final now = DateTime.now().toUtc().toIso8601String();
+    try {
+      final cursor = existing.last.startAt.toUtc().toIso8601String();
+      final rows = await _db
+          .from('event_sessions')
+          .select(
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count')
+          .eq('event_id', eventId)
+          .gt('start_at', cursor) // next batch of more recent past sessions
+          .lt('start_at', now)
+          .order('start_at', ascending: true)
+          .limit(_kSessionsPageSize + 1) as List<dynamic>;
+      final hasMore = rows.length > _kSessionsPageSize;
+      final page = rows
+          .take(_kSessionsPageSize)
+          .map((r) => EventSession.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _pastSessions[eventId] = [...existing, ...page];
+      _hasMorePast[eventId] = hasMore;
+    } finally {
+      _loadingPast[eventId] = false;
+      notifyListeners();
+    }
+  }
+
+  // ── Roster fetching ─────────────────────────────────────────────────────
+
+  /// Fetches the first page of roster entries for [sessionId]. No-op if already
+  /// cached — call [refreshSessionRoster] to force a reload.
+  Future<void> fetchSessionRoster(String sessionId) async {
+    if (_sessionRosters.containsKey(sessionId)) return;
+    await refreshSessionRoster(sessionId);
+  }
+
+  /// Always reloads from the first page, replacing the cache for [sessionId].
+  Future<void> refreshSessionRoster(String sessionId) async {
+    final rows = await _db
+        .from('event_session_roster')
+        .select()
+        .eq('session_id', sessionId)
+        .order('signup_order', ascending: true, nullsFirst: false)
+        .limit(_kRosterPageSize + 1) as List<dynamic>;
+    final hasMore = rows.length > _kRosterPageSize;
+    _sessionRosters[sessionId] = rows
+        .take(_kRosterPageSize)
+        .map((r) => EventSessionRosterEntry.fromJson(r as Map<String, dynamic>))
+        .toList();
+    _hasMoreRoster[sessionId] = hasMore;
+    notifyListeners();
+  }
+
+  /// Appends the next page of roster entries for [sessionId].
+  Future<void> loadMoreRoster(String sessionId) async {
+    final existing = _sessionRosters[sessionId] ?? [];
+    if (!(_hasMoreRoster[sessionId] ?? false)) return;
+    // Use the highest known signup_order as cursor.
+    final maxOrder = existing
+        .where((r) => r.signupOrder != null)
+        .fold<int>(0, (m, r) => r.signupOrder! > m ? r.signupOrder! : m);
+    final rows = await _db
+        .from('event_session_roster')
+        .select()
+        .eq('session_id', sessionId)
+        .gt('signup_order', maxOrder)
+        .order('signup_order', ascending: true, nullsFirst: false)
+        .limit(_kRosterPageSize + 1) as List<dynamic>;
+    final hasMore = rows.length > _kRosterPageSize;
+    final page = rows
+        .take(_kRosterPageSize)
+        .map((r) => EventSessionRosterEntry.fromJson(r as Map<String, dynamic>))
+        .toList();
+    _sessionRosters[sessionId] = [...existing, ...page];
+    _hasMoreRoster[sessionId] = hasMore;
+    notifyListeners();
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  /// Reads going_count / waitlist_count from the DB (maintained by trigger) and
+  /// updates both session caches. Called after any roster mutation.
+  Future<void> _refreshSessionCounts(String sessionId, String eventId) async {
+    final row = await _db
+        .from('event_sessions')
+        .select('id,going_count,waitlist_count')
+        .eq('id', sessionId)
+        .single();
+    final going = row['going_count'] as int? ?? 0;
+    final waitlist = row['waitlist_count'] as int? ?? 0;
+    _patchSessionInCache(eventId, sessionId,
+        (s) => s.copyWithCounts(goingCount: going, waitlistCount: waitlist));
+  }
+
+  void _patchSessionInCache(String eventId, String sessionId,
+      EventSession Function(EventSession) fn) {
+    void patch(Map<String, List<EventSession>> cache) {
+      final list = cache[eventId];
+      if (list == null) return;
+      final i = list.indexWhere((s) => s.id == sessionId);
+      if (i >= 0) {
+        final updated = List<EventSession>.from(list);
+        updated[i] = fn(updated[i]);
+        cache[eventId] = updated;
+      }
+    }
+    patch(_upcomingSessions);
+    patch(_pastSessions);
+  }
+
+  void _patchRosterEntry(String sessionId, String rosterId,
+      EventSessionRosterEntry Function(EventSessionRosterEntry) fn) {
+    final roster = _sessionRosters[sessionId];
+    if (roster == null) return;
+    final i = roster.indexWhere((r) => r.id == rosterId);
+    if (i >= 0) {
+      final updated = List<EventSessionRosterEntry>.from(roster);
+      updated[i] = fn(updated[i]);
+      _sessionRosters[sessionId] = updated;
+      notifyListeners();
+    }
+  }
+
+  // ── Session creation ────────────────────────────────────────────────────
+
+  /// Organizer creates a new session. Inserted into the upcoming cache if its
+  /// start_at is in the future, otherwise past cache.
+  Future<EventSession> addSession(
+      String eventId, DateTime startAt, DateTime? endAt) async {
+    final rows = await _db.rpc('add_event_session', params: {
+      'p_event_id': eventId,
+      'p_start_at': startAt.toUtc().toIso8601String(),
+      'p_end_at': endAt?.toUtc().toIso8601String(),
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to create session');
+    final session = EventSession.fromJson(rows.first as Map<String, dynamic>);
+    if (session.isUpcoming) {
+      final list = List<EventSession>.from(_upcomingSessions[eventId] ?? []);
+      list.add(session);
+      list.sort((a, b) => a.startAt.compareTo(b.startAt));
+      _upcomingSessions[eventId] = list;
+    } else {
+      final list = List<EventSession>.from(_pastSessions[eventId] ?? []);
+      list.insert(0, session);
+      _pastSessions[eventId] = list;
+    }
+    notifyListeners();
+    return session;
+  }
+
+  // ── Roster mutations ────────────────────────────────────────────────────
+
+  /// Guest self-cancels from a session (auto-promotes waitlist).
+  Future<void> cancelSessionSignup(
+      String rosterId, String sessionId, String eventId) async {
+    await _db.rpc('cancel_session_signup', params: {'p_roster_id': rosterId});
+    final roster = _sessionRosters[sessionId];
+    if (roster != null) {
+      _sessionRosters[sessionId] =
+          roster.where((r) => r.id != rosterId).toList();
+      notifyListeners();
+    }
+    unawaited(_refreshSessionCounts(sessionId, eventId));
+  }
+
+  /// Organizer removes a roster entry (auto-promotes waitlist).
+  Future<void> removeSessionRosterEntry(
+      String rosterId, String sessionId, String eventId) async {
+    await _db.rpc('session_remove_roster_entry', params: {'p_roster_id': rosterId});
+    final roster = _sessionRosters[sessionId];
+    if (roster != null) {
+      _sessionRosters[sessionId] =
+          roster.where((r) => r.id != rosterId).toList();
+      notifyListeners();
+    }
+    unawaited(_refreshSessionCounts(sessionId, eventId));
+  }
+
+  /// Organizer manually promotes a waitlisted roster entry.
+  Future<void> promoteSessionRosterEntry(
+      String rosterId, String sessionId, String eventId) async {
+    await _db.rpc('session_promote_roster_entry', params: {'p_roster_id': rosterId});
+    _patchRosterEntry(sessionId, rosterId, (r) => r.copyWith(status: 'going'));
+    unawaited(_refreshSessionCounts(sessionId, eventId));
+  }
+
+  /// Organizer demotes a confirmed roster entry to the waitlist.
+  Future<void> demoteSessionRosterEntry(
+      String rosterId, String sessionId, String eventId) async {
+    await _db.rpc('session_demote_roster_entry', params: {'p_roster_id': rosterId});
+    // Reload page 1 — demote changes signup_order so cursor positions shift.
+    await refreshSessionRoster(sessionId);
+    unawaited(_refreshSessionCounts(sessionId, eventId));
+  }
+
+  /// Organizer reorders roster entries within a status group.
+  Future<void> reorderSessionRoster(
+      String eventId, String sessionId, List<String> orderedIds,
+      {int startOrder = 1}) async {
+    final idToOrder = {
+      for (var i = 0; i < orderedIds.length; i++) orderedIds[i]: startOrder + i,
+    };
+    final roster = _sessionRosters[sessionId];
+    if (roster != null) {
+      _sessionRosters[sessionId] = roster.map((r) {
+        final o = idToOrder[r.id];
+        return o != null ? r.copyWith(signupOrder: o) : r;
+      }).toList();
+      notifyListeners();
+    }
+    for (var i = 0; i < orderedIds.length; i++) {
+      unawaited(_db
+          .from('event_session_roster')
+          .update({'signup_order': startOrder + i}).eq('id', orderedIds[i]));
+    }
+  }
+
+  /// Organizer marks attendance on a roster entry.
+  Future<void> markSessionAttendance(
+      String rosterId, String sessionId, String eventId, bool attended) async {
+    await _db.rpc('session_mark_attendance', params: {
+      'p_roster_id': rosterId,
+      'p_attended': attended,
+    });
+    _patchRosterEntry(sessionId, rosterId, (r) => r.copyWith(attended: attended));
+  }
+
+  /// Toggle signup confirmation on a roster entry.
+  Future<void> toggleSessionConfirmed(
+      String rosterId, String sessionId, String eventId, bool confirmed) async {
+    await _db.rpc('toggle_session_confirmed', params: {
+      'p_roster_id': rosterId,
+      'p_confirmed': confirmed,
+    });
+    _patchRosterEntry(
+        sessionId, rosterId, (r) => r.copyWith(signupConfirmed: confirmed));
   }
 
   // ─── Members (trip-type invite flow) ──────────────────────────────────────
