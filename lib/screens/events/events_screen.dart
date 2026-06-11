@@ -88,6 +88,7 @@ Color _dotColorFor(EventType type) => switch (type) {
       EventType.wedding => const Color(0xFF7B1FA2),
       EventType.social => const Color(0xFF00897B),
       EventType.quickBites => const Color(0xFFE64A19),
+      EventType.signup => const Color(0xFF2E7D32),
     };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -315,6 +316,7 @@ class _TypeFilterRow extends StatelessWidget {
             EventType.wedding => l10n.eventTypeWedding,
             EventType.social => l10n.eventTypeSocial,
             EventType.quickBites => l10n.eventTypeQuickBites,
+            EventType.signup => l10n.eventTypeSignup,
           };
           return _TypeChip(
             label: label,
@@ -614,14 +616,18 @@ class _EventList extends StatelessWidget {
       );
     }
 
+    final isInvited = tab == _EventTab.invited;
+
     return ListView.builder(
       padding: const EdgeInsets.only(top: 8, bottom: 80),
-      itemCount: events.length,
+      itemCount: events.length + (isInvited ? 1 : 0),
       itemBuilder: (context, index) {
-        final event = events[index];
+        if (isInvited && index == 0) return const _SwipeHint();
+
+        final event = events[isInvited ? index - 1 : index];
         final card = EventCard(event: event, currentUserId: currentUserId);
 
-        if (tab != _EventTab.invited) return card;
+        if (!isInvited) return card;
 
         return Dismissible(
           key: ValueKey(event.id),
@@ -644,6 +650,44 @@ class _EventList extends StatelessWidget {
           child: card,
         );
       },
+    );
+  }
+}
+
+// ─── Swipe hint ──────────────────────────────────────────────────────────────
+
+class _SwipeHint extends StatelessWidget {
+  const _SwipeHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.arrow_back_rounded, size: 13, color: Colors.red.shade400),
+              const SizedBox(width: 4),
+              Text(
+                'Swipe left to decline',
+                style: TextStyle(fontSize: 12, color: Colors.red.shade400, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Text(
+                'Swipe right to accept',
+                style: TextStyle(fontSize: 12, color: Colors.green.shade600, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.arrow_forward_rounded, size: 13, color: Colors.green.shade600),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

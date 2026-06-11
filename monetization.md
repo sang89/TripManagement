@@ -265,7 +265,7 @@ At this scale all costs are out-of-pocket (credit exhausted in the first ~620 te
 |---|---|---|
 | Database rows | 500 MB | Well within — events + polls + votes are small |
 | Bandwidth | 2 GB/month | Well within for API-only traffic |
-| Edge Function invocations | 500K/month | ~5K AI chat calls at 1K MAU — well within |
+| Edge Function invocations | 500K/month | ~5K AI chat calls + session-signup page loads (2 invocations per public signup: GET form + POST submit) at 1K MAU — well within |
 | Realtime connections | 200 concurrent | Sufficient until ~500+ simultaneous active users |
 
 Paid tier (Pro, $25/month): 8 GB DB, 250 GB bandwidth, 2M Edge Function invocations.

@@ -1102,6 +1102,109 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eventTypeQuickBites => '快捷美食';
 
   @override
+  String get eventTypeSignup => '报名';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total 个名额已满';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count 人在候补名单';
+  }
+
+  @override
+  String get signupEventFull => '活动已满';
+
+  @override
+  String get signupJoinWaitlist => '加入候补名单';
+
+  @override
+  String get signupClaimSpot => '抢占名额';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return '您在名单第 #$pos 位！';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return '您在候补名单第 #$pos 位';
+  }
+
+  @override
+  String get signupWaitlistEnabled => '启用候补名单';
+
+  @override
+  String get signupWaitlistDescription => '超出容量的嘉宾将按顺序加入候补名单';
+
+  @override
+  String get signupRosterTab => '名单';
+
+  @override
+  String get signupInviteTab => '邀请';
+
+  @override
+  String get signupPromoteGuest => '提升为已确认';
+
+  @override
+  String get signupRemoveGuest => '从活动中移除';
+
+  @override
+  String get signupCopyLink => '复制邀请链接';
+
+  @override
+  String get signupShowQr => '显示二维码';
+
+  @override
+  String get signupLocked => '报名已截止';
+
+  @override
+  String get signupLockedMessage => '报名已截止，请联系主办方。';
+
+  @override
+  String get signupCancelSpot => '取消我的名额';
+
+  @override
+  String get signupMarkAttended => '已出席';
+
+  @override
+  String get signupMarkNoShow => '未出席';
+
+  @override
+  String get signupAttendanceHeader => '出勤';
+
+  @override
+  String get signupRepeat => '重复';
+
+  @override
+  String get signupRepeatNone => '无';
+
+  @override
+  String get signupRepeatWeekly => '每周';
+
+  @override
+  String get signupRepeatBiweekly => '每两周';
+
+  @override
+  String get signupRepeatMonthly => '每月';
+
+  @override
+  String get signupNextSession => '创建下一场';
+
+  @override
+  String get signupCarryOverGuests => '自动报名已确认嘉宾';
+
+  @override
+  String get signupCarryOverGuestsHint => '嘉宾将收到通知并可选择退出';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return '系列活动的一部分（$interval）';
+  }
+
+  @override
   String get eventTypePicker => '活动类型';
 
   @override

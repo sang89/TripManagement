@@ -1122,6 +1122,113 @@ class AppLocalizationsDe extends AppLocalizations {
   String get eventTypeQuickBites => 'Schnelle Happen';
 
   @override
+  String get eventTypeSignup => 'Anmeldung';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total Plätze belegt';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count auf der Warteliste';
+  }
+
+  @override
+  String get signupEventFull => 'Veranstaltung ausgebucht';
+
+  @override
+  String get signupJoinWaitlist => 'Warteliste beitreten';
+
+  @override
+  String get signupClaimSpot => 'Platz reservieren';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return 'Du bist #$pos auf der Liste!';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return 'Du bist #$pos auf der Warteliste';
+  }
+
+  @override
+  String get signupWaitlistEnabled => 'Warteliste aktivieren';
+
+  @override
+  String get signupWaitlistDescription =>
+      'Gäste über der Kapazität kommen auf eine Warteliste';
+
+  @override
+  String get signupRosterTab => 'Liste';
+
+  @override
+  String get signupInviteTab => 'Einladen';
+
+  @override
+  String get signupPromoteGuest => 'Hochstufen';
+
+  @override
+  String get signupRemoveGuest => 'Von Veranstaltung entfernen';
+
+  @override
+  String get signupCopyLink => 'Einladungslink kopieren';
+
+  @override
+  String get signupShowQr => 'QR-Code anzeigen';
+
+  @override
+  String get signupLocked => 'Anmeldungen gesperrt';
+
+  @override
+  String get signupLockedMessage =>
+      'Anmeldungen sind gesperrt. Wende dich an den Organisator.';
+
+  @override
+  String get signupCancelSpot => 'Platz stornieren';
+
+  @override
+  String get signupMarkAttended => 'Anwesend';
+
+  @override
+  String get signupMarkNoShow => 'Nicht erschienen';
+
+  @override
+  String get signupAttendanceHeader => 'Anwesenheit';
+
+  @override
+  String get signupRepeat => 'Wiederholung';
+
+  @override
+  String get signupRepeatNone => 'Keine';
+
+  @override
+  String get signupRepeatWeekly => 'Wöchentlich';
+
+  @override
+  String get signupRepeatBiweekly => 'Alle 2 Wochen';
+
+  @override
+  String get signupRepeatMonthly => 'Monatlich';
+
+  @override
+  String get signupNextSession => 'Nächste Sitzung erstellen';
+
+  @override
+  String get signupCarryOverGuests =>
+      'Bestätigte Gäste automatisch einschreiben';
+
+  @override
+  String get signupCarryOverGuestsHint =>
+      'Gäste erhalten eine Benachrichtigung und können sich abmelden';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return 'Teil einer $interval-Serie';
+  }
+
+  @override
   String get eventTypePicker => 'Ereignistyp';
 
   @override

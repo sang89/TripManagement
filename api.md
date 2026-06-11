@@ -51,6 +51,7 @@ Edge Functions are Deno TypeScript functions deployed to Supabase. They hold ser
 | Function | Path | Purpose |
 |----------|------|---------|
 | `ai-chat` | `supabase/functions/ai-chat/index.ts` | AI chat proxy — holds `GEMINI_API_KEY`, selects model by tier. Shared with PropertyManagement. |
+| `session-signup` | `supabase/functions/session-signup/index.ts` | Public HTML signup page for signup-event sessions. Session QR codes point here so guests **without the app** can sign up in any browser. Deployed with `--no-verify-jwt`. GET `?code=<session_invite_code>` renders the form (via `get_session_by_invite_code` RPC); POST submits to `rsvp_session` RPC and renders position/waitlist result. No secrets — uses anon key. |
 
 ### Deployment workflow
 

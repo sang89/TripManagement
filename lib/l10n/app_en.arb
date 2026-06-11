@@ -538,6 +538,63 @@
   "eventTypeWedding": "Wedding",
   "eventTypeSocial": "Social",
   "eventTypeQuickBites": "Quick Bites",
+  "eventTypeSignup": "Signup",
+  "signupSpotsFilled": "{filled} / {total} spots filled",
+  "@signupSpotsFilled": {
+    "placeholders": {
+      "filled": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "signupWaitlistCount": "{count} on the waitlist",
+  "@signupWaitlistCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "signupEventFull": "Event full",
+  "signupJoinWaitlist": "Join the waitlist",
+  "signupClaimSpot": "Claim a Spot",
+  "signupConfirmedPosition": "You're #{pos} on the list!",
+  "@signupConfirmedPosition": {
+    "placeholders": {
+      "pos": {"type": "int"}
+    }
+  },
+  "signupWaitlistPosition": "You're #{pos} on the waitlist",
+  "@signupWaitlistPosition": {
+    "placeholders": {
+      "pos": {"type": "int"}
+    }
+  },
+  "signupWaitlistEnabled": "Enable waitlist",
+  "signupWaitlistDescription": "Guests over capacity join an ordered waitlist",
+  "signupRosterTab": "Roster",
+  "signupInviteTab": "Invite",
+  "signupPromoteGuest": "Promote to confirmed",
+  "signupRemoveGuest": "Remove from event",
+  "signupCopyLink": "Copy invite link",
+  "signupShowQr": "Show QR Code",
+  "signupLocked": "Signups are locked",
+  "signupLockedMessage": "Signups are locked. Contact the organiser to be removed.",
+  "signupCancelSpot": "Cancel my spot",
+  "signupMarkAttended": "Attended",
+  "signupMarkNoShow": "No-show",
+  "signupAttendanceHeader": "Attendance",
+  "signupRepeat": "Repeat",
+  "signupRepeatNone": "None",
+  "signupRepeatWeekly": "Weekly",
+  "signupRepeatBiweekly": "Every 2 weeks",
+  "signupRepeatMonthly": "Monthly",
+  "signupNextSession": "Create next session",
+  "signupCarryOverGuests": "Auto-enroll confirmed guests",
+  "signupCarryOverGuestsHint": "Guests will receive a notification and can opt out",
+  "signupPartOfSeries": "Part of a {interval} series",
+  "@signupPartOfSeries": {
+    "placeholders": {
+      "interval": {"type": "String"}
+    }
+  },
   "eventTypePicker": "Event type",
   "routeTab": "Route",
   "leaveEventTitle": "Leave event?",

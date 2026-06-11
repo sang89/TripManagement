@@ -1104,6 +1104,109 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eventTypeQuickBites => 'クイックバイツ';
 
   @override
+  String get eventTypeSignup => 'サインアップ';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total 席が埋まっています';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count 人がウェイトリストに登録中';
+  }
+
+  @override
+  String get signupEventFull => '満席';
+
+  @override
+  String get signupJoinWaitlist => 'ウェイトリストに追加';
+
+  @override
+  String get signupClaimSpot => '席を確保する';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return 'リストの#$pos番目です！';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return 'ウェイトリストの#$pos番目です';
+  }
+
+  @override
+  String get signupWaitlistEnabled => 'ウェイトリストを有効化';
+
+  @override
+  String get signupWaitlistDescription => '定員を超えたゲストは順番待ちリストに入ります';
+
+  @override
+  String get signupRosterTab => '名簿';
+
+  @override
+  String get signupInviteTab => '招待';
+
+  @override
+  String get signupPromoteGuest => '確定枠に昇格';
+
+  @override
+  String get signupRemoveGuest => 'イベントから削除';
+
+  @override
+  String get signupCopyLink => '招待リンクをコピー';
+
+  @override
+  String get signupShowQr => 'QRコードを表示';
+
+  @override
+  String get signupLocked => '登録が締め切られました';
+
+  @override
+  String get signupLockedMessage => '登録が締め切られました。主催者にお問い合わせください。';
+
+  @override
+  String get signupCancelSpot => '席をキャンセル';
+
+  @override
+  String get signupMarkAttended => '出席';
+
+  @override
+  String get signupMarkNoShow => '欠席';
+
+  @override
+  String get signupAttendanceHeader => '出欠';
+
+  @override
+  String get signupRepeat => '繰り返し';
+
+  @override
+  String get signupRepeatNone => 'なし';
+
+  @override
+  String get signupRepeatWeekly => '毎週';
+
+  @override
+  String get signupRepeatBiweekly => '隔週';
+
+  @override
+  String get signupRepeatMonthly => '毎月';
+
+  @override
+  String get signupNextSession => '次のセッションを作成';
+
+  @override
+  String get signupCarryOverGuests => '確定ゲストを自動登録';
+
+  @override
+  String get signupCarryOverGuestsHint => 'ゲストに通知が届き、キャンセルできます';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return '$intervalシリーズの一部';
+  }
+
+  @override
   String get eventTypePicker => 'イベントの種類';
 
   @override

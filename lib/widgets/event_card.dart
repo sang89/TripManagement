@@ -50,10 +50,12 @@ class EventCard extends StatelessWidget {
       EventType.wedding => Icons.favorite_outline,
       EventType.social => Icons.celebration_outlined,
       EventType.quickBites => Icons.restaurant_outlined,
+      EventType.signup => Icons.how_to_reg_outlined,
     };
 
     final pendingCount =
         event.isTrip ? event.guests.where((g) => g.status == 'pending').length : 0;
+    const String? recurringLabel = null;
 
     return AppTappable(
       onTap: () => context.push('/event/${event.id}'),
@@ -68,6 +70,7 @@ class EventCard extends StatelessWidget {
           dateRange: dateRange,
           guestCount: event.guests.length,
           pendingCount: pendingCount,
+          recurringLabel: recurringLabel,
           statusLabel: statusLabel,
           statusColor: statusColor,
         ),
@@ -86,6 +89,7 @@ class _ThemedCardBody extends StatelessWidget {
   final String dateRange;
   final int guestCount;
   final int pendingCount;
+  final String? recurringLabel;
   final String statusLabel;
   final Color statusColor;
 
@@ -97,6 +101,7 @@ class _ThemedCardBody extends StatelessWidget {
     required this.dateRange,
     required this.guestCount,
     required this.pendingCount,
+    this.recurringLabel,
     required this.statusLabel,
     required this.statusColor,
   });
@@ -135,6 +140,27 @@ class _ThemedCardBody extends StatelessWidget {
                 children: [
                   Icon(typeIcon, size: 20, color: Colors.white),
                   const Spacer(),
+                  if (recurringLabel != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 0.8),
+                      ),
+                      child: Text(
+                        recurringLabel!,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   if (pendingCount > 0) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(

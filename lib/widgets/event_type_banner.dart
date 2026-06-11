@@ -80,12 +80,27 @@ const eventTypeSocialBannerTheme = EventTypeBannerTheme(
   ],
 );
 
+const eventTypeSignupBannerTheme = EventTypeBannerTheme(
+  gradientColors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF26A69A)],
+  icons: [
+    Icons.checklist_rounded,
+    Icons.group_add_rounded,
+    Icons.how_to_reg_rounded,
+    Icons.event_seat_rounded,
+    Icons.leaderboard_rounded,
+    Icons.timer_rounded,
+    Icons.sports_rounded,
+    Icons.emoji_events_rounded,
+  ],
+);
+
 EventTypeBannerTheme bannerThemeFor(EventType type) => switch (type) {
       EventType.trip => eventTypeTripBannerTheme,
       EventType.quickBites => eventTypeQuickBitesBannerTheme,
       EventType.birthday => eventTypeBirthdayBannerTheme,
       EventType.wedding => eventTypeWeddingBannerTheme,
       EventType.social => eventTypeSocialBannerTheme,
+      EventType.signup => eventTypeSignupBannerTheme,
     };
 
 // ── Icon-pattern CustomPainter ─────────────────────────────────────────────

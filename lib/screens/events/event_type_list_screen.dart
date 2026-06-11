@@ -24,6 +24,7 @@ class EventTypeListScreen extends StatelessWidget {
       EventType.wedding => l10n.eventTypeWedding,
       EventType.social => l10n.eventTypeSocial,
       EventType.quickBites => l10n.eventTypeQuickBites,
+      EventType.signup => l10n.eventTypeSignup,
     };
 
     void goNew() =>
@@ -142,6 +143,7 @@ class _EventCard extends StatelessWidget {
       EventType.wedding => Icons.favorite_outline,
       EventType.social => Icons.celebration_outlined,
       EventType.quickBites => Icons.restaurant_outlined,
+      EventType.signup => Icons.how_to_reg_outlined,
     };
 
     final pendingCount = event.isTrip

@@ -1111,6 +1111,111 @@ class AppLocalizationsAr extends AppLocalizations {
   String get eventTypeQuickBites => 'لقمات سريعة';
 
   @override
+  String get eventTypeSignup => 'تسجيل';
+
+  @override
+  String signupSpotsFilled(int filled, int total) {
+    return '$filled / $total أماكن مشغولة';
+  }
+
+  @override
+  String signupWaitlistCount(int count) {
+    return '$count في قائمة الانتظار';
+  }
+
+  @override
+  String get signupEventFull => 'الفعالية ممتلئة';
+
+  @override
+  String get signupJoinWaitlist => 'انضم لقائمة الانتظار';
+
+  @override
+  String get signupClaimSpot => 'احجز مكانًا';
+
+  @override
+  String signupConfirmedPosition(int pos) {
+    return 'أنت رقم #$pos في القائمة!';
+  }
+
+  @override
+  String signupWaitlistPosition(int pos) {
+    return 'أنت رقم #$pos في قائمة الانتظار';
+  }
+
+  @override
+  String get signupWaitlistEnabled => 'تفعيل قائمة الانتظار';
+
+  @override
+  String get signupWaitlistDescription =>
+      'الضيوف الزائدون عن الطاقة يدخلون قائمة انتظار مرتبة';
+
+  @override
+  String get signupRosterTab => 'القائمة';
+
+  @override
+  String get signupInviteTab => 'دعوة';
+
+  @override
+  String get signupPromoteGuest => 'ترقية للمؤكدين';
+
+  @override
+  String get signupRemoveGuest => 'إزالة من الفعالية';
+
+  @override
+  String get signupCopyLink => 'نسخ رابط الدعوة';
+
+  @override
+  String get signupShowQr => 'عرض رمز QR';
+
+  @override
+  String get signupLocked => 'التسجيل مغلق';
+
+  @override
+  String get signupLockedMessage => 'التسجيل مغلق. تواصل مع المنظم.';
+
+  @override
+  String get signupCancelSpot => 'إلغاء مكاني';
+
+  @override
+  String get signupMarkAttended => 'حضر';
+
+  @override
+  String get signupMarkNoShow => 'لم يحضر';
+
+  @override
+  String get signupAttendanceHeader => 'الحضور';
+
+  @override
+  String get signupRepeat => 'تكرار';
+
+  @override
+  String get signupRepeatNone => 'لا يوجد';
+
+  @override
+  String get signupRepeatWeekly => 'أسبوعي';
+
+  @override
+  String get signupRepeatBiweekly => 'كل أسبوعين';
+
+  @override
+  String get signupRepeatMonthly => 'شهري';
+
+  @override
+  String get signupNextSession => 'إنشاء الجلسة التالية';
+
+  @override
+  String get signupCarryOverGuests => 'تسجيل الضيوف المؤكدين تلقائيًا';
+
+  @override
+  String get signupCarryOverGuestsHint =>
+      'سيتلقى الضيوف إشعارًا ويمكنهم إلغاء التسجيل';
+
+  @override
+  String signupPartOfSeries(String interval) {
+    return 'جزء من سلسلة $interval';
+  }
+
+  @override
   String get eventTypePicker => 'نوع الحدث';
 
   @override

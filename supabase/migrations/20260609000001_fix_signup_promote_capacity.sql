@@ -1,0 +1,1 @@
+-- Consolidated into 20260609000000_add_signup_event.sql
