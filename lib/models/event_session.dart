@@ -9,6 +9,10 @@ class EventSession {
   // Denormalized by DB trigger — never requires a COUNT(*) on the roster.
   final int goingCount;
   final int waitlistCount;
+  // Per-session signup settings (moved from events table).
+  final int? capacity;
+  final bool waitlistEnabled;
+  final int? signupLockHours;
 
   const EventSession({
     required this.id,
@@ -20,6 +24,9 @@ class EventSession {
     required this.createdAt,
     this.goingCount = 0,
     this.waitlistCount = 0,
+    this.capacity,
+    this.waitlistEnabled = true,
+    this.signupLockHours,
   });
 
   factory EventSession.fromJson(Map<String, dynamic> json) => EventSession(
@@ -34,16 +41,23 @@ class EventSession {
         createdAt: DateTime.parse(json['created_at'] as String),
         goingCount: json['going_count'] as int? ?? 0,
         waitlistCount: json['waitlist_count'] as int? ?? 0,
+        capacity: json['capacity'] as int?,
+        waitlistEnabled: (json['waitlist_enabled'] as bool?) ?? true,
+        signupLockHours: json['signup_lock_hours'] as int?,
       );
 
-  bool isFullFor(int? capacity) => capacity != null && goingCount >= capacity;
+  bool get isFull =>
+      capacity != null && goingCount >= capacity!;
 
-  bool isLockedFor(int? lockHours) =>
-      lockHours != null &&
-      DateTime.now().isAfter(startAt.subtract(Duration(hours: lockHours)));
+  bool get isLocked =>
+      signupLockHours != null &&
+      DateTime.now()
+          .isAfter(startAt.subtract(Duration(hours: signupLockHours!)));
 
   bool get hasEnded =>
-      endAt != null ? DateTime.now().isAfter(endAt!) : DateTime.now().isAfter(startAt);
+      endAt != null
+          ? DateTime.now().isAfter(endAt!)
+          : DateTime.now().isAfter(startAt);
 
   bool get isUpcoming => startAt.isAfter(DateTime.now());
 
@@ -58,6 +72,9 @@ class EventSession {
         createdAt: createdAt,
         goingCount: goingCount ?? this.goingCount,
         waitlistCount: waitlistCount ?? this.waitlistCount,
+        capacity: capacity,
+        waitlistEnabled: waitlistEnabled,
+        signupLockHours: signupLockHours,
       );
 }
 

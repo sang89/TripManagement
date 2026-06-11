@@ -491,6 +491,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get memberLinkedAccount => 'リンク済みアカウント';
 
   @override
+  String get selectFriendOptional => '友達を選ぶ（任意）';
+
+  @override
+  String get searchFriends => '友達を検索…';
+
+  @override
   String get invitePending => '保留中';
 
   @override

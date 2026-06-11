@@ -492,6 +492,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get memberLinkedAccount => '연결된 계정';
 
   @override
+  String get selectFriendOptional => '친구 선택 (선택사항)';
+
+  @override
+  String get searchFriends => '친구 검색…';
+
+  @override
   String get invitePending => '대기 중';
 
   @override

@@ -495,6 +495,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get memberLinkedAccount => 'Tài khoản đã liên kết';
 
   @override
+  String get selectFriendOptional => 'Chọn bạn bè (tùy chọn)';
+
+  @override
+  String get searchFriends => 'Tìm kiếm bạn bè…';
+
+  @override
   String get invitePending => 'Đang chờ';
 
   @override

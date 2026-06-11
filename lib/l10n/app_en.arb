@@ -211,6 +211,8 @@
   "memberAccountFound": "Account found",
   "memberNoAccountFound": "No account found",
   "memberLinkedAccount": "Linked account",
+  "selectFriendOptional": "Select a friend (optional)",
+  "searchFriends": "Search friends…",
   "invitePending": "Pending",
   "inviteAccepted": "Accepted",
   "inviteDeclined": "Declined",

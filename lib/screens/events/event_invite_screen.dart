@@ -6,6 +6,7 @@ import 'package:shared_ui/shared_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/invite_codec.dart';
 
 /// Public RSVP screen — accessible without authentication.
 /// Fetches event info by invite_code and lets anyone RSVP.
@@ -23,6 +24,9 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+
+  // Decode once — accepts both encoded (22-char) and raw UUID forms.
+  late final String _uuid = InviteCodec.decode(widget.inviteCode);
 
   bool _loading = true;
   bool _submitting = false;
@@ -53,7 +57,7 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
     try {
       final data = await Supabase.instance.client.rpc(
         'get_event_by_invite_code',
-        params: {'p_invite_code': widget.inviteCode},
+        params: {'p_invite_code': _uuid},
       ) as List<dynamic>;
 
       if (data.isEmpty) {
@@ -106,7 +110,7 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
         final rows = await Supabase.instance.client.rpc(
           'rsvp_signup_event',
           params: {
-            'p_invite_code': widget.inviteCode,
+            'p_invite_code': _uuid,
             'p_display_name': _nameCtrl.text.trim(),
             'p_email': _emailCtrl.text.trim().isEmpty
                 ? null
@@ -125,7 +129,7 @@ class _EventInviteScreenState extends State<EventInviteScreen> {
         await Supabase.instance.client.rpc(
           'rsvp_event_public',
           params: {
-            'p_invite_code': widget.inviteCode,
+            'p_invite_code': _uuid,
             'p_display_name': _nameCtrl.text.trim(),
             'p_email': _emailCtrl.text.trim().isEmpty
                 ? null

@@ -45,7 +45,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   DateTime? _rsvpDeadline;
   String? _vibe;
 
-  // Signup fields
+  // Signup fields kept for passing to create_event (Session #1 inherits these
+  // as defaults; user configures per-session when adding sessions after creation)
   bool _waitlistEnabled = true;
   int? _signupLockHours;
 
@@ -280,6 +281,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
           waitlistEnabled: _isSignup ? _waitlistEnabled : true,
           signupLockHours: _isSignup ? _signupLockHours : null,
         );
+
         if (mounted) context.go('/event/${event.id}');
       }
     } catch (e) {
@@ -585,40 +587,30 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     ),
                   ],
 
-                  // ── Signup-only fields ───────────────────────────────────
+                  // ── Signup-only hint ─────────────────────────────────────
                   if (_isSignup) ...[
                     const SizedBox(height: 16),
-
-                    // Waitlist toggle
-                    SwitchListTile(
-                      value: _waitlistEnabled,
-                      onChanged: (v) => setState(() => _waitlistEnabled = v),
-                      title: Text(l10n.signupWaitlistEnabled),
-                      subtitle: Text(l10n.signupWaitlistDescription,
-                          style: const TextStyle(fontSize: 12)),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Lock hours
-                    TextFormField(
-                      initialValue: _signupLockHours?.toString() ?? '',
-                      decoration: InputDecoration(
-                        labelText: 'Lock signups (hours before start)',
-                        hintText: 'e.g. 2 — no changes 2 h before start',
-                        prefixIcon: const Icon(Icons.lock_clock_outlined),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF2E7D32).withValues(alpha: 0.25)),
                       ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) => setState(() {
-                        _signupLockHours =
-                            v.trim().isEmpty ? null : int.tryParse(v.trim());
-                      }),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return null;
-                        final n = int.tryParse(v.trim());
-                        if (n == null || n < 1) return l10n.required;
-                        return null;
-                      },
+                      child: Row(
+                        children: [
+                          const Text('📅', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Capacity, waitlist, lock time, and participants are configured per session — set them when you add sessions after creating the event.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600], height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
 
@@ -637,7 +629,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: AppButton(
-                  label: _isEdit ? l10n.saveChanges : l10n.saveEvent,
+                  label: _isEdit ? l10n.saveChanges : 'Create event',
                   onPressed: _save,
                   loading: _loading,
                 ),

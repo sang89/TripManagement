@@ -150,6 +150,8 @@
   "memberAccountFound": "Cuenta encontrada",
   "memberNoAccountFound": "No se encontró ninguna cuenta",
   "memberLinkedAccount": "Cuenta vinculada",
+  "selectFriendOptional": "Seleccionar un amigo (opcional)",
+  "searchFriends": "Buscar amigos…",
   "invitePending": "Pendiente",
   "inviteAccepted": "Aceptado",
   "inviteDeclined": "Rechazado",

@@ -6,6 +6,7 @@ import 'package:shared_ui/shared_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/invite_codec.dart';
 
 /// Public signup screen for a specific session (scanned via session QR code).
 /// Accessible without authentication.
@@ -23,6 +24,9 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+
+  // Decode once — accepts both encoded (22-char) and raw UUID forms.
+  late final String _uuid = InviteCodec.decode(widget.inviteCode);
 
   bool _loading = true;
   bool _submitting = false;
@@ -50,7 +54,7 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
     try {
       final data = await Supabase.instance.client.rpc(
         'get_session_by_invite_code',
-        params: {'p_invite_code': widget.inviteCode},
+        params: {'p_invite_code': _uuid},
       ) as List<dynamic>;
 
       if (data.isEmpty) {
@@ -98,7 +102,7 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
       final rows = await Supabase.instance.client.rpc(
         'rsvp_session',
         params: {
-          'p_invite_code': widget.inviteCode,
+          'p_invite_code': _uuid,
           'p_display_name': _nameCtrl.text.trim(),
           'p_email': _emailCtrl.text.trim().isEmpty
               ? null

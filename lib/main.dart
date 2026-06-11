@@ -29,6 +29,7 @@ import 'screens/events/event_detail_screen.dart';
 import 'screens/events/event_form_screen.dart';
 import 'screens/events/event_invite_screen.dart';
 import 'screens/events/session_invite_screen.dart';
+import 'screens/events/session_scan_screen.dart';
 import 'screens/events/event_type_list_screen.dart';
 import 'screens/events/events_screen.dart';
 import 'screens/profile/profile_screen.dart';
@@ -168,7 +169,8 @@ class _TripManagementAppState extends State<TripManagementApp> {
         final onAuth = loc == '/login' || loc == '/register';
         final onBiometricLock = loc == '/biometric-lock';
         final isPublic = loc.startsWith('/event/invite/') ||
-            loc.startsWith('/session/invite/');
+            loc.startsWith('/session/invite/') ||
+            loc == '/scan';
 
         if (!loggedIn && !onBiometricLock && !onAuth && !isPublic) return '/login';
         if (!loggedIn && onBiometricLock) return '/login';
@@ -211,6 +213,10 @@ class _TripManagementAppState extends State<TripManagementApp> {
           path: '/session/invite/:code',
           builder: (_, state) =>
               SessionInviteScreen(inviteCode: state.pathParameters['code']!),
+        ),
+        GoRoute(
+          path: '/scan',
+          builder: (_, _) => const SessionScanScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (_, _, shell) => ShellScaffold(navigationShell: shell),
