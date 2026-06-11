@@ -493,6 +493,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get memberLinkedAccount => 'حساب مرتبط';
 
   @override
+  String get selectFriendOptional => 'اختر صديقاً (اختياري)';
+
+  @override
+  String get searchFriends => 'البحث عن الأصدقاء…';
+
+  @override
   String get invitePending => 'معلق';
 
   @override

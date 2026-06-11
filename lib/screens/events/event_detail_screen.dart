@@ -32,7 +32,6 @@ import '../../models/event_poll.dart';
 import '../../models/event_guest.dart';
 import '../../models/event_session.dart';
 import '../../models/event_message.dart';
-import 'session_scan_screen.dart';
 import '../../models/event_photo.dart';
 import '../../models/event_prediction.dart';
 import '../../models/event_stop.dart';
@@ -49,6 +48,7 @@ import '../../services/connectivity_service.dart';
 import '../../services/trip_places_service.dart';
 import '../../services/user_lookup_service.dart';
 import '../../utils/avatar_utils.dart';
+import '../../utils/invite_codec.dart';
 import '../../widgets/event_type_banner.dart';
 import '../../widgets/add_member_sheet.dart';
 import '../../widgets/ai_itinerary_sheet.dart';
@@ -288,7 +288,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
 
   Future<void> _shareEvent(BuildContext context, Event event) async {
     final l10n = AppLocalizations.of(context);
-    final url = 'https://tripmanagement.app/event/invite/${event.inviteCode}';
+    final url = 'https://tripmanagement.app/event/invite/${InviteCodec.encode(event.inviteCode)}';
     await Clipboard.setData(ClipboardData(text: url));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -895,7 +895,7 @@ class _SignupGuideTab extends StatelessWidget {
             _GuideStep(
               emoji: '🎟️',
               title: 'Claim your spot',
-              body: 'Scan the session QR code (tap the Invite tab, then "Scan a QR code") or paste the invite code someone shared with you.',
+              body: 'Scan the session QR code using the Scan tab in the app, or paste the invite code someone shared with you.',
               color: const Color(0xFFDB2777),
             ),
             _GuideStep(
@@ -9116,31 +9116,38 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
         : widget.event.startAt.add(const Duration(days: 7));
 
     if (!context.mounted) return;
-    final start = await showDatePicker(
+    final result = await showModalBottomSheet<_NewSessionConfig>(
       context: context,
-      initialDate: suggestion,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _AddSessionSheet(suggestion: suggestion),
     );
-    if (start == null || !context.mounted) return;
-
-    final startTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(suggestion),
-    );
-    if (startTime == null || !context.mounted) return;
-
-    final startAt = DateTime(
-        start.year, start.month, start.day, startTime.hour, startTime.minute);
-    DateTime? endAt;
-    if (widget.event.endAt != null) {
-      final dur = widget.event.endAt!.difference(widget.event.startAt);
-      endAt = startAt.add(dur);
-    }
+    if (result == null || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final session = await provider.addSession(widget.event.id, startAt, endAt);
+      final session = await provider.addSession(
+        widget.event.id,
+        result.startAt,
+        null,
+        capacity: result.capacity,
+        waitlistEnabled: result.waitlistEnabled,
+        signupLockHours: result.signupLockHours,
+      );
+      // Bulk-add pre-registered participants to this session.
+      if (result.preAddNames.isNotEmpty) {
+        for (var i = 0; i < result.preAddNames.length; i++) {
+          await provider.db.from('event_session_roster').insert({
+            'session_id': session.id,
+            'display_name': result.preAddNames[i],
+            'status': 'going',
+            'signup_order': i + 1,
+            'signed_up_at': DateTime.now().toUtc().toIso8601String(),
+          });
+        }
+        await provider.refreshSessionRoster(session.id);
+      }
       if (mounted) setState(() => _expandedSessionId = session.id);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -9152,6 +9159,7 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     final provider = context.watch<EventProvider>();
     final upcoming = provider.upcomingSessionsFor(widget.event.id);
     final past = provider.pastSessionsFor(widget.event.id);
+    final hasMoreUpcoming = provider.hasMoreUpcomingFor(widget.event.id);
     final hasMorePast = provider.hasMorePastFor(widget.event.id);
 
     if (_loadingUpcoming) {
@@ -9172,7 +9180,11 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '${upcoming.length} upcoming session${upcoming.length == 1 ? '' : 's'}',
+                () {
+                  final n = upcoming.length;
+                  final label = hasMoreUpcoming ? '$n+' : '$n';
+                  return '$label upcoming session${n == 1 && !hasMoreUpcoming ? '' : 's'}';
+                }(),
                 style:
                     const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
@@ -9418,10 +9430,10 @@ class _SessionCardState extends State<_SessionCard>
     final l10n = AppLocalizations.of(context);
     final fmt = DateFormat('EEE, MMM d · h:mm a');
     final provider = context.watch<EventProvider>();
-    final cap = widget.event.capacity;
+    final cap = widget.session.capacity;
     final going = widget.session.goingCount;
     final waitlisted = widget.session.waitlistCount;
-    final isLocked = widget.session.isLockedFor(widget.event.signupLockHours);
+    final isLocked = widget.session.isLocked;
     final hasEnded = widget.session.hasEnded;
     final fillFraction =
         cap != null && cap > 0 ? (going / cap).clamp(0.0, 1.0) : 0.0;
@@ -9463,60 +9475,7 @@ class _SessionCardState extends State<_SessionCard>
                 children: [
                   Row(
                     children: [
-                      // Session badge — jewel teal, distinct from app's primary green
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF003D33), Color(0xFF00695C), Color(0xFF00897B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            // Depth shadow
-                            BoxShadow(
-                              color: const Color(0xFF00695C).withValues(alpha: 0.50),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                            // Top-edge highlight — gives raised look
-                            BoxShadow(
-                              color: const Color(0xFF4DB6AC).withValues(alpha: 0.30),
-                              blurRadius: 1,
-                              offset: const Offset(0, -1),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: const Color(0xFF4DB6AC).withValues(alpha: 0.25),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'SESSION',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.60),
-                                fontSize: 7,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            Text(
-                              '${widget.session.sessionNumber}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                height: 1.05,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _SessionEmojiBadge(session: widget.session),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -9545,6 +9504,42 @@ class _SessionCardState extends State<_SessionCard>
                             _StatusChip(label: 'Locked', color: Colors.orange),
                           if (hasEnded)
                             _StatusChip(label: 'Ended', color: Colors.grey),
+                          if (!hasEnded && !isLocked)
+                            if (widget.isOrganizer) ...[
+                              // Organizer chips: open spots + waitlist demand
+                              if (cap != null && going < cap)
+                                _StatusChip(
+                                  label: '${cap - going} open',
+                                  color: const Color(0xFF2E7D32),
+                                )
+                              else if (cap != null)
+                                _StatusChip(
+                                  label: 'Full',
+                                  color: AppTheme.danger,
+                                ),
+                              if (waitlisted > 0)
+                                _StatusChip(
+                                  label: '$waitlisted waiting',
+                                  color: Colors.orange,
+                                ),
+                            ] else ...[
+                              // Member chip: personal status
+                              Builder(builder: (ctx) {
+                                final my = ctx.watch<EventProvider>()
+                                    .myStatusFor(widget.session.id);
+                                if (my == null) return const SizedBox.shrink();
+                                if (my.status == 'going') {
+                                  return _StatusChip(
+                                    label: '✓ Going',
+                                    color: const Color(0xFF2E7D32),
+                                  );
+                                }
+                                return _StatusChip(
+                                  label: '⏳ #${my.order} wait',
+                                  color: Colors.orange,
+                                );
+                              }),
+                            ],
                           const SizedBox(width: 4),
                           Icon(
                             widget.isExpanded
@@ -9622,7 +9617,7 @@ class _SessionCardState extends State<_SessionCard>
                                   isOrganizer: true,
                                   showDragHandle: true,
                                   showAttendance: hasEnded,
-                                  onDemote: widget.event.waitlistEnabled
+                                  onDemote: widget.session.waitlistEnabled
                                       ? () async {
                                           try {
                                             await context
@@ -9704,7 +9699,7 @@ class _SessionCardState extends State<_SessionCard>
                         ],
 
                         // ── Waitlist ──────────────────────────────────────
-                        if (widget.event.waitlistEnabled) ...[
+                        if (widget.session.waitlistEnabled) ...[
                           const SizedBox(height: 12),
                           _WaitlistDivider(count: waitlist.length),
                           const SizedBox(height: 8),
@@ -9789,24 +9784,25 @@ class _SessionCardState extends State<_SessionCard>
                         ],
 
                         // ── Current user CTA ──────────────────────────────
+                        if (!hasEnded) ...[
                         const SizedBox(height: 16),
-                        if (myEntry == null && !widget.isOrganizer) ...[
+                        if (myEntry == null) ...[
                           if (isLocked)
                             _LockedBanner(message: l10n.signupLocked)
-                          else if (widget.session.isFullFor(cap) &&
-                              !widget.event.waitlistEnabled)
+                          else if (widget.session.isFull &&
+                              !widget.session.waitlistEnabled)
                             _LockedBanner(
                                 message: l10n.signupEventFull,
                                 color: AppTheme.danger)
                           else
                             _SignupCTAButton(
-                              label: widget.session.isFullFor(cap)
+                              label: widget.session.isFull
                                   ? '⏳  ${l10n.signupJoinWaitlist}'
                                   : '🎟️  ${l10n.signupClaimSpot}',
-                              isWaitlist: widget.session.isFullFor(cap),
+                              isWaitlist: widget.session.isFull,
                               onPressed: () => _signupForSession(context, l10n),
                             ),
-                        ] else if (myEntry != null && !widget.isOrganizer) ...[
+                        ] else ...[
                           if (!isLocked)
                             _CancelSpotButton(
                               label: l10n.signupCancelSpot,
@@ -9817,6 +9813,7 @@ class _SessionCardState extends State<_SessionCard>
                           else
                             _LockedBanner(message: l10n.signupLockedMessage),
                         ],
+                        ], // end if (!hasEnded)
                       ],
                     ),
             ),
@@ -10661,6 +10658,102 @@ class _WaitlistDivider extends StatelessWidget {
       );
 }
 
+// ── Session emoji badge ───────────────────────────────────────────────────────
+
+class _SessionEmojiBadge extends StatelessWidget {
+  final EventSession session;
+  const _SessionEmojiBadge({required this.session});
+
+  // Fun emoji pool — picked deterministically by session id hash so the same
+  // session always shows the same one across devices and reloads.
+  static const _emojis = [
+    '🦁', '🐼', '🦊', '🐸', '🦄', '🐙', '🦋', '🐬',
+    '🦀', '🦖', '🐳', '🦩', '🦚', '🦜', '🦝', '🦥',
+    '🚀', '🎸', '🎯', '🎲', '🎪', '🎭', '🎨', '🎺',
+    '🏄', '🤸', '🧗', '🏋️', '🤺', '🥊', '🏇', '🧜',
+    '🍕', '🍜', '🧁', '🍩', '🌮', '🍣', '🧇', '🥐',
+    '🌈', '⚡', '🔥', '💫', '🌊', '🍀', '🌸', '🎋',
+    '🤖', '👾', '🎃', '🧸', '💎', '🔮', '🪄', '🎁',
+  ];
+
+  // Background colour pairs [start, end] matched to the emoji vibe
+  static const _gradients = [
+    [Color(0xFFFF6B6B), Color(0xFFFF8E53)], // warm red-orange
+    [Color(0xFF4ECDC4), Color(0xFF44A08D)], // teal
+    [Color(0xFFA18CD1), Color(0xFFFBC2EB)], // purple-pink
+    [Color(0xFFFFD93D), Color(0xFFFF6B6B)], // yellow-red
+    [Color(0xFF6BCB77), Color(0xFF4D96FF)], // green-blue
+    [Color(0xFFFF9A9E), Color(0xFFFECFEF)], // pink
+    [Color(0xFF43E97B), Color(0xFF38F9D7)], // mint
+    [Color(0xFFFA709A), Color(0xFFFEE140)], // pink-yellow
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final hash = session.id.hashCode.abs();
+    final emoji = _emojis[hash % _emojis.length];
+    final grad = _gradients[(hash ~/ _emojis.length) % _gradients.length];
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: grad,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: grad[0].withValues(alpha: 0.45),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+          ),
+        ),
+        // Session number corner badge
+        Positioned(
+          right: -4,
+          bottom: -4,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '${session.sessionNumber}',
+                style: TextStyle(
+                  fontSize: session.sessionNumber > 9 ? 9 : 11,
+                  fontWeight: FontWeight.w900,
+                  color: grad[0],
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Session roster row ────────────────────────────────────────────────────────
 
 class _SessionRosterRow extends StatelessWidget {
@@ -10795,14 +10888,16 @@ class _SessionRosterRow extends StatelessWidget {
                         child: Icon(
                           isConfirmed
                               ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
+                              : onToggleConfirmed != null
+                                  ? Icons.radio_button_unchecked_rounded
+                                  : Icons.radio_button_unchecked_rounded,
                           key: ValueKey(isConfirmed),
                           size: 24,
                           color: isConfirmed
-                              ? const Color(0xFF2E7D32)
+                              ? const Color(0xFF2E7D32)   // confirmed → green
                               : onToggleConfirmed != null
-                                  ? Colors.grey[350]
-                                  : Colors.grey[250],
+                                  ? AppTheme.primary       // yours, unconfirmed → blue (tap me!)
+                                  : Colors.grey[300],      // someone else's → clearly disabled
                         ),
                       ),
                     ),
@@ -10824,7 +10919,7 @@ class _SessionRosterRow extends StatelessWidget {
                           horizontal: 4, vertical: 8),
                       child: Icon(
                         Icons.drag_handle_rounded,
-                        color: Colors.grey[350],
+                        color: Colors.grey[400],
                         size: 22,
                       ),
                     ),
@@ -11043,8 +11138,6 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
             const SizedBox(height: 6),
             Text('Create a session first, then share its QR code.',
                 style: TextStyle(color: Colors.grey[400], fontSize: 13)),
-            const SizedBox(height: 24),
-            _ScanToJoinButton(),
           ],
         ),
       );
@@ -11053,11 +11146,12 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
     final idx = _selectedIdx.clamp(0, sessions.length - 1);
     final session = sessions[idx];
     // App-only deep link — scanned with the in-app QR scanner on the same tab.
-    final inviteUrl = '$kAppBaseUrl/session/invite/${session.inviteCode}';
+    final encodedCode = InviteCodec.encode(session.inviteCode);
+    final inviteUrl = '$kAppBaseUrl/session/invite/$encodedCode';
     final inviteMessage =
-        'Join "${widget.event.title}" — Session #${session.sessionNumber} on '
-        'TripManagement! 🎟️\nOpen the app → Organize → Invite → Scan a QR code '
-        '→ Enter code, and paste this invite code:\n${session.inviteCode}';
+        '🎟️ You\'re invited to "${widget.event.title}" — '
+        'Session #${session.sessionNumber}\n'
+        'Scan the QR code or enter this code:\n$encodedCode';
     final fmt = DateFormat('EEE, MMM d · h:mm a');
 
     return ListView(
@@ -11222,24 +11316,6 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
         const Divider(),
         const SizedBox(height: 16),
 
-        // ── Scan to join ────────────────────────────────────────────────
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Join a session',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            SizedBox(height: 2),
-            Text('Scan someone else\'s session QR code to claim a spot.',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _ScanToJoinButton(),
-
-        const SizedBox(height: 28),
-        const Divider(),
-        const SizedBox(height: 16),
-
         // ── Manual add ──────────────────────────────────────────────────
         const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -11258,39 +11334,250 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
   }
 }
 
-// ── Scan to join button ───────────────────────────────────────────────────────
+// ── Add session sheet ────────────────────────────────────────────────────────
 
-class _ScanToJoinButton extends StatelessWidget {
+class _NewSessionConfig {
+  final DateTime startAt;
+  final int? capacity;
+  final bool waitlistEnabled;
+  final int? signupLockHours;
+  final List<String> preAddNames;
+
+  const _NewSessionConfig({
+    required this.startAt,
+    this.capacity,
+    this.waitlistEnabled = true,
+    this.signupLockHours,
+    this.preAddNames = const [],
+  });
+}
+
+class _AddSessionSheet extends StatefulWidget {
+  final DateTime suggestion;
+  const _AddSessionSheet({required this.suggestion});
+
   @override
-  Widget build(BuildContext context) => AppTappable(
-        onTap: () => Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(builder: (_) => const SessionScanScreen()),
-        ),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: const Color(0xFF2E7D32).withValues(alpha: 0.55),
-                width: 1.5),
-            color: const Color(0xFF2E7D32).withValues(alpha: 0.06),
+  State<_AddSessionSheet> createState() => _AddSessionSheetState();
+}
+
+class _AddSessionSheetState extends State<_AddSessionSheet> {
+  late DateTime _startAt;
+  final _capacityCtrl = TextEditingController();
+  bool _waitlistEnabled = true;
+  final _lockCtrl = TextEditingController();
+  final List<String> _preAddNames = [];
+  final _preAddCtrl = TextEditingController();
+  bool _preAddHasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAt = widget.suggestion;
+  }
+
+  @override
+  void dispose() {
+    _capacityCtrl.dispose();
+    _lockCtrl.dispose();
+    _preAddCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submitPreAdd() {
+    final name = _preAddCtrl.text.trim();
+    if (name.isNotEmpty && !_preAddNames.contains(name)) {
+      setState(() {
+        _preAddNames.add(name);
+        _preAddHasText = false;
+      });
+      _preAddCtrl.clear();
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _startAt,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+    );
+    if (d == null) return;
+    final t = TimeOfDay.fromDateTime(_startAt);
+    setState(() => _startAt =
+        DateTime(d.year, d.month, d.day, t.hour, t.minute));
+  }
+
+  Future<void> _pickTime() async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_startAt),
+    );
+    if (t == null) return;
+    setState(() => _startAt = DateTime(
+        _startAt.year, _startAt.month, _startAt.day, t.hour, t.minute));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('EEE, MMM d · h:mm a');
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(children: [
+            const Text('📅', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: 8),
+            const Text('New session',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 20),
+
+          // Date/time tile
+          AppTappable(
+            onTap: _pickDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(children: [
+                Icon(Icons.calendar_month_outlined,
+                    color: colorScheme.onSurfaceVariant, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text(fmt.format(_startAt),
+                    style: const TextStyle(fontWeight: FontWeight.w500))),
+                AppTappable(
+                  onTap: _pickTime,
+                  child: Icon(Icons.access_time_rounded,
+                      color: colorScheme.onSurfaceVariant, size: 20),
+                ),
+              ]),
+            ),
           ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.qr_code_scanner_rounded,
-                  size: 20, color: Color(0xFF2E7D32)),
-              SizedBox(width: 8),
-              Text('Scan a QR code',
-                  style: TextStyle(
-                      color: Color(0xFF2E7D32),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700)),
-            ],
+          const SizedBox(height: 16),
+
+          // Capacity + waitlist row
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _capacityCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Max spots',
+                  hintText: 'Unlimited',
+                  prefixIcon: Icon(Icons.people_outline),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Waitlist', style: TextStyle(fontSize: 13)),
+                const SizedBox(width: 4),
+                Switch(
+                  value: _waitlistEnabled,
+                  onChanged: (v) => setState(() => _waitlistEnabled = v),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+          ]),
+          const SizedBox(height: 12),
+
+          // Lock hours
+          TextField(
+            controller: _lockCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Lock signups (hours before start)',
+              hintText: 'None',
+              prefixIcon: Icon(Icons.lock_clock_outlined),
+              isDense: true,
+            ),
+            keyboardType: TextInputType.number,
           ),
-        ),
-      );
+          const SizedBox(height: 16),
+
+          // Pre-add participants
+          Text('Pre-add participants',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          if (_preAddNames.isNotEmpty) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: _preAddNames
+                  .map((name) => Chip(
+                        label: Text(name, style: const TextStyle(fontSize: 13)),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: () =>
+                            setState(() => _preAddNames.remove(name)),
+                        backgroundColor: const Color(0xFF2E7D32)
+                            .withValues(alpha: 0.10),
+                        side: BorderSide(
+                            color: const Color(0xFF2E7D32)
+                                .withValues(alpha: 0.35)),
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
+          TextField(
+            controller: _preAddCtrl,
+            decoration: InputDecoration(
+              hintText: 'Type a name and press ↵',
+              prefixIcon: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Text('🙋', style: TextStyle(fontSize: 18)),
+              ),
+              prefixIconConstraints: const BoxConstraints(minWidth: 0),
+              isDense: true,
+              suffixIcon: _preAddHasText
+                  ? IconButton(
+                      icon: const Text('➕',
+                          style: TextStyle(fontSize: 18)),
+                      tooltip: 'Add',
+                      onPressed: _submitPreAdd,
+                    )
+                  : null,
+            ),
+            textInputAction: TextInputAction.done,
+            onChanged: (v) =>
+                setState(() => _preAddHasText = v.trim().isNotEmpty),
+            onSubmitted: (_) => _submitPreAdd(),
+          ),
+          const SizedBox(height: 20),
+
+          // Create button
+          AppButton(
+            label: 'Add session',
+            onPressed: () {
+              final cap = int.tryParse(_capacityCtrl.text.trim());
+              final lock = int.tryParse(_lockCtrl.text.trim());
+              Navigator.pop(
+                context,
+                _NewSessionConfig(
+                  startAt: _startAt,
+                  capacity: cap,
+                  waitlistEnabled: _waitlistEnabled,
+                  signupLockHours: lock,
+                  preAddNames: List.unmodifiable(_preAddNames),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Add guest manually to a session ──────────────────────────────────────────

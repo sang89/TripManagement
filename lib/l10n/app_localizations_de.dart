@@ -495,6 +495,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get memberLinkedAccount => 'Verknüpftes Konto';
 
   @override
+  String get selectFriendOptional => 'Einen Freund auswählen (optional)';
+
+  @override
+  String get searchFriends => 'Freunde suchen…';
+
+  @override
   String get invitePending => 'Ausstehend';
 
   @override

@@ -150,6 +150,8 @@
   "memberAccountFound": "تم العثور على الحساب",
   "memberNoAccountFound": "لم يتم العثور على حساب",
   "memberLinkedAccount": "حساب مرتبط",
+  "selectFriendOptional": "اختر صديقاً (اختياري)",
+  "searchFriends": "البحث عن الأصدقاء…",
   "invitePending": "معلق",
   "inviteAccepted": "مقبول",
   "inviteDeclined": "مرفوض",

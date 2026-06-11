@@ -495,6 +495,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get memberLinkedAccount => 'Conta vinculada';
 
   @override
+  String get selectFriendOptional => 'Selecionar um amigo (opcional)';
+
+  @override
+  String get searchFriends => 'Pesquisar amigos…';
+
+  @override
   String get invitePending => 'Pendente';
 
   @override

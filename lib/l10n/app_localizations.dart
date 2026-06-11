@@ -1044,6 +1044,18 @@ abstract class AppLocalizations {
   /// **'Linked account'**
   String get memberLinkedAccount;
 
+  /// No description provided for @selectFriendOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a friend (optional)'**
+  String get selectFriendOptional;
+
+  /// No description provided for @searchFriends.
+  ///
+  /// In en, this message translates to:
+  /// **'Search friends…'**
+  String get searchFriends;
+
   /// No description provided for @invitePending.
   ///
   /// In en, this message translates to:

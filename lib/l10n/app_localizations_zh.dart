@@ -490,6 +490,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memberLinkedAccount => '已关联账户';
 
   @override
+  String get selectFriendOptional => '选择朋友（可选）';
+
+  @override
+  String get searchFriends => '搜索朋友…';
+
+  @override
   String get invitePending => '待定';
 
   @override

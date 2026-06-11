@@ -32,6 +32,7 @@ class EventProvider extends ChangeNotifier {
   static const _orderKey = 'events_order_v1';
 
   SupabaseClient get _db => Supabase.instance.client;
+  SupabaseClient get db => _db;
 
   List<Event> _events = [];
   bool _loaded = false;
@@ -867,9 +868,31 @@ class EventProvider extends ChangeNotifier {
             final row = payload.newRecord;
             final eventId = row['event_id'] as String?;
             if (eventId == null) return;
-            // Refetch upcoming/past so the new card appears without a full reload.
             unawaited(fetchUpcomingSessions(eventId));
-            unawaited(fetchPastSessions(eventId));
+            // Only reset past sessions if they haven't been loaded yet.
+            // Resetting would discard pages the user already paginated through.
+            if (!(_pastSessions.containsKey(eventId))) {
+              unawaited(fetchPastSessions(eventId));
+            }
+          },
+        )
+
+        // DELETE: organizer deleted a session on another device.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_sessions',
+          callback: (payload) {
+            final sessionId = payload.oldRecord['id'] as String?;
+            final eventId = payload.oldRecord['event_id'] as String?;
+            if (sessionId == null || eventId == null) return;
+            _upcomingSessions[eventId]
+                ?.removeWhere((s) => s.id == sessionId);
+            _pastSessions[eventId]
+                ?.removeWhere((s) => s.id == sessionId);
+            _sessionRosters.remove(sessionId);
+            _mySessionStatuses.remove(sessionId);
+            notifyListeners();
           },
         )
 
@@ -898,16 +921,43 @@ class EventProvider extends ChangeNotifier {
 
         // ── event_session_roster ────────────────────────────────────────────
         // INSERT: someone signed up (via QR scan or organizer-added).
+        // Patch the cache directly from payload — no DB round-trip needed.
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'event_session_roster',
           callback: (payload) {
-            final sessionId = payload.newRecord['session_id'] as String?;
+            final row = payload.newRecord;
+            final sessionId = row['session_id'] as String?;
             if (sessionId == null) return;
-            // Only refresh if this session's roster is already in our cache.
-            if (!_sessionRosters.containsKey(sessionId)) return;
-            unawaited(refreshSessionRoster(sessionId));
+
+            // Keep _mySessionStatuses in sync even when roster isn't expanded.
+            final uid = _db.auth.currentUser?.id;
+            final rowUserId = row['user_id'] as String?;
+            if (uid != null && rowUserId == uid) {
+              _mySessionStatuses[sessionId] = (
+                status: row['status'] as String? ?? 'going',
+                order: (row['signup_order'] as int?) ?? 0,
+              );
+            }
+
+            // Append to cached roster; fall back to full refetch if parse fails.
+            if (_sessionRosters.containsKey(sessionId)) {
+              try {
+                final entry = EventSessionRosterEntry.fromJson(row);
+                final roster =
+                    List<EventSessionRosterEntry>.from(_sessionRosters[sessionId]!);
+                if (!roster.any((r) => r.id == entry.id)) {
+                  roster.add(entry);
+                  roster.sort((a, b) =>
+                      (a.signupOrder ?? 0).compareTo(b.signupOrder ?? 0));
+                  _sessionRosters[sessionId] = roster;
+                }
+              } catch (_) {
+                unawaited(refreshSessionRoster(sessionId));
+              }
+            }
+            notifyListeners();
           },
         )
 
@@ -922,6 +972,22 @@ class EventProvider extends ChangeNotifier {
             final sessionId = row['session_id'] as String?;
             final rosterId = row['id'] as String?;
             if (sessionId == null || rosterId == null) return;
+
+            // Keep the status chip in sync even when the roster isn't expanded.
+            final uid = _db.auth.currentUser?.id;
+            final rowUserId = row['user_id'] as String?;
+            if (uid != null && rowUserId == uid) {
+              final newStatus = row['status'] as String?;
+              final newOrder = row['signup_order'] as int?;
+              if (newStatus != null) {
+                _mySessionStatuses[sessionId] = (
+                  status: newStatus,
+                  order: newOrder ?? _mySessionStatuses[sessionId]?.order ?? 0,
+                );
+                notifyListeners();
+              }
+            }
+
             if (!_sessionRosters.containsKey(sessionId)) return;
             _patchRosterEntry(
               sessionId,
@@ -947,18 +1013,33 @@ class EventProvider extends ChangeNotifier {
         )
 
         // DELETE: cancelled or removed by organizer.
+        // Always notify — even when the roster isn't expanded the count badge
+        // needs to update, and _mySessionStatuses must clear on other devices.
         .onPostgresChanges(
           event: PostgresChangeEvent.delete,
           schema: 'public',
           table: 'event_session_roster',
           callback: (payload) {
-            final sessionId = payload.oldRecord['session_id'] as String?;
-            final rosterId = payload.oldRecord['id'] as String?;
+            final old = payload.oldRecord;
+            final sessionId = old['session_id'] as String?;
+            final rosterId = old['id'] as String?;
             if (sessionId == null || rosterId == null) return;
+
+            // Clear status badge if the current user's entry was deleted
+            // (handles cancellation from another device).
+            final uid = _db.auth.currentUser?.id;
+            final rowUserId = old['user_id'] as String?;
+            if (uid != null && rowUserId == uid) {
+              _mySessionStatuses.remove(sessionId);
+            }
+
+            // Remove from cached roster if loaded.
             final roster = _sessionRosters[sessionId];
-            if (roster == null) return;
-            _sessionRosters[sessionId] =
-                roster.where((r) => r.id != rosterId).toList();
+            if (roster != null) {
+              _sessionRosters[sessionId] =
+                  roster.where((r) => r.id != rosterId).toList();
+            }
+
             notifyListeners();
           },
         )
@@ -1221,12 +1302,16 @@ class EventProvider extends ChangeNotifier {
   static const _kRosterPageSize = 100;
 
   final Map<String, List<EventSession>> _upcomingSessions = {};
+  final Map<String, bool> _hasMoreUpcoming = {};
   final Map<String, List<EventSession>> _pastSessions = {};
   final Map<String, bool> _hasMorePast = {};
   final Map<String, bool> _loadingPast = {};
 
   final Map<String, List<EventSessionRosterEntry>> _sessionRosters = {};
   final Map<String, bool> _hasMoreRoster = {};
+
+  // sessionId → ('going'|'waitlisted', signup_order) for the current user
+  final Map<String, ({String status, int order})> _mySessionStatuses = {};
 
   // ── Public accessors ────────────────────────────────────────────────────
 
@@ -1236,6 +1321,8 @@ class EventProvider extends ChangeNotifier {
   List<EventSession> pastSessionsFor(String eventId) =>
       _pastSessions[eventId] ?? [];
 
+  bool hasMoreUpcomingFor(String eventId) => _hasMoreUpcoming[eventId] ?? false;
+
   bool hasMorePastFor(String eventId) => _hasMorePast[eventId] ?? false;
 
   List<EventSessionRosterEntry>? rosterFor(String sessionId) =>
@@ -1243,7 +1330,38 @@ class EventProvider extends ChangeNotifier {
 
   bool hasMoreRosterFor(String sessionId) => _hasMoreRoster[sessionId] ?? false;
 
+  /// Returns the current user's status for [sessionId], or null if not signed up.
+  ({String status, int order})? myStatusFor(String sessionId) =>
+      _mySessionStatuses[sessionId];
+
   // ── Session list fetching ───────────────────────────────────────────────
+
+  /// Fetches the current user's session signup statuses for all sessions of
+  /// [eventId] and caches them in [_mySessionStatuses].
+  Future<void> _fetchMySessionStatuses(String eventId) async {
+    final uid = _db.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      final rows = await _db
+          .from('event_session_roster')
+          .select('session_id, status, signup_order')
+          .eq('user_id', uid)
+          .inFilter(
+            'session_id',
+            [
+              ..._upcomingSessions[eventId]?.map((s) => s.id) ?? [],
+              ..._pastSessions[eventId]?.map((s) => s.id) ?? [],
+            ],
+          ) as List<dynamic>;
+      for (final r in rows) {
+        final map = r as Map<String, dynamic>;
+        _mySessionStatuses[map['session_id'] as String] = (
+          status: map['status'] as String,
+          order: (map['signup_order'] as int?) ?? 0,
+        );
+      }
+    } catch (_) {}
+  }
 
   /// Fetches upcoming sessions (start_at >= now). Replaces the cache.
   Future<void> fetchUpcomingSessions(String eventId) async {
@@ -1251,13 +1369,17 @@ class EventProvider extends ChangeNotifier {
     final rows = await _db
         .from('event_sessions')
         .select(
-            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count')
+            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours')
         .eq('event_id', eventId)
         .gte('start_at', now)
         .order('start_at', ascending: true)
-        .limit(_kSessionsPageSize) as List<dynamic>;
-    _upcomingSessions[eventId] =
-        rows.map((r) => EventSession.fromJson(r as Map<String, dynamic>)).toList();
+        .limit(_kSessionsPageSize + 1) as List<dynamic>;
+    _hasMoreUpcoming[eventId] = rows.length > _kSessionsPageSize;
+    _upcomingSessions[eventId] = rows
+        .take(_kSessionsPageSize)
+        .map((r) => EventSession.fromJson(r as Map<String, dynamic>))
+        .toList();
+    await _fetchMySessionStatuses(eventId);
     notifyListeners();
   }
 
@@ -1270,10 +1392,10 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours')
           .eq('event_id', eventId)
           .lt('start_at', now)
-          .order('start_at', ascending: true) // oldest first, session numbers go up
+          .order('start_at', ascending: false) // most recent first
           .limit(_kSessionsPageSize + 1) as List<dynamic>;
       final hasMore = rows.length > _kSessionsPageSize;
       _pastSessions[eventId] = rows
@@ -1287,23 +1409,21 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
-  /// Loads the next page of past sessions (sessions newer than the last loaded, ascending).
+  /// Loads the next page of past sessions (older than the last loaded, descending).
   Future<void> loadMorePastSessions(String eventId) async {
     if (_loadingPast[eventId] == true) return;
     final existing = _pastSessions[eventId] ?? [];
     if (existing.isEmpty || !(_hasMorePast[eventId] ?? false)) return;
     _loadingPast[eventId] = true;
-    final now = DateTime.now().toUtc().toIso8601String();
     try {
       final cursor = existing.last.startAt.toUtc().toIso8601String();
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours')
           .eq('event_id', eventId)
-          .gt('start_at', cursor) // next batch of more recent past sessions
-          .lt('start_at', now)
-          .order('start_at', ascending: true)
+          .lt('start_at', cursor) // next batch of older past sessions
+          .order('start_at', ascending: false)
           .limit(_kSessionsPageSize + 1) as List<dynamic>;
       final hasMore = rows.length > _kSessionsPageSize;
       final page = rows
@@ -1312,6 +1432,7 @@ class EventProvider extends ChangeNotifier {
           .toList();
       _pastSessions[eventId] = [...existing, ...page];
       _hasMorePast[eventId] = hasMore;
+      await _fetchMySessionStatuses(eventId);
     } finally {
       _loadingPast[eventId] = false;
       notifyListeners();
@@ -1336,11 +1457,26 @@ class EventProvider extends ChangeNotifier {
         .order('signup_order', ascending: true, nullsFirst: false)
         .limit(_kRosterPageSize + 1) as List<dynamic>;
     final hasMore = rows.length > _kRosterPageSize;
-    _sessionRosters[sessionId] = rows
+    final entries = rows
         .take(_kRosterPageSize)
         .map((r) => EventSessionRosterEntry.fromJson(r as Map<String, dynamic>))
         .toList();
+    _sessionRosters[sessionId] = entries;
     _hasMoreRoster[sessionId] = hasMore;
+
+    // Keep mySessionStatuses in sync — find the current user's entry if any.
+    final uid = _db.auth.currentUser?.id;
+    if (uid != null) {
+      final mine = entries.where((e) => e.userId == uid).firstOrNull;
+      if (mine != null) {
+        _mySessionStatuses[sessionId] = (
+          status: mine.status,
+          order: mine.signupOrder ?? 0,
+        );
+      } else {
+        _mySessionStatuses.remove(sessionId);
+      }
+    }
     notifyListeners();
   }
 
@@ -1419,11 +1555,20 @@ class EventProvider extends ChangeNotifier {
   /// Organizer creates a new session. Inserted into the upcoming cache if its
   /// start_at is in the future, otherwise past cache.
   Future<EventSession> addSession(
-      String eventId, DateTime startAt, DateTime? endAt) async {
+    String eventId,
+    DateTime startAt,
+    DateTime? endAt, {
+    int? capacity,
+    bool waitlistEnabled = true,
+    int? signupLockHours,
+  }) async {
     final rows = await _db.rpc('add_event_session', params: {
       'p_event_id': eventId,
       'p_start_at': startAt.toUtc().toIso8601String(),
       'p_end_at': endAt?.toUtc().toIso8601String(),
+      'p_capacity': capacity,
+      'p_waitlist_enabled': waitlistEnabled,
+      'p_signup_lock_hours': signupLockHours,
     }) as List<dynamic>;
     if (rows.isEmpty) throw Exception('Failed to create session');
     final session = EventSession.fromJson(rows.first as Map<String, dynamic>);
@@ -1451,8 +1596,9 @@ class EventProvider extends ChangeNotifier {
     if (roster != null) {
       _sessionRosters[sessionId] =
           roster.where((r) => r.id != rosterId).toList();
-      notifyListeners();
     }
+    _mySessionStatuses.remove(sessionId);
+    notifyListeners();
     unawaited(_refreshSessionCounts(sessionId, eventId));
   }
 
@@ -1574,13 +1720,37 @@ class EventProvider extends ChangeNotifier {
 
     if (_isOnline) {
       if (userId != null) {
+        // Reinvite path: UPDATE existing left/declined row first, then INSERT.
+        // Avoids upsert (which mutates the PK and breaks the event_expense_splits FK).
         try {
-          final data = await _db
+          final reinviteUpdate = <String, dynamic>{
+            'display_name': displayName,
+            'email': email,
+            'phone': phone,
+            'status': 'pending',
+            'invited_by': invitedBy,
+            'rsvp_at': now,
+          };
+          final updated = await _db
               .from('event_guests')
-              .upsert(payload, onConflict: 'event_id,user_id')
+              .update(reinviteUpdate)
+              .eq('event_id', eventId)
+              .eq('user_id', userId)
+              .inFilter('status', ['left', 'declined'])
               .select()
-              .single();
-          guest = EventGuest.fromJson(data);
+              .maybeSingle();
+
+          if (updated != null) {
+            guest = EventGuest.fromJson(updated);
+          } else {
+            // No existing left/declined row — fresh invite.
+            final data = await _db
+                .from('event_guests')
+                .insert(payload)
+                .select()
+                .single();
+            guest = EventGuest.fromJson(data);
+          }
         } on PostgrestException catch (e) {
           if (e.message.contains('blocked_reinvite') ||
               (e.details ?? '').toString().contains('blocked_reinvite')) {

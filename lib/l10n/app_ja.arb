@@ -150,6 +150,8 @@
   "memberAccountFound": "アカウントが見つかりました",
   "memberNoAccountFound": "アカウントが見つかりません",
   "memberLinkedAccount": "リンク済みアカウント",
+  "selectFriendOptional": "友達を選ぶ（任意）",
+  "searchFriends": "友達を検索…",
   "invitePending": "保留中",
   "inviteAccepted": "承諾済み",
   "inviteDeclined": "辞退済み",

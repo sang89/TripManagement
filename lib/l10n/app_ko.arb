@@ -150,6 +150,8 @@
   "memberAccountFound": "계정을 찾았습니다",
   "memberNoAccountFound": "계정을 찾을 수 없습니다",
   "memberLinkedAccount": "연결된 계정",
+  "selectFriendOptional": "친구 선택 (선택사항)",
+  "searchFriends": "친구 검색…",
   "invitePending": "대기 중",
   "inviteAccepted": "수락됨",
   "inviteDeclined": "거절됨",

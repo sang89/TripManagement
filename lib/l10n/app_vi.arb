@@ -150,6 +150,8 @@
   "memberAccountFound": "Đã tìm thấy tài khoản",
   "memberNoAccountFound": "Không tìm thấy tài khoản",
   "memberLinkedAccount": "Tài khoản đã liên kết",
+  "selectFriendOptional": "Chọn bạn bè (tùy chọn)",
+  "searchFriends": "Tìm kiếm bạn bè…",
   "invitePending": "Đang chờ",
   "inviteAccepted": "Đã chấp nhận",
   "inviteDeclined": "Đã từ chối",

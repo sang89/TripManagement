@@ -5,6 +5,7 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/event_provider.dart';
+import '../events/session_scan_screen.dart';
 
 class ShellScaffold extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -35,45 +36,47 @@ class ShellScaffold extends StatelessWidget {
           top: false,
           child: Row(
             children: [
-              _NavItem(
-                icon: Consumer<EventProvider>(
-                  builder: (_, events, _) => Badge(
-                    isLabelVisible: events.pendingInviteCount > 0,
-                    label: Text('${events.pendingInviteCount}'),
-                    child: Icon(
-                      current == 0 ? Icons.event : Icons.event_outlined,
-                      size: 28,
-                      color: current == 0 ? AppTheme.primary : Colors.grey,
-                    ),
-                  ),
+              // Events
+              Consumer<EventProvider>(
+                builder: (_, events, _) => _PillNavItem(
+                  iconSelected: Icons.event_rounded,
+                  iconUnselected: Icons.event_outlined,
+                  label: l10n.navEvents,
+                  gradient: const [Color(0xFF5B21B6), Color(0xFF8B5CF6)],
+                  selected: current == 0,
+                  badge: events.pendingInviteCount,
+                  onTap: () => go(0),
                 ),
-                label: l10n.navEvents,
-                selected: current == 0,
-                onTap: () => go(0),
               ),
-              _NavItem(
-                icon: Consumer<FriendsProvider>(
-                  builder: (_, friends, _) => Badge(
-                    isLabelVisible: friends.incomingRequests.isNotEmpty,
-                    label: Text('${friends.incomingRequests.length}'),
-                    child: Icon(
-                      current == 1 ? Icons.people : Icons.people_outline,
-                      size: 28,
-                      color: current == 1 ? AppTheme.primary : Colors.grey,
-                    ),
-                  ),
+              // Join — action button, not a nav tab
+              _PillNavItem(
+                iconSelected: Icons.qr_code_scanner_rounded,
+                iconUnselected: Icons.qr_code_scanner_rounded,
+                label: 'Join',
+                gradient: const [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                selected: false,
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => const SessionScanScreen()),
                 ),
-                label: l10n.navFriends,
-                selected: current == 1,
-                onTap: () => go(1),
               ),
-              _NavItem(
-                icon: Icon(
-                  current == 2 ? Icons.person : Icons.person_outline,
-                  size: 28,
-                  color: current == 2 ? AppTheme.primary : Colors.grey,
+              // Friends
+              Consumer<FriendsProvider>(
+                builder: (_, friends, _) => _PillNavItem(
+                  iconSelected: Icons.people_rounded,
+                  iconUnselected: Icons.people_outline,
+                  label: l10n.navFriends,
+                  gradient: const [Color(0xFFEA580C), Color(0xFFFB923C)],
+                  selected: current == 1,
+                  badge: friends.incomingRequests.length,
+                  onTap: () => go(1),
                 ),
+              ),
+              // Profile
+              _PillNavItem(
+                iconSelected: Icons.person_rounded,
+                iconUnselected: Icons.person_outline,
                 label: l10n.navProfile,
+                gradient: const [Color(0xFF0D9488), Color(0xFF34D399)],
                 selected: current == 2,
                 onTap: () => go(2),
               ),
@@ -85,37 +88,82 @@ class ShellScaffold extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  final Widget icon;
+class _PillNavItem extends StatelessWidget {
+  final IconData iconSelected;
+  final IconData iconUnselected;
   final String label;
+  final List<Color> gradient;
   final bool selected;
+  final int badge;
   final VoidCallback onTap;
 
-  const _NavItem({
-    required this.icon,
+  const _PillNavItem({
+    required this.iconSelected,
+    required this.iconUnselected,
     required this.label,
+    required this.gradient,
     required this.selected,
     required this.onTap,
+    this.badge = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showGradient = selected;
+    final pillDecoration = showGradient
+        ? BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.last.withValues(alpha: 0.35),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          )
+        : BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          );
+
+    final iconWidget = Icon(
+      selected ? iconSelected : iconUnselected,
+      size: 20,
+      color: showGradient ? Colors.white : Colors.grey.shade400,
+    );
+
     return Expanded(
       child: AppTappable(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              icon,
-              const SizedBox(height: 5),
+              Badge(
+                isLabelVisible: badge > 0,
+                label: Text('$badge'),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 44,
+                  height: 34,
+                  decoration: pillDecoration,
+                  alignment: Alignment.center,
+                  child: iconWidget,
+                ),
+              ),
+              const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: selected ? AppTheme.primary : Colors.grey,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 11,
+                  color: selected ? gradient.first : Colors.grey.shade400,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
             ],

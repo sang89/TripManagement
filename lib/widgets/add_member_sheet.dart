@@ -60,6 +60,9 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
   int _lookupGeneration = 0;
   bool _loading = false;
 
+  // Selected friend (from the picker)
+  Friendship? _selectedFriend;
+
   final _lookupService = UserLookupService();
 
   @override
@@ -139,15 +142,16 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
     });
   }
 
-  void _prefillFriend(Friendship f) {
+  void _selectFriend(Friendship f) {
     final myUserId = context.read<AuthProvider>().userId ?? '';
     final otherId = f.otherUserId(myUserId);
     final name = f.otherDisplayName ?? '';
-    if (name.isNotEmpty && _nameCtrl.text.isEmpty) {
+    if (name.isNotEmpty && (_nameCtrl.text.isEmpty || !_nameTouched)) {
       _nameCtrl.text = name;
       _nameTouched = true;
     }
     setState(() {
+      _selectedFriend = f;
       _lookupState = _LookupFound(LinkedUserInfo(
         userId: otherId,
         fullName: name,
@@ -156,6 +160,30 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
         avatarUrl: '',
       ));
     });
+  }
+
+  void _clearFriend() {
+    setState(() {
+      _selectedFriend = null;
+      _lookupState = _LookupIdle();
+      _nameCtrl.clear();
+      _nameTouched = false;
+    });
+  }
+
+  Future<void> _openFriendPicker(List<Friendship> friends) async {
+    final picked = await showModalBottomSheet<Friendship>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _FriendPickerSheet(
+        friends: friends,
+        selectedId: _selectedFriend?.id,
+      ),
+    );
+    if (picked != null && mounted) _selectFriend(picked);
   }
 
   Future<void> _submit() async {
@@ -228,62 +256,31 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
             ),
           ),
           const Divider(height: 1),
-          Consumer<FriendsProvider>(
-            builder: (context, friends, _) {
-              final accepted = friends.accepted;
-              if (accepted.isEmpty) return const SizedBox.shrink();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Text(
-                      l10n.friendsTabFriends,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[600]),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: accepted.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final f = accepted[i];
-                        return ActionChip(
-                          avatar: CircleAvatar(
-                            radius: 12,
-                            backgroundColor:
-                                avatarColors(f.otherDisplayName ?? '').first,
-                            child: Text(
-                              avatarInitials(f.otherDisplayName ?? ''),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          label: Text(f.otherDisplayName ?? ''),
-                          onPressed: () => _prefillFriend(f),
-                        );
-                      },
-                    ),
-                  ),
-                  const Divider(height: 16),
-                ],
-              );
-            },
-          ),
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // ── Friend picker field ──────────────────────────────────
+                  Consumer<FriendsProvider>(
+                    builder: (context, friends, _) {
+                      final accepted = friends.accepted;
+                      if (accepted.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _FriendPickerField(
+                            selected: _selectedFriend,
+                            label: l10n.selectFriendOptional,
+                            onTap: () => _openFriendPicker(accepted),
+                            onClear: _clearFriend,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      );
+                    },
+                  ),
                   TextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
@@ -320,6 +317,245 @@ class _AddMemberSheetState extends State<AddMemberSheet> {
               label: l10n.addMember,
               onPressed: _submit,
               loading: _loading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Friend picker field ───────────────────────────────────────────────────────
+
+class _FriendPickerField extends StatelessWidget {
+  final Friendship? selected;
+  final String label;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+
+  const _FriendPickerField({
+    required this.selected,
+    required this.label,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = selected != null
+        ? avatarColors(selected!.otherDisplayName ?? '')
+        : <Color>[Colors.grey.shade300, Colors.grey.shade400];
+
+    return AppTappable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: selected != null
+                ? AppTheme.accent.withValues(alpha: 0.5)
+                : theme.colorScheme.outline.withValues(alpha: 0.4),
+            width: selected != null ? 1.5 : 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: selected != null
+              ? AppTheme.accent.withValues(alpha: 0.05)
+              : null,
+        ),
+        child: Row(
+          children: [
+            if (selected != null) ...[
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: colors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  avatarInitials(selected!.otherDisplayName ?? ''),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  selected!.otherDisplayName ?? '',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 15),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                onPressed: onClear,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                color: Colors.grey[500],
+              ),
+            ] else ...[
+              Icon(Icons.people_outline_rounded,
+                  size: 20, color: Colors.grey[500]),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                ),
+              ),
+              Icon(Icons.expand_more_rounded,
+                  size: 20, color: Colors.grey[400]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Friend picker sheet ───────────────────────────────────────────────────────
+
+class _FriendPickerSheet extends StatefulWidget {
+  final List<Friendship> friends;
+  final String? selectedId;
+
+  const _FriendPickerSheet({required this.friends, this.selectedId});
+
+  @override
+  State<_FriendPickerSheet> createState() => _FriendPickerSheetState();
+}
+
+class _FriendPickerSheetState extends State<_FriendPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final filtered = _query.isEmpty
+        ? widget.friends
+        : widget.friends.where((f) {
+            final name = (f.otherDisplayName ?? '').toLowerCase();
+            return name.contains(_query);
+          }).toList();
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+              l10n.friendsTabFriends,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: l10n.searchFriends,
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (v) => setState(() => _query = v.toLowerCase()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 16),
+              itemCount: filtered.isEmpty ? 1 : filtered.length,
+              itemBuilder: (_, i) {
+                if (filtered.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 24),
+                    child: Center(
+                      child: Text(
+                        l10n.friendsNoResults,
+                        style:
+                            TextStyle(color: Colors.grey[400], fontSize: 14),
+                      ),
+                    ),
+                  );
+                }
+                final f = filtered[i];
+                final name = f.otherDisplayName ?? '';
+                final isSelected = f.id == widget.selectedId;
+                return ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: avatarColors(name),
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      avatarInitials(name),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  title: Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.w500)),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle_rounded,
+                          color: AppTheme.accent)
+                      : null,
+                  onTap: () => Navigator.pop(context, f),
+                );
+              },
             ),
           ),
         ],

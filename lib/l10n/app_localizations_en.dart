@@ -494,6 +494,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memberLinkedAccount => 'Linked account';
 
   @override
+  String get selectFriendOptional => 'Select a friend (optional)';
+
+  @override
+  String get searchFriends => 'Search friends…';
+
+  @override
   String get invitePending => 'Pending';
 
   @override
