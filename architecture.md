@@ -74,7 +74,7 @@ lib/
 ├── models/                 # Pure data classes — toJson/fromJson, no Flutter deps
 │   ├── event.dart          # Event; EventType enum (trip/birthday/wedding/social/quickBites/signup); embeds List<EventGuest> + List<EventStop>; trip-specific fields (startLocation, startLat/Lng); quick-bites fields (budgetPerHead, cuisineTags, rsvpDeadline, vibe); birthday fields (honoreeDisplayName, birthYear, predictionsRevealedAt, wishesRevealedAt); signup fields (waitlistEnabled, signupLockHours); getters isBirthday, isSignup, isSignupLocked, honoreeAge
 │   ├── event_guest.dart    # EventGuest — id, eventId, userId (nullable), displayName, status (going/maybe/declined/pending/accepted/left), invitedBy, blockReinvite, role, rsvpNote (nullable); isWaitlisted getter
-│   ├── event_session.dart  # EventSession (id, eventId, sessionNumber, startAt, endAt, inviteCode, roster List<EventSessionRosterEntry>); EventSessionRosterEntry (id, sessionId, userId, displayName, status going/waitlisted, signupOrder, attended, signupConfirmed, signedUpAt); helpers goingCount, waitlistCount, isFullFor, isLockedFor, hasEnded
+│   ├── event_session.dart  # EventSession (id, eventId, sessionNumber, startAt, endAt, inviteCode, createdAt, goingCount, waitlistCount, capacity, waitlistEnabled, signupLockHours, isPublic, requiresApproval); computed: isFull, isLocked, hasEnded, isUpcoming; copyWithCounts(). EventSessionRosterEntry (id, sessionId, userId nullable, displayName, email, phone, status going/waitlisted/pending_review, signupOrder, attended nullable, signupConfirmed, signedUpAt); computed: isGoing, isWaitlisted; copyWith(status, attended, signupConfirmed, signupOrder)
 │   ├── event_stop.dart     # EventStop — id, eventId, title, address, lat/lng, arriveAt, departAt, notes, sortOrder
 │   ├── event_message.dart  # EventMessage — id, eventId, userId, content, enriched senderName
 │   ├── event_photo.dart    # EventPhoto — id, eventId, storagePath, caption, publicUrl (resolved at load); photos with captions appear in Memory Wall
@@ -90,7 +90,7 @@ lib/
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart          # Auth session; login/register/logout
-│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); signup session CRUD (fetchSessions, addSession, cancelSessionSignup, removeSessionRosterEntry, promoteSessionRosterEntry, demoteSessionRosterEntry, reorderSessionRoster, markSessionAttendance, toggleSessionConfirmed); full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param; _sessions Map cache
+│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); signup session CRUD (fetchUpcomingSessions, fetchPastSessions, loadMorePastSessions, addSession, cancelSessionSignup, removeSessionRosterEntry, promoteSessionRosterEntry, demoteSessionRosterEntry, reorderSessionRoster, markSessionAttendance, toggleSessionConfirmed, approveSessionRosterEntry, rejectSessionRosterEntry); session caches: _upcomingSessions / _pastSessions (paginated, 20/page) + _sessionRosters (100/page) + _mySessionStatuses; full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param; static applyOrder()
 │   ├── event_chat_provider.dart    # Event-scoped chat; paginated load + Realtime INSERT; scoped to /event/:id route
 │   ├── invitations_provider.dart   # Pending trip-event invitations for the current user; Realtime
 │   ├── friends_provider.dart       # Friend list + requests; two Realtime channels; searchUsers RPC
@@ -116,7 +116,7 @@ lib/
 │   │   ├── settings_screen.dart      # Theme, language, account, notifications, privacy sections
 │   │   └── blocked_users_screen.dart # List of globally blocked users with Unblock action
 │   └── shell/
-│       └── shell_scaffold.dart     # StatefulShellRoute wrapper; 3-tab bottom nav (Events + pending badge, Friends + request badge, Profile)
+│       └── shell_scaffold.dart     # StatefulShellRoute wrapper; bottom nav with 3 tabs (Events + pending badge, Friends + request badge, Profile) + 1 action button (Join / QR scanner → SessionScanScreen)
 ├── services/
 │   ├── ai_chat_service.dart            # Abstract interface + factory
 │   ├── edge_function_ai_chat_service.dart   # Release — proxies through Supabase Edge Function
@@ -171,9 +171,12 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 /login                   → LoginScreen
 /register                → RegisterScreen
 /event/invite/:code      → EventInviteScreen (public — no auth required)
+/session/invite/:code    → SessionInviteScreen (public — no auth required; QR code deep-link for session signup)
 ```
 
-**Auth guard:** Unauthenticated users are redirected to `/login`. Exception: `/event/invite/*` routes are public (accessible without auth). Logged-in users visiting `/login` or `/register` are redirected to `/events`. Guard is driven by `AuthProvider` as a `refreshListenable`.
+`SessionScanScreen` is not a named route — it is pushed modally from the "Join" action button in `ShellScaffold`. It handles both session codes (shows inline join sheet + calls `rsvp_session` RPC) and event codes (navigates to `/event/invite/:code`).
+
+**Auth guard:** Unauthenticated users are redirected to `/login`. Exception: `/event/invite/*` and `/session/invite/*` routes are public (accessible without auth). Logged-in users visiting `/login` or `/register` are redirected to `/events`. Guard is driven by `AuthProvider` as a `refreshListenable`.
 
 ---
 
@@ -184,7 +187,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | Provider | Owns | Key methods |
 |---|---|---|
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
-| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; Realtime via `event_sync_<userId>` channel |
+| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; **signup sessions:** `fetchUpcomingSessions(eventId)`, `fetchPastSessions(eventId)`, `loadMorePastSessions(eventId)`, `fetchSessionRoster(sessionId)`, `loadMoreRoster(sessionId)`, `refreshSessionRoster(sessionId)`, `addSession(eventId, startAt, endAt, {capacity, waitlistEnabled, signupLockHours, isPublic, requiresApproval})`, `cancelSessionSignup(rosterId, sessionId, eventId)`, `removeSessionRosterEntry()`, `promoteSessionRosterEntry()`, `demoteSessionRosterEntry()`, `reorderSessionRoster()`, `markSessionAttendance()`, `toggleSessionConfirmed()`, `approveSessionRosterEntry()`, `rejectSessionRosterEntry()`; session accessors: `upcomingSessionsFor(eventId)`, `pastSessionsFor(eventId)`, `rosterFor(sessionId)`, `myStatusFor(sessionId)`, `hasMoreUpcomingFor()`, `hasMorePastFor()`, `hasMoreRosterFor()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; static `applyOrder(events, order)`; Realtime via `event_sync_<userId>` channel |
 | `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel; scoped to `/event/:id` route |
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
@@ -310,7 +313,7 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 | `user_id` | uuid FK→auth.users nullable | Null for anonymous signups |
 | `display_name` | text | |
 | `email / phone` | text nullable | |
-| `status` | text | `going` \| `waitlisted` |
+| `status` | text | `going` \| `waitlisted` \| `pending_review` (requires_approval sessions only) |
 | `signup_order` | integer nullable | Monotonically increasing; organizer can reorder via batch UPDATE |
 | `attended` | boolean nullable | null=not marked; true=attended; false=no-show; set after session ends |
 | `signup_confirmed` | boolean default false | Pre-session confirmation; organizer or own user can toggle |
