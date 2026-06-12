@@ -203,7 +203,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 Tab(icon: Icon(Icons.info_outline_rounded, size: mainTabCount > 4 ? 18 : 20), text: l10n.infoTab),
                 Tab(icon: Icon(Icons.chat_bubble_outline_rounded, size: mainTabCount > 4 ? 18 : 20), text: l10n.chatTabLabel),
                 Tab(icon: Icon(Icons.photo_library_outlined, size: mainTabCount > 4 ? 18 : 20), text: l10n.photosTab),
-                Tab(icon: Icon(Icons.grid_view_outlined, size: mainTabCount > 4 ? 18 : 20), text: l10n.organizeTab),
+                Tab(icon: Icon(Icons.grid_view_outlined, size: mainTabCount > 4 ? 18 : 20), text: event.isSignup ? 'Session' : l10n.organizeTab),
                 if (event.isBirthday)
                   Tab(icon: const Icon(Icons.favorite_rounded, size: 18), text: l10n.memoriesTab),
               ],
@@ -9119,11 +9119,12 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       if (mounted) {
         setState(() {
           _loadingUpcoming = false;
-          // Auto-expand the nearest upcoming session on first load.
+          // Auto-expand only when there is exactly one upcoming session.
+          // With multiple sessions the user should choose which to open.
           final upcoming = context
               .read<EventProvider>()
               .upcomingSessionsFor(widget.event.id);
-          if (upcoming.isNotEmpty) _expandedSessionId = upcoming.first.id;
+          if (upcoming.length == 1) _expandedSessionId = upcoming.first.id;
         });
       }
     }
@@ -9484,6 +9485,7 @@ class _SessionCardState extends State<_SessionCard>
   bool _rosterLoading = false;
   String? _cancellingId;       // roster entry id currently animating out
   AnimationController? _cancelCtrl;
+  StreamSubscription<String>? _statusClearedSub;
 
   @override
   void didUpdateWidget(_SessionCard old) {
@@ -9503,6 +9505,18 @@ class _SessionCardState extends State<_SessionCard>
     super.initState();
     if (widget.isExpanded) _loadRoster();
     _initAnims();
+    // Subscribe to direct status-cleared signals from the provider. Using a
+    // stream + setState guarantees a rebuild even if notifyListeners() was
+    // already processed and Flutter considers this widget clean.
+    _statusClearedSub = context
+        .read<EventProvider>()
+        .sessionStatusCleared
+        .where((id) => id == widget.session.id)
+        .listen((_) {
+      if (!mounted) return;
+      setState(() {}); // force rebuild immediately
+      _loadRoster(forceRefresh: true); // then sync fresh DB state
+    });
   }
 
   void _initAnims() {
@@ -9517,6 +9531,7 @@ class _SessionCardState extends State<_SessionCard>
 
   @override
   void dispose() {
+    _statusClearedSub?.cancel();
     _pulseCtrl?.dispose();
     _cancelCtrl?.dispose();
     super.dispose();
@@ -9597,6 +9612,7 @@ class _SessionCardState extends State<_SessionCard>
           // ── Header (always visible, counts from DB columns) ──────────────
           AppTappable(
             onTap: widget.onToggle,
+            behavior: HitTestBehavior.opaque,
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -9686,46 +9702,21 @@ class _SessionCardState extends State<_SessionCard>
                               ),
                             ),
                           ],
-                          const SizedBox(width: 4),
                           // Pending-review badge (shows dot when roster loaded)
                           if (widget.isOrganizer && pending.isNotEmpty)
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Icon(
-                                  widget.isExpanded
-                                      ? Icons.expand_less_rounded
-                                      : Icons.expand_more_rounded,
-                                  size: 20,
-                                  color: Colors.grey[400],
-                                ),
-                                Positioned(
-                                  top: -4,
-                                  right: -4,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF6A1B9A),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      '${pending.length}',
-                                      style: const TextStyle(
-                                          fontSize: 9,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            Icon(
-                              widget.isExpanded
-                                  ? Icons.expand_less_rounded
-                                  : Icons.expand_more_rounded,
-                              size: 20,
-                              color: Colors.grey[400],
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF6A1B9A),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${pending.length}',
+                                style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
                         ],
                       ),
@@ -10275,7 +10266,6 @@ class _SignupCTAButton extends StatefulWidget {
 
 class _SignupCTAButtonState extends State<_SignupCTAButton>
     with TickerProviderStateMixin {
-  final _key = GlobalKey();
 
   // Continuous float loop on the big emoji
   late final AnimationController _floatCtrl;
@@ -10313,23 +10303,23 @@ class _SignupCTAButtonState extends State<_SignupCTAButton>
   }
 
   Future<void> _handleTap() async {
+    // Capture position and overlay before the async gap.
+    final box = context.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context);
+    Offset? center;
+    if (box != null) {
+      final offset = box.localToGlobal(Offset.zero);
+      center = Offset(offset.dx + box.size.width / 2, offset.dy + box.size.height / 2);
+    }
+
     await _pressCtrl.forward();
     _pressCtrl.reverse();
 
-    final box = _key.currentContext?.findRenderObject() as RenderBox?;
-    if (box != null && mounted) {
-      final offset = box.localToGlobal(Offset.zero);
-      final size = box.size;
-      _launchParticles(
-        context,
-        Offset(offset.dx + size.width / 2, offset.dy + size.height / 2),
-      );
-    }
-
+    if (center != null && mounted) _launchParticles(overlay, center);
     widget.onPressed();
   }
 
-  void _launchParticles(BuildContext context, Offset origin) {
+  void _launchParticles(OverlayState overlay, Offset origin) {
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
     entry = OverlayEntry(
@@ -10356,7 +10346,6 @@ class _SignupCTAButtonState extends State<_SignupCTAButton>
     return ScaleTransition(
       scale: _pressAnim,
       child: Container(
-        key: _key,
         width: double.infinity,
         height: 96,
         decoration: BoxDecoration(
@@ -10587,7 +10576,6 @@ class _CancelSpotButton extends StatefulWidget {
 
 class _CancelSpotButtonState extends State<_CancelSpotButton>
     with TickerProviderStateMixin {
-  final _key = GlobalKey();
 
   // Side-to-side run loop
   late final AnimationController _runCtrl;
@@ -10625,24 +10613,23 @@ class _CancelSpotButtonState extends State<_CancelSpotButton>
   }
 
   Future<void> _handleTap() async {
+    // Capture position and overlay before the async gap.
+    final box = context.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context);
+    Offset? center;
+    if (box != null) {
+      final offset = box.localToGlobal(Offset.zero);
+      center = Offset(offset.dx + box.size.width / 2, offset.dy + box.size.height / 2);
+    }
+
     await _pressCtrl.forward();
     _pressCtrl.reverse();
 
-    final box = _key.currentContext?.findRenderObject() as RenderBox?;
-    if (box != null && mounted) {
-      final offset = box.localToGlobal(Offset.zero);
-      final size = box.size;
-      _launchRunAwayBurst(
-        context,
-        Offset(offset.dx + size.width / 2, offset.dy + size.height / 2),
-      );
-    }
-
+    if (center != null && mounted) _launchRunAwayBurst(overlay, center);
     widget.onPressed();
   }
 
-  void _launchRunAwayBurst(BuildContext context, Offset origin) {
-    final overlay = Overlay.of(context);
+  void _launchRunAwayBurst(OverlayState overlay, Offset origin) {
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (_) => _RunAwayBurst(
@@ -10667,7 +10654,6 @@ class _CancelSpotButtonState extends State<_CancelSpotButton>
     return ScaleTransition(
       scale: _pressAnim,
       child: Container(
-        key: _key,
         width: double.infinity,
         height: 88,
         decoration: BoxDecoration(
@@ -10938,7 +10924,9 @@ class _WaitlistDivider extends StatelessWidget {
 
 class _SessionEmojiBadge extends StatelessWidget {
   final EventSession session;
-  const _SessionEmojiBadge({required this.session});
+  /// Outer box size in logical pixels. Defaults to 52 (full card size).
+  final double size;
+  const _SessionEmojiBadge({required this.session, this.size = 52});
 
   // Fun emoji pool — picked deterministically by session id hash so the same
   // session always shows the same one across devices and reloads.
@@ -10977,62 +10965,32 @@ class _SessionEmojiBadge extends StatelessWidget {
     final emoji = _emojis[hash % _emojis.length];
     final grad = _gradients[(hash ~/ _emojis.length) % _gradients.length];
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: grad,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: grad[0].withValues(alpha: 0.45),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(emoji, style: const TextStyle(fontSize: 26)),
-          ),
+    final radius = size * 0.27;
+    final emojiFontSize = size * 0.50;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: grad,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        // Session number corner badge
-        Positioned(
-          right: -4,
-          bottom: -4,
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: size >= 40
+            ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 4,
+                  color: grad[0].withValues(alpha: 0.45),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                '${session.sessionNumber}',
-                style: TextStyle(
-                  fontSize: session.sessionNumber > 9 ? 9 : 11,
-                  fontWeight: FontWeight.w900,
-                  color: grad[0],
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+              ]
+            : null,
+      ),
+      child: Center(
+        child: Text(emoji, style: TextStyle(fontSize: emojiFontSize)),
+      ),
     );
   }
 }
@@ -11428,11 +11386,12 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
     // App-only deep link — scanned with the in-app QR scanner on the same tab.
     final encodedCode = InviteCodec.encode(session.inviteCode);
     final inviteUrl = '$kAppBaseUrl/session/invite/$encodedCode';
+    final fmt = DateFormat('EEE, MMM d · h:mm a');
     final inviteMessage =
         '🎟️ You\'re invited to "${widget.event.title}" — '
         'Session #${session.sessionNumber}\n'
-        'Scan the QR code or enter this code:\n$encodedCode';
-    final fmt = DateFormat('EEE, MMM d · h:mm a');
+        '📅 ${fmt.format(session.startAt.toLocal())}\n'
+        'Open the app → Join tab → enter this code:\n$encodedCode';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
@@ -11495,9 +11454,7 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
                       child: Text(
                         '#${e.value.sessionNumber}  ·  ${DateFormat('MMM d').format(e.value.startAt.toLocal())}',
                         style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : Colors.grey[700],
+                          color: selected ? Colors.white : Colors.grey[700],
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -11511,16 +11468,16 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
           const SizedBox(height: 20),
         ],
 
-        // ── Session info ────────────────────────────────────────────────
+        // ── Selected session info bar ───────────────────────────────────
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: const Color(0xFF2E7D32).withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              const Text('📅', style: TextStyle(fontSize: 18)),
+              _SessionEmojiBadge(session: session, size: 36),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -12072,11 +12029,18 @@ class _PendingReviewRow extends StatelessWidget {
                 border: Border.all(
                     color: const Color(0xFF2E7D32).withValues(alpha: 0.4)),
               ),
-              child: const Text('✓ Approve',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2E7D32))),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('👍', style: TextStyle(fontSize: 13)),
+                  SizedBox(width: 4),
+                  Text('Approve',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2E7D32))),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -12091,11 +12055,18 @@ class _PendingReviewRow extends StatelessWidget {
                 border: Border.all(
                     color: AppTheme.danger.withValues(alpha: 0.35)),
               ),
-              child: Text('✗ Reject',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.danger)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🙅', style: TextStyle(fontSize: 13)),
+                  const SizedBox(width: 4),
+                  Text('Reject',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.danger)),
+                ],
+              ),
             ),
           ),
         ],
@@ -12179,7 +12150,10 @@ class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
                   unawaited(provider.fetchUpcomingSessions(widget.event.id));
                   _nameCtrl.clear();
                   _emailCtrl.clear();
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (ctx.mounted) {
+                    FocusScope.of(ctx).unfocus();
+                    Navigator.pop(ctx);
+                  }
                 } catch (e) {
                   final msg = e.toString();
                   messenger.showSnackBar(SnackBar(
