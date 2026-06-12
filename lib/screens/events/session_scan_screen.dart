@@ -168,6 +168,7 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
     final capacity = s['capacity'] as int?;
     final waitlistEnabled = s['waitlist_enabled'] as bool? ?? true;
     final lockHours = s['signup_lock_hours'] as int?;
+    final requiresApproval = s['requires_approval'] as bool? ?? false;
     final isFull = capacity != null && going >= capacity;
     final isLocked = lockHours != null &&
         startAt != null &&
@@ -188,6 +189,7 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
         waitlistEnabled: waitlistEnabled,
         isFull: isFull,
         isLocked: isLocked,
+        requiresApproval: requiresApproval,
         l10n: l10n,
       ),
     );
@@ -226,7 +228,9 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
         messenger.showSnackBar(SnackBar(
           content: Text(status == 'waitlisted'
               ? l10n.signupWaitlistPosition(pos)
-              : l10n.signupConfirmedPosition(pos)),
+              : status == 'pending_review'
+                  ? l10n.signupPendingReview
+                  : l10n.signupConfirmedPosition(pos)),
         ));
       }
 
@@ -385,6 +389,7 @@ class _SessionJoinSheet extends StatelessWidget {
   final bool waitlistEnabled;
   final bool isFull;
   final bool isLocked;
+  final bool requiresApproval;
   final AppLocalizations l10n;
 
   const _SessionJoinSheet({
@@ -397,6 +402,7 @@ class _SessionJoinSheet extends StatelessWidget {
     required this.waitlistEnabled,
     required this.isFull,
     required this.isLocked,
+    this.requiresApproval = false,
     required this.l10n,
   });
 
@@ -449,8 +455,19 @@ class _SessionJoinSheet extends StatelessWidget {
             AppButton(
               label: isFull
                   ? '⏳  ${l10n.signupJoinWaitlist}'
-                  : '🎟️  ${l10n.signupClaimSpot}',
+                  : requiresApproval
+                      ? '🔍  Request to join'
+                      : '🎟️  ${l10n.signupClaimSpot}',
               onPressed: () => Navigator.pop(context, true),
+            ),
+          if (!isLocked && requiresApproval && !(isFull && !waitlistEnabled))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'This session requires organizer approval. Your request will be reviewed before being confirmed.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
             ),
         ],
       ),

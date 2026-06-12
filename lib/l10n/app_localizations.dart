@@ -2286,6 +2286,12 @@ abstract class AppLocalizations {
   /// **'Signups are locked. Contact the organiser to be removed.'**
   String get signupLockedMessage;
 
+  /// No description provided for @signupPendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request is pending approval'**
+  String get signupPendingReview;
+
   /// No description provided for @signupCancelSpot.
   ///
   /// In en, this message translates to:

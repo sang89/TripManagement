@@ -1189,6 +1189,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'Las inscripciones están cerradas. Contacta al organizador.';
 
   @override
+  String get signupPendingReview => 'Tu solicitud está pendiente de aprobación';
+
+  @override
   String get signupCancelSpot => 'Cancelar mi lugar';
 
   @override

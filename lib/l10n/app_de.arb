@@ -502,6 +502,7 @@
   "signupShowQr": "QR-Code anzeigen",
   "signupLocked": "Anmeldungen gesperrt",
   "signupLockedMessage": "Anmeldungen sind gesperrt. Wende dich an den Organisator.",
+  "signupPendingReview": "Ihre Anfrage wird überprüft",
   "signupCancelSpot": "Platz stornieren",
   "signupMarkAttended": "Anwesend",
   "signupMarkNoShow": "Nicht erschienen",

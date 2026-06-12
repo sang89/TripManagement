@@ -502,6 +502,7 @@
   "signupShowQr": "QRコードを表示",
   "signupLocked": "登録が締め切られました",
   "signupLockedMessage": "登録が締め切られました。主催者にお問い合わせください。",
+  "signupPendingReview": "リクエストは承認待ちです",
   "signupCancelSpot": "席をキャンセル",
   "signupMarkAttended": "出席",
   "signupMarkNoShow": "欠席",

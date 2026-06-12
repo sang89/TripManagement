@@ -502,6 +502,7 @@
   "signupShowQr": "QR 코드 보기",
   "signupLocked": "신청이 마감되었습니다",
   "signupLockedMessage": "신청이 마감되었습니다. 주최자에게 문의하세요.",
+  "signupPendingReview": "요청이 승인 대기 중입니다",
   "signupCancelSpot": "자리 취소",
   "signupMarkAttended": "출석",
   "signupMarkNoShow": "결석",

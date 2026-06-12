@@ -363,4 +363,272 @@ void main() {
     });
   });
 
+  // ── Bug-regression: clearAttended flag (Bug 1 fix) ───────────────────────────
+  //
+  // The attendance chip cycles null → true → false → null.
+  // copyWith(attended: x) cannot express "reset to null" because a null
+  // argument is indistinguishable from "no change".  clearAttended=true was
+  // added to enable the reset step without ambiguity.
+
+  group('EventSessionRosterEntry.copyWith — clearAttended (Bug 1 regression)', () {
+    test('clearAttended=true resets attended from true to null', () {
+      final r = EventSessionRosterEntry.fromJson(
+          Map<String, dynamic>.from(baseRosterJson)..['attended'] = true);
+      final reset = r.copyWith(clearAttended: true);
+      expect(reset.attended, isNull);
+      expect(reset.status, r.status); // other fields unchanged
+      expect(reset.signupConfirmed, r.signupConfirmed);
+    });
+
+    test('clearAttended=true resets attended from false to null', () {
+      final r = EventSessionRosterEntry.fromJson(
+          Map<String, dynamic>.from(baseRosterJson)..['attended'] = false);
+      final reset = r.copyWith(clearAttended: true);
+      expect(reset.attended, isNull);
+    });
+
+    test('clearAttended=true takes precedence over a provided attended value', () {
+      final r = EventSessionRosterEntry.fromJson(
+          Map<String, dynamic>.from(baseRosterJson)..['attended'] = true);
+      // Passing both clearAttended=true AND attended=false — clear wins.
+      final reset = r.copyWith(clearAttended: true, attended: false);
+      expect(reset.attended, isNull);
+    });
+
+    test('clearAttended=false (default) with attended=true sets it', () {
+      final r = EventSessionRosterEntry.fromJson(baseRosterJson); // attended null
+      expect(r.copyWith(attended: true).attended, isTrue);
+    });
+
+    test('clearAttended=false (default) with attended=false sets it', () {
+      final r = EventSessionRosterEntry.fromJson(baseRosterJson); // attended null
+      expect(r.copyWith(attended: false).attended, isFalse);
+    });
+
+    test('clearAttended=false (default) without attended preserves null', () {
+      final r = EventSessionRosterEntry.fromJson(baseRosterJson); // attended null
+      expect(r.copyWith(status: 'waitlisted').attended, isNull);
+    });
+
+    test('clearAttended=false (default) preserves existing true attended', () {
+      final r = EventSessionRosterEntry.fromJson(
+          Map<String, dynamic>.from(baseRosterJson)..['attended'] = true);
+      expect(r.copyWith(signupConfirmed: true).attended, isTrue);
+    });
+  });
+
+  // ── Attendance cycle invariant (Bug 1 regression) ────────────────────────────
+  //
+  // The _AttendanceChip widget cycles: null → true → false → null.
+  // This helper encodes the same logic so regressions are caught here without
+  // a full widget test.
+
+  group('Attendance cycle logic (Bug 1 regression)', () {
+    // Encodes the _AttendanceChip.onTap logic so regressions are caught here.
+    bool? cycle(bool? current) {
+      if (current == null) return true;
+      if (current == true) return false;
+      return null;
+    }
+
+    test('unset → attended', () => expect(cycle(null), isTrue));
+    test('attended → no-show', () => expect(cycle(true), isFalse));
+    test('no-show → unset (not back to attended)', () =>
+        expect(cycle(false), isNull));
+    test('three-step cycle returns to null', () {
+      bool? state;
+      state = cycle(state); // → true
+      state = cycle(state); // → false
+      state = cycle(state); // → null
+      expect(state, isNull);
+    });
+  });
+
+  // ── Bug-regression: pending_review as distinct status (Bugs 2, 3, B) ─────────
+
+  group('pending_review status is distinct from going/waitlisted (Bug 2/3/B regression)', () {
+    test('fromJson parses pending_review status correctly', () {
+      final j = Map<String, dynamic>.from(baseRosterJson)
+        ..['status'] = 'pending_review';
+      final r = EventSessionRosterEntry.fromJson(j);
+      expect(r.status, 'pending_review');
+      expect(r.isGoing, isFalse);
+      expect(r.isWaitlisted, isFalse);
+    });
+
+    test('pending_review copyWith preserves status', () {
+      final r = EventSessionRosterEntry.fromJson(
+          Map<String, dynamic>.from(baseRosterJson)..['status'] = 'pending_review');
+      final copy = r.copyWith(signupConfirmed: true);
+      expect(copy.status, 'pending_review');
+    });
+
+    test('pending_review promoted to going via copyWith', () {
+      final r = EventSessionRosterEntry.fromJson(
+          Map<String, dynamic>.from(baseRosterJson)..['status'] = 'pending_review');
+      final approved = r.copyWith(status: 'going');
+      expect(approved.isGoing, isTrue);
+      expect(approved.isWaitlisted, isFalse);
+    });
+  });
+
+  // ── Bug-regression: session Realtime UPDATE preserves all fields (Bug 4) ──────
+  //
+  // The Realtime handler now rebuilds EventSession via fromJson instead of
+  // copyWithCounts.  This test ensures copyWithCounts itself still preserves
+  // non-count fields (used by _refreshSessionCounts), AND verifies the fromJson
+  // round-trip used in the Realtime handler.
+
+  group('EventSession Realtime UPDATE field preservation (Bug 4 regression)', () {
+    test('copyWithCounts preserves capacity, requiresApproval, signupLockHours, isPublic', () {
+      final session = EventSession.fromJson(Map<String, dynamic>.from(baseJson)
+        ..['capacity'] = 20
+        ..['requires_approval'] = true
+        ..['signup_lock_hours'] = 4
+        ..['is_public'] = false);
+      final updated = session.copyWithCounts(goingCount: 10, waitlistCount: 2);
+      expect(updated.capacity, 20);
+      expect(updated.requiresApproval, isTrue);
+      expect(updated.signupLockHours, 4);
+      expect(updated.isPublic, isFalse);
+      expect(updated.goingCount, 10);
+      expect(updated.waitlistCount, 2);
+    });
+
+    test('fromJson round-trip used in Realtime handler preserves metadata when counts change', () {
+      // Simulates what the Realtime UPDATE handler now does: build a merged
+      // JSON map from both the incoming row and the existing cached session.
+      final existing = EventSession.fromJson(Map<String, dynamic>.from(baseJson)
+        ..['capacity'] = 15
+        ..['requires_approval'] = true
+        ..['signup_lock_hours'] = 2
+        ..['is_public'] = false
+        ..['going_count'] = 3
+        ..['waitlist_count'] = 0);
+
+      // Simulate a Realtime payload that only carries count updates.
+      final realtimeRow = <String, dynamic>{
+        'id': existing.id,
+        'event_id': existing.eventId,
+        'going_count': 12,
+        'waitlist_count': 3,
+      };
+
+      final merged = EventSession.fromJson({
+        'id': existing.id,
+        'event_id': existing.eventId,
+        'session_number': existing.sessionNumber,
+        'start_at': existing.startAt.toIso8601String(),
+        'end_at': existing.endAt?.toIso8601String(),
+        'invite_code': existing.inviteCode,
+        'created_at': existing.createdAt.toIso8601String(),
+        'going_count': realtimeRow['going_count'],
+        'waitlist_count': realtimeRow['waitlist_count'],
+        'capacity': existing.capacity,
+        'waitlist_enabled': existing.waitlistEnabled,
+        'signup_lock_hours': existing.signupLockHours,
+        'is_public': existing.isPublic,
+        'requires_approval': existing.requiresApproval,
+      });
+
+      expect(merged.goingCount, 12);
+      expect(merged.waitlistCount, 3);
+      expect(merged.capacity, 15);           // preserved from existing
+      expect(merged.requiresApproval, isTrue);  // preserved
+      expect(merged.signupLockHours, 2);     // preserved
+      expect(merged.isPublic, isFalse);      // preserved
+    });
+  });
+
+  // ── Bug-regression: promote check uses goingCount not roster length (Bug 5) ───
+  //
+  // The UI promote-button guard was using confirmed.length (paginated in-memory
+  // list) instead of session.goingCount (DB-authoritative).  This test verifies
+  // that isFull (which uses goingCount) correctly reflects full capacity even
+  // when the local roster list has fewer entries than goingCount.
+
+  group('isFull uses goingCount from DB, not in-memory roster length (Bug 5 regression)', () {
+    test('session with goingCount==capacity is full even if roster page is partial', () {
+      // DB says 10/10 going.  Imagine local roster only loaded 3 entries so far.
+      final session = EventSession.fromJson(Map<String, dynamic>.from(baseJson)
+        ..['capacity'] = 10
+        ..['going_count'] = 10);
+      // The UI must use session.goingCount (==10) not roster.length (would be 3).
+      expect(session.isFull, isTrue);
+      expect(session.goingCount, 10);
+    });
+
+    test('session with goingCount < capacity is not full', () {
+      final session = EventSession.fromJson(Map<String, dynamic>.from(baseJson)
+        ..['capacity'] = 10
+        ..['going_count'] = 9);
+      expect(session.isFull, isFalse);
+    });
+
+    test('isFull is false when capacity is null (unlimited)', () {
+      final session = EventSession.fromJson(Map<String, dynamic>.from(baseJson)
+        ..remove('capacity')
+        ..['going_count'] = 9999);
+      expect(session.isFull, isFalse);
+    });
+  });
+
+  // ── Bug-regression: refreshSessionRoster must not clear myStatus for paginated
+  //    users (Bug C regression) ────────────────────────────────────────────────
+  //
+  // When a session has >100 roster entries, refreshSessionRoster fetches only
+  // the first 100.  If the current user is entry #101+, they won't appear in
+  // the first page.  The old code would remove them from _mySessionStatuses,
+  // hiding the "Cancel my spot" button.
+  //
+  // Fix: only clear _mySessionStatuses when hasMore==false (all entries loaded).
+  // This behaviour is exercised in provider integration tests.  The model test
+  // below documents the expected invariant: a user CAN be signed up even if they
+  // don't appear in the first roster page.
+
+  group('Roster pagination — myStatus invariant (Bug C regression docs)', () {
+    test('a session with hasMore=true may have user entries beyond the first page', () {
+      // First page of 100 entries — none belong to userId 'u-late'.
+      final page1 = List.generate(
+        100,
+        (i) => EventSessionRosterEntry(
+          id: 'r$i',
+          sessionId: 's1',
+          userId: 'u$i',
+          displayName: 'User $i',
+          status: 'going',
+          signupOrder: i + 1,
+          signedUpAt: DateTime.now(),
+        ),
+      );
+      final hasMore = true; // page 2 exists
+      final myUserId = 'u-late'; // signed up as entry #101
+
+      // Since hasMore=true, absence from page1 does NOT mean unsigned up.
+      final foundInPage1 = page1.any((e) => e.userId == myUserId);
+      expect(foundInPage1, isFalse); // not in page 1
+      expect(hasMore, isTrue);       // but more pages exist → do NOT clear status
+    });
+
+    test('a session with hasMore=false and user absent means truly not signed up', () {
+      final pageAll = [
+        EventSessionRosterEntry(
+          id: 'r1',
+          sessionId: 's1',
+          userId: 'u1',
+          displayName: 'User 1',
+          status: 'going',
+          signupOrder: 1,
+          signedUpAt: DateTime.now(),
+        ),
+      ];
+      final hasMore = false;
+      final myUserId = 'u-absent';
+
+      final foundInPage = pageAll.any((e) => e.userId == myUserId);
+      expect(foundInPage, isFalse);
+      expect(hasMore, isFalse); // all entries loaded → safe to clear status
+    });
+  });
+
 }

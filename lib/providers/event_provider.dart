@@ -910,10 +910,22 @@ class EventProvider extends ChangeNotifier {
             _patchSessionInCache(
               eventId,
               sessionId,
-              (s) => s.copyWithCounts(
-                goingCount: row['going_count'] as int? ?? s.goingCount,
-                waitlistCount: row['waitlist_count'] as int? ?? s.waitlistCount,
-              ),
+              (s) => EventSession.fromJson({
+                'id': s.id,
+                'event_id': s.eventId,
+                'session_number': s.sessionNumber,
+                'start_at': (row.containsKey('start_at') ? row['start_at'] : null) ?? s.startAt.toIso8601String(),
+                'end_at': row.containsKey('end_at') ? row['end_at'] : s.endAt?.toIso8601String(),
+                'invite_code': s.inviteCode,
+                'created_at': s.createdAt.toIso8601String(),
+                'going_count': row['going_count'] as int? ?? s.goingCount,
+                'waitlist_count': row['waitlist_count'] as int? ?? s.waitlistCount,
+                'capacity': row.containsKey('capacity') ? row['capacity'] : s.capacity,
+                'waitlist_enabled': row.containsKey('waitlist_enabled') ? row['waitlist_enabled'] : s.waitlistEnabled,
+                'signup_lock_hours': row.containsKey('signup_lock_hours') ? row['signup_lock_hours'] : s.signupLockHours,
+                'is_public': row.containsKey('is_public') ? row['is_public'] : s.isPublic,
+                'requires_approval': row.containsKey('requires_approval') ? row['requires_approval'] : s.requiresApproval,
+              }),
             );
             notifyListeners();
           },
@@ -949,8 +961,7 @@ class EventProvider extends ChangeNotifier {
                     List<EventSessionRosterEntry>.from(_sessionRosters[sessionId]!);
                 if (!roster.any((r) => r.id == entry.id)) {
                   roster.add(entry);
-                  roster.sort((a, b) =>
-                      (a.signupOrder ?? 0).compareTo(b.signupOrder ?? 0));
+                  roster.sort(_rosterOrder);
                   _sessionRosters[sessionId] = roster;
                 }
               } catch (_) {
@@ -1008,6 +1019,9 @@ class EventProvider extends ChangeNotifier {
                     row['signup_confirmed'] as bool? ?? r.signupConfirmed,
                 signedUpAt: r.signedUpAt,
               ),
+              // signup_order may have changed (promote/demote/reorder) — keep
+              // the list sorted so other devices see the correct visual order.
+              resort: true,
             );
           },
         )
@@ -1473,7 +1487,9 @@ class EventProvider extends ChangeNotifier {
           status: mine.status,
           order: mine.signupOrder ?? 0,
         );
-      } else {
+      } else if (!hasMore) {
+        // Only clear if we loaded ALL entries — the user might be on a later
+        // page of a large session and simply wasn't in the first 100 rows.
         _mySessionStatuses.remove(sessionId);
       }
     }
@@ -1537,14 +1553,24 @@ class EventProvider extends ChangeNotifier {
     patch(_pastSessions);
   }
 
+  // Canonical sort for in-memory rosters: ascending signup_order, nulls last.
+  static int _rosterOrder(EventSessionRosterEntry a, EventSessionRosterEntry b) {
+    if (a.signupOrder == null && b.signupOrder == null) return 0;
+    if (a.signupOrder == null) return 1;
+    if (b.signupOrder == null) return -1;
+    return a.signupOrder!.compareTo(b.signupOrder!);
+  }
+
   void _patchRosterEntry(String sessionId, String rosterId,
-      EventSessionRosterEntry Function(EventSessionRosterEntry) fn) {
+      EventSessionRosterEntry Function(EventSessionRosterEntry) fn,
+      {bool resort = false}) {
     final roster = _sessionRosters[sessionId];
     if (roster == null) return;
     final i = roster.indexWhere((r) => r.id == rosterId);
     if (i >= 0) {
       final updated = List<EventSessionRosterEntry>.from(roster);
       updated[i] = fn(updated[i]);
+      if (resort) updated.sort(_rosterOrder);
       _sessionRosters[sessionId] = updated;
       notifyListeners();
     }
@@ -1645,10 +1671,11 @@ class EventProvider extends ChangeNotifier {
     };
     final roster = _sessionRosters[sessionId];
     if (roster != null) {
-      _sessionRosters[sessionId] = roster.map((r) {
+      _sessionRosters[sessionId] = (roster.map((r) {
         final o = idToOrder[r.id];
         return o != null ? r.copyWith(signupOrder: o) : r;
-      }).toList();
+      }).toList())
+        ..sort(_rosterOrder);
       notifyListeners();
     }
     for (var i = 0; i < orderedIds.length; i++) {
@@ -1660,12 +1687,12 @@ class EventProvider extends ChangeNotifier {
 
   /// Organizer marks attendance on a roster entry.
   Future<void> markSessionAttendance(
-      String rosterId, String sessionId, String eventId, bool attended) async {
+      String rosterId, String sessionId, String eventId, bool? attended) async {
     await _db.rpc('session_mark_attendance', params: {
       'p_roster_id': rosterId,
       'p_attended': attended,
     });
-    _patchRosterEntry(sessionId, rosterId, (r) => r.copyWith(attended: attended));
+    _patchRosterEntry(sessionId, rosterId, (r) => r.copyWith(attended: attended, clearAttended: attended == null));
   }
 
   /// Organizer approves a pending_review request — entry moves to 'going'.

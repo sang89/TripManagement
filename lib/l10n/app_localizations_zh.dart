@@ -1170,6 +1170,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get signupLockedMessage => '报名已截止，请联系主办方。';
 
   @override
+  String get signupPendingReview => '您的申请正在等待审批';
+
+  @override
   String get signupCancelSpot => '取消我的名额';
 
   @override

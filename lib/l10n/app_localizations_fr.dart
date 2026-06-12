@@ -1192,6 +1192,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les inscriptions sont fermées. Contactez l\'organisateur.';
 
   @override
+  String get signupPendingReview =>
+      'Votre demande est en attente d\'approbation';
+
+  @override
   String get signupCancelSpot => 'Annuler ma place';
 
   @override

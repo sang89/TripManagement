@@ -502,6 +502,7 @@
   "signupShowQr": "عرض رمز QR",
   "signupLocked": "التسجيل مغلق",
   "signupLockedMessage": "التسجيل مغلق. تواصل مع المنظم.",
+  "signupPendingReview": "طلبك قيد المراجعة",
   "signupCancelSpot": "إلغاء مكاني",
   "signupMarkAttended": "حضر",
   "signupMarkNoShow": "لم يحضر",

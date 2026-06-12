@@ -1182,6 +1182,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Signups are locked. Contact the organiser to be removed.';
 
   @override
+  String get signupPendingReview => 'Your request is pending approval';
+
+  @override
   String get signupCancelSpot => 'Cancel my spot';
 
   @override

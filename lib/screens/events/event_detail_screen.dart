@@ -9610,24 +9610,6 @@ class _SessionCardState extends State<_SessionCard>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                    colors: [accentColor, accentColor2]),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'Session #${widget.session.sessionNumber}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ),
                             Text(
                               fmt.format(widget.session.startAt.toLocal()),
                               style: const TextStyle(
@@ -9676,6 +9658,12 @@ class _SessionCardState extends State<_SessionCard>
                                   return _StatusChip(
                                     label: '✓ Going',
                                     color: const Color(0xFF2E7D32),
+                                  );
+                                }
+                                if (my.status == 'pending_review') {
+                                  return const _StatusChip(
+                                    label: '🔍 Pending',
+                                    color: Color(0xFF6A1B9A),
                                   );
                                 }
                                 return _StatusChip(
@@ -9919,7 +9907,7 @@ class _SessionCardState extends State<_SessionCard>
                                     showDragHandle: true,
                                     showAttendance: false,
                                     onPromote: (cap == null ||
-                                            confirmed.length < cap)
+                                            going < cap)
                                         ? () async {
                                             try {
                                               await context
@@ -10363,7 +10351,7 @@ class _SignupCTAButtonState extends State<_SignupCTAButton>
     final glowColor =
         isWaitlist ? const Color(0xFFFFB300) : const Color(0xFF43A047);
     final bigEmoji = isWaitlist ? '⏳' : '🎟️';
-    final label = isWaitlist ? 'Join the waitlist' : 'Claim your spot';
+    final label = widget.label;
 
     return ScaleTransition(
       scale: _pressAnim,
@@ -11062,7 +11050,7 @@ class _SessionRosterRow extends StatelessWidget {
   final VoidCallback? onRemove;
   final VoidCallback? onPromote;
   final VoidCallback? onDemote;
-  final void Function(bool)? onMarkAttendance;
+  final void Function(bool?)? onMarkAttendance;
   final void Function(bool)? onToggleConfirmed;
 
   const _SessionRosterRow({
@@ -11178,7 +11166,7 @@ class _SessionRosterRow extends StatelessWidget {
                       onTap: () => onToggleConfirmed!(!isConfirmed),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 6),
+                            horizontal: 10, vertical: 12),
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
                           child: Icon(
@@ -11264,7 +11252,7 @@ class _SessionRosterRow extends StatelessWidget {
 
 class _AttendanceChip extends StatelessWidget {
   final bool? attended; // null = not marked, true = attended, false = no-show
-  final void Function(bool)? onMarkAttendance;
+  final void Function(bool?)? onMarkAttendance;
 
   const _AttendanceChip({this.attended, this.onMarkAttendance});
 
@@ -11327,8 +11315,7 @@ class _AttendanceChip extends StatelessWidget {
         } else if (attended == true) {
           onMarkAttendance!(false);
         } else {
-          // no-show → reset: re-tap attended cycles back
-          onMarkAttendance!(true);
+          onMarkAttendance!(null);
         }
       },
       child: chip,
@@ -12178,6 +12165,7 @@ class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
               onPressed: () async {
                 if (_nameCtrl.text.trim().isEmpty) return;
                 final provider = ctx.read<EventProvider>();
+                final messenger = ScaffoldMessenger.of(ctx);
                 try {
                   await Supabase.instance.client
                       .rpc('rsvp_session', params: {
@@ -12187,11 +12175,23 @@ class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
                         ? null
                         : _emailCtrl.text.trim(),
                   });
-                  await provider.fetchUpcomingSessions(widget.event.id);
-                } catch (_) {}
-                _nameCtrl.clear();
-                _emailCtrl.clear();
-                if (ctx.mounted) Navigator.pop(ctx);
+                  unawaited(provider.refreshSessionRoster(widget.session.id));
+                  unawaited(provider.fetchUpcomingSessions(widget.event.id));
+                  _nameCtrl.clear();
+                  _emailCtrl.clear();
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  final msg = e.toString();
+                  messenger.showSnackBar(SnackBar(
+                    content: Text(msg.contains('already_signed_up')
+                        ? 'This person is already signed up.'
+                        : msg.contains('signup_locked')
+                            ? 'Signups are locked for this session.'
+                            : msg.contains('session_full')
+                                ? 'Session is full — enable the waitlist to add more.'
+                                : msg),
+                  ));
+                }
               },
             ),
           ],

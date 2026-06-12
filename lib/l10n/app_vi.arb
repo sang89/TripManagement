@@ -502,6 +502,7 @@
   "signupShowQr": "Hiển thị mã QR",
   "signupLocked": "Đăng ký đã bị khóa",
   "signupLockedMessage": "Đăng ký đã bị khóa. Liên hệ người tổ chức.",
+  "signupPendingReview": "Yêu cầu của bạn đang chờ phê duyệt",
   "signupCancelSpot": "Hủy chỗ của tôi",
   "signupMarkAttended": "Đã tham dự",
   "signupMarkNoShow": "Vắng mặt",

@@ -502,6 +502,7 @@
   "signupShowQr": "Afficher le QR code",
   "signupLocked": "Les inscriptions sont fermées",
   "signupLockedMessage": "Les inscriptions sont fermées. Contactez l'organisateur.",
+  "signupPendingReview": "Votre demande est en attente d'approbation",
   "signupCancelSpot": "Annuler ma place",
   "signupMarkAttended": "Présent",
   "signupMarkNoShow": "Absent",

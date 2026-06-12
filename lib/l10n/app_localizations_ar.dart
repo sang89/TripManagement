@@ -1180,6 +1180,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get signupLockedMessage => 'التسجيل مغلق. تواصل مع المنظم.';
 
   @override
+  String get signupPendingReview => 'طلبك قيد المراجعة';
+
+  @override
   String get signupCancelSpot => 'إلغاء مكاني';
 
   @override

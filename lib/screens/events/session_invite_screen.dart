@@ -153,11 +153,14 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
       );
     }
     if (_done) {
-      final successMsg = _rsvpPosition != null
-          ? (_rsvpStatus == 'waitlisted'
-              ? l10n.signupWaitlistPosition(_rsvpPosition!)
-              : l10n.signupConfirmedPosition(_rsvpPosition!))
-          : l10n.rsvpSuccess;
+      final isPendingReview = _rsvpStatus == 'pending_review';
+      final successMsg = isPendingReview
+          ? l10n.signupPendingReview
+          : _rsvpPosition != null
+              ? (_rsvpStatus == 'waitlisted'
+                  ? l10n.signupWaitlistPosition(_rsvpPosition!)
+                  : l10n.signupConfirmedPosition(_rsvpPosition!))
+              : l10n.rsvpSuccess;
       return Scaffold(
         body: Center(
           child: Column(
@@ -166,10 +169,14 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
               Icon(
                 _rsvpStatus == 'waitlisted'
                     ? Icons.hourglass_top_rounded
-                    : Icons.check_circle_rounded,
+                    : isPendingReview
+                        ? Icons.pending_actions_rounded
+                        : Icons.check_circle_rounded,
                 color: _rsvpStatus == 'waitlisted'
                     ? Colors.orange
-                    : Colors.green,
+                    : isPendingReview
+                        ? Colors.amber
+                        : Colors.green,
                 size: 64,
               ),
               const SizedBox(height: 16),
@@ -201,6 +208,7 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
     final capacity = d['capacity'] as int?;
     final waitlistEnabled = d['waitlist_enabled'] as bool? ?? true;
     final signupLockHours = d['signup_lock_hours'] as int?;
+    final requiresApproval = d['requires_approval'] as bool? ?? false;
     final isFull = capacity != null && goingCount >= capacity;
     final isLocked = signupLockHours != null &&
         startAt != null &&
@@ -294,10 +302,19 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
                   Text(
                     isFull
                         ? '⏳  ${l10n.signupJoinWaitlist}'
-                        : '🎟️  Sign up for this session',
+                        : requiresApproval
+                            ? '🔍  Request to join'
+                            : '🎟️  Sign up for this session',
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 16),
                   ),
+                  if (requiresApproval && !isFull) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'This session requires organizer approval. Your request will be reviewed before being confirmed.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _nameCtrl,
@@ -329,7 +346,9 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
                   AppButton(
                     label: isFull
                         ? l10n.signupJoinWaitlist
-                        : l10n.signupClaimSpot,
+                        : requiresApproval
+                            ? 'Request to join'
+                            : l10n.signupClaimSpot,
                     onPressed: _submit,
                     loading: _submitting,
                   ),
