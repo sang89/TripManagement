@@ -1187,6 +1187,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đăng ký đã bị khóa. Liên hệ người tổ chức.';
 
   @override
+  String get signupPendingReview => 'Yêu cầu của bạn đang chờ phê duyệt';
+
+  @override
   String get signupCancelSpot => 'Hủy chỗ của tôi';
 
   @override

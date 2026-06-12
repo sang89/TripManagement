@@ -1173,6 +1173,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get signupLockedMessage => '신청이 마감되었습니다. 주최자에게 문의하세요.';
 
   @override
+  String get signupPendingReview => '요청이 승인 대기 중입니다';
+
+  @override
   String get signupCancelSpot => '자리 취소';
 
   @override

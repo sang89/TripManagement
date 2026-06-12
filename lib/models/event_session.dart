@@ -136,6 +136,7 @@ class EventSessionRosterEntry {
   EventSessionRosterEntry copyWith({
     String? status,
     bool? attended,
+    bool clearAttended = false,
     bool? signupConfirmed,
     int? signupOrder,
   }) =>
@@ -148,7 +149,7 @@ class EventSessionRosterEntry {
         phone: phone,
         status: status ?? this.status,
         signupOrder: signupOrder ?? this.signupOrder,
-        attended: attended ?? this.attended,
+        attended: clearAttended ? null : (attended ?? this.attended),
         signupConfirmed: signupConfirmed ?? this.signupConfirmed,
         signedUpAt: signedUpAt,
       );

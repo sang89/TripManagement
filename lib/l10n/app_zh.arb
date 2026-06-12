@@ -502,6 +502,7 @@
   "signupShowQr": "显示二维码",
   "signupLocked": "报名已截止",
   "signupLockedMessage": "报名已截止，请联系主办方。",
+  "signupPendingReview": "您的申请正在等待审批",
   "signupCancelSpot": "取消我的名额",
   "signupMarkAttended": "已出席",
   "signupMarkNoShow": "未出席",

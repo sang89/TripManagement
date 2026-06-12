@@ -1172,6 +1172,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get signupLockedMessage => '登録が締め切られました。主催者にお問い合わせください。';
 
   @override
+  String get signupPendingReview => 'リクエストは承認待ちです';
+
+  @override
   String get signupCancelSpot => '席をキャンセル';
 
   @override

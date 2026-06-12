@@ -1192,6 +1192,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Anmeldungen sind gesperrt. Wende dich an den Organisator.';
 
   @override
+  String get signupPendingReview => 'Ihre Anfrage wird überprüft';
+
+  @override
   String get signupCancelSpot => 'Platz stornieren';
 
   @override

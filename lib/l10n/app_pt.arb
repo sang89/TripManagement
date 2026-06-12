@@ -502,6 +502,7 @@
   "signupShowQr": "Mostrar QR Code",
   "signupLocked": "Inscrições encerradas",
   "signupLockedMessage": "Inscrições encerradas. Entre em contato com o organizador.",
+  "signupPendingReview": "Seu pedido está pendente de aprovação",
   "signupCancelSpot": "Cancelar minha vaga",
   "signupMarkAttended": "Compareceu",
   "signupMarkNoShow": "Não compareceu",

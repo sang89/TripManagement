@@ -1189,6 +1189,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Inscrições encerradas. Entre em contato com o organizador.';
 
   @override
+  String get signupPendingReview => 'Seu pedido está pendente de aprovação';
+
+  @override
   String get signupCancelSpot => 'Cancelar minha vaga';
 
   @override
