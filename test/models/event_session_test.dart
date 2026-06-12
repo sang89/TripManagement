@@ -362,4 +362,5 @@ void main() {
       expect(updated.signedUpAt, r.signedUpAt);
     });
   });
+
 }
