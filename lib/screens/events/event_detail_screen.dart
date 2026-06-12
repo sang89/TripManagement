@@ -880,6 +880,18 @@ class _SignupGuideTab extends StatelessWidget {
                 title: 'Signup lock',
                 body: 'If you set a lock window (e.g. 2 hours), signups and cancellations are disabled that many hours before the session starts.',
                 color: const Color(0xFFEA580C),
+              ),
+              _GuideStep(
+                emoji: '✅',
+                title: 'Approval requests',
+                body: 'Enable "Requires approval" when creating a session to review each signup manually. Pending requests show a purple badge on the session card — tap to approve or reject.',
+                color: const Color(0xFFEA580C),
+              ),
+              _GuideStep(
+                emoji: '🔐',
+                title: 'Private sessions',
+                body: 'Private sessions (shown with a 🔒 badge) are not joinable via a public link. Only people you personally share the invite code with can sign up.',
+                color: const Color(0xFFEA580C),
                 isLast: true,
               ),
             ],
@@ -895,13 +907,25 @@ class _SignupGuideTab extends StatelessWidget {
             _GuideStep(
               emoji: '🎟️',
               title: 'Claim your spot',
-              body: 'Scan the session QR code using the Scan tab in the app, or paste the invite code someone shared with you.',
+              body: 'Tap the "Join" button (QR scanner icon) in the bottom nav bar, then scan the session QR code or paste the invite code someone shared with you.',
               color: const Color(0xFFDB2777),
             ),
             _GuideStep(
               emoji: '⏳',
               title: 'Waitlist',
               body: 'If the session is full, you join the waitlist. When someone cancels their confirmed spot, the first person on the waitlist is promoted automatically.',
+              color: const Color(0xFFDB2777),
+            ),
+            _GuideStep(
+              emoji: '📋',
+              title: 'Pending approval',
+              body: 'Some sessions require the organizer\'s approval before you\'re confirmed. You\'ll see a "Pending review" status on the session card until the organizer approves or rejects your request.',
+              color: const Color(0xFFDB2777),
+            ),
+            _GuideStep(
+              emoji: '✔️',
+              title: 'Confirm attendance',
+              body: 'Before the session, you can tap your spot\'s confirmation chip to let the organizer know you\'ll definitely be there. This is optional but helpful.',
               color: const Color(0xFFDB2777),
             ),
             _GuideStep(

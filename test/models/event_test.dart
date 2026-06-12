@@ -169,4 +169,168 @@ void main() {
       expect(copy.guests.length, e.guests.length);
     });
   });
+
+  // ── EventType ────────────────────────────────────────────────────────────────
+
+  group('EventType.fromString', () {
+    test('parses all known types', () {
+      expect(EventType.fromString('trip'), EventType.trip);
+      expect(EventType.fromString('birthday'), EventType.birthday);
+      expect(EventType.fromString('wedding'), EventType.wedding);
+      expect(EventType.fromString('quick_bites'), EventType.quickBites);
+      expect(EventType.fromString('signup'), EventType.signup);
+      expect(EventType.fromString('social'), EventType.social);
+    });
+
+    test('defaults unknown or null values to social', () {
+      expect(EventType.fromString(null), EventType.social);
+      expect(EventType.fromString(''), EventType.social);
+      expect(EventType.fromString('unknown'), EventType.social);
+    });
+
+    test('dbValue round-trips back to fromString', () {
+      for (final type in EventType.values) {
+        expect(EventType.fromString(type.dbValue), type);
+      }
+    });
+  });
+
+  // ── Signup-specific Event fields ─────────────────────────────────────────────
+
+  final signupEventJson = {
+    'id': 'e2',
+    'created_by': 'u1',
+    'title': 'Yoga class',
+    'description': 'Weekly yoga',
+    'location': 'Studio A',
+    'start_at': '2026-08-01T09:00:00.000Z',
+    'event_type': 'signup',
+    'waitlist_enabled': true,
+    'signup_lock_hours': 4,
+    'invite_code': 'yoga-code',
+    'created_at': '2026-06-01T08:00:00.000Z',
+    'updated_at': '2026-06-01T08:00:00.000Z',
+    'event_guests': <dynamic>[],
+  };
+
+  group('Event signup fields', () {
+    test('fromJson parses waitlistEnabled and signupLockHours', () {
+      final e = Event.fromJson(signupEventJson);
+      expect(e.eventType, EventType.signup);
+      expect(e.waitlistEnabled, isTrue);
+      expect(e.signupLockHours, 4);
+    });
+
+    test('fromJson defaults waitlistEnabled=true when absent', () {
+      final j = Map<String, dynamic>.from(signupEventJson)
+        ..remove('waitlist_enabled');
+      expect(Event.fromJson(j).waitlistEnabled, isTrue);
+    });
+
+    test('fromJson parses waitlistEnabled=false', () {
+      final j = Map<String, dynamic>.from(signupEventJson)
+        ..['waitlist_enabled'] = false;
+      expect(Event.fromJson(j).waitlistEnabled, isFalse);
+    });
+
+    test('isSignup true only for signup type', () {
+      final signup = Event.fromJson(signupEventJson);
+      expect(signup.isSignup, isTrue);
+      expect(signup.isTrip, isFalse);
+      expect(signup.isBirthday, isFalse);
+      expect(signup.isQuickBites, isFalse);
+    });
+
+    test('isSignupLocked false when no lock hours set', () {
+      final j = Map<String, dynamic>.from(signupEventJson)
+        ..remove('signup_lock_hours');
+      expect(Event.fromJson(j).isSignupLocked, isFalse);
+    });
+
+    test('isSignupLocked false when start is far in future', () {
+      final startAt =
+          DateTime.now().toUtc().add(const Duration(hours: 10)).toIso8601String();
+      final j = Map<String, dynamic>.from(signupEventJson)
+        ..['start_at'] = startAt
+        ..['signup_lock_hours'] = 2;
+      expect(Event.fromJson(j).isSignupLocked, isFalse);
+    });
+
+    test('isSignupLocked true when within lock window', () {
+      final startAt =
+          DateTime.now().toUtc().add(const Duration(hours: 1)).toIso8601String();
+      final j = Map<String, dynamic>.from(signupEventJson)
+        ..['start_at'] = startAt
+        ..['signup_lock_hours'] = 2;
+      expect(Event.fromJson(j).isSignupLocked, isTrue);
+    });
+
+    test('toJson includes waitlist_enabled and signup_lock_hours for signup type', () {
+      final e = Event.fromJson(signupEventJson);
+      final json = e.toJson();
+      expect(json['waitlist_enabled'], isTrue);
+      expect(json['signup_lock_hours'], 4);
+      expect(json['event_type'], 'signup');
+    });
+
+    test('toJson omits waitlist_enabled and signup_lock_hours for non-signup type', () {
+      final e = Event.fromJson(eventJson); // birthday party (social)
+      final json = e.toJson();
+      expect(json.containsKey('waitlist_enabled'), isFalse);
+      expect(json.containsKey('signup_lock_hours'), isFalse);
+    });
+
+    test('copyWith updates waitlistEnabled and clears signupLockHours', () {
+      final e = Event.fromJson(signupEventJson);
+      final updated = e.copyWith(
+        waitlistEnabled: false,
+        clearSignupLockHours: true,
+      );
+      expect(updated.waitlistEnabled, isFalse);
+      expect(updated.signupLockHours, isNull);
+      expect(updated.eventType, EventType.signup);
+    });
+  });
+
+  // ── Event guest count helpers ─────────────────────────────────────────────────
+
+  group('Event guest counts', () {
+    test('waitlistCount counts waitlisted guests', () {
+      final now = DateTime.now();
+      final guests = [
+        EventGuest(
+          id: 'g1', eventId: 'e1', displayName: 'A',
+          status: 'waitlisted', rsvpAt: now, createdAt: now,
+        ),
+        EventGuest(
+          id: 'g2', eventId: 'e1', displayName: 'B',
+          status: 'going', rsvpAt: now, createdAt: now,
+        ),
+        EventGuest(
+          id: 'g3', eventId: 'e1', displayName: 'C',
+          status: 'waitlisted', rsvpAt: now, createdAt: now,
+        ),
+      ];
+      final e = Event.fromJson(eventJson).copyWith(guests: guests);
+      expect(e.waitlistCount, 2);
+      expect(e.goingCount, 1);
+    });
+
+    test('pendingCount counts pending guests', () {
+      final now = DateTime.now();
+      final guests = [
+        EventGuest(
+          id: 'g1', eventId: 'e1', displayName: 'A',
+          status: 'pending', rsvpAt: now, createdAt: now,
+        ),
+        EventGuest(
+          id: 'g2', eventId: 'e1', displayName: 'B',
+          status: 'accepted', rsvpAt: now, createdAt: now,
+        ),
+      ];
+      final e = Event.fromJson(eventJson).copyWith(guests: guests);
+      expect(e.pendingCount, 1);
+      expect(e.goingCount, 1); // 'accepted' counts as going
+    });
+  });
 }
