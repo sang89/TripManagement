@@ -9129,6 +9129,17 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     }
   }
 
+  /// Returns deduplicated display names of confirmed event members for pre-add suggestions.
+  List<String> _memberSuggestionNames() {
+    const excluded = {'left', 'declined'};
+    return widget.event.guests
+        .where((g) => !excluded.contains(g.status) && g.displayName.isNotEmpty)
+        .map((g) => g.displayName)
+        .toSet()
+        .toList()
+      ..sort();
+  }
+
   Future<void> _cloneSession(BuildContext context, EventSession source) async {
     final provider = context.read<EventProvider>();
     final suggestion = source.startAt.add(const Duration(days: 7));
@@ -9139,8 +9150,11 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) =>
-          _AddSessionSheet(suggestion: suggestion, template: source),
+      builder: (_) => _AddSessionSheet(
+        suggestion: suggestion,
+        template: source,
+        memberNames: _memberSuggestionNames(),
+      ),
     );
     if (result == null || !context.mounted) return;
     await _applySessionConfig(context, provider, result);
@@ -9162,7 +9176,10 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _AddSessionSheet(suggestion: suggestion),
+      builder: (_) => _AddSessionSheet(
+        suggestion: suggestion,
+        memberNames: _memberSuggestionNames(),
+      ),
     );
     if (result == null || !context.mounted) return;
     await _applySessionConfig(context, provider, result);
@@ -9478,14 +9495,29 @@ class _SessionCardState extends State<_SessionCard>
     }
   }
 
+  AnimationController? _pulseCtrl;
+  Animation<double>? _pulseAnim;
+
   @override
   void initState() {
     super.initState();
     if (widget.isExpanded) _loadRoster();
+    _initAnims();
+  }
+
+  void _initAnims() {
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.10, end: 0.30).animate(
+      CurvedAnimation(parent: _pulseCtrl!, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
+    _pulseCtrl?.dispose();
     _cancelCtrl?.dispose();
     super.dispose();
   }
@@ -9528,23 +9560,39 @@ class _SessionCardState extends State<_SessionCard>
     final myEntry = roster?.where((r) => r.userId == widget.authUid).firstOrNull;
     final hasMoreRoster = provider.hasMoreRosterFor(widget.session.id);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFF2E7D32).withValues(alpha: 0.18),
+    final grad = _SessionEmojiBadge.gradientFor(widget.session);
+    final accentColor = grad[0];
+    final accentColor2 = grad[1];
+
+    // Guard against hot-reload where initState may not have run on existing state.
+    if (_pulseCtrl == null) _initAnims();
+    final pulseAnim = _pulseAnim!;
+
+    return AnimatedBuilder(
+      animation: pulseAnim,
+      builder: (_, child) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withValues(alpha: pulseAnim.value),
+              blurRadius: 18,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2E7D32).withValues(alpha: 0.07),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        child: child,
       ),
-      child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          children: [
+            // ── Card background + content ─────────────────────────────────
+            Container(
+              color: Theme.of(context).colorScheme.surface,
+              child: Column(
         children: [
           // ── Header (always visible, counts from DB columns) ──────────────
           AppTappable(
@@ -9562,6 +9610,24 @@ class _SessionCardState extends State<_SessionCard>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                    colors: [accentColor, accentColor2]),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Session #${widget.session.sessionNumber}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
                             Text(
                               fmt.format(widget.session.startAt.toLocal()),
                               style: const TextStyle(
@@ -9793,16 +9859,6 @@ class _SessionCardState extends State<_SessionCard>
                                   entry: e.value,
                                   isOrganizer: false,
                                   showAttendance: false,
-                                  onToggleConfirmed: !hasEnded &&
-                                          e.value.userId == widget.authUid
-                                      ? (c) => context
-                                          .read<EventProvider>()
-                                          .toggleSessionConfirmed(
-                                              e.value.id,
-                                              widget.session.id,
-                                              widget.event.id,
-                                              c)
-                                      : null,
                                 ),
                               )),
 
@@ -9998,10 +10054,54 @@ class _SessionCardState extends State<_SessionCard>
                         ], // end if (!hasEnded)
                       ],
                     ),
+            ),          // closes Padding
+          ],            // closes isExpanded spread
+        ],              // closes Column.children
+        ),              // closes Column
+        ),              // closes card background Container
+            // ── Animated left border ────────────────────────────────────
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              child: AnimatedBuilder(
+                animation: pulseAnim,
+                builder: (_, snap) => Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        accentColor.withValues(alpha: pulseAnim.value * 3.0),
+                        accentColor.withValues(alpha: pulseAnim.value * 1.2),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
-        ],
-      ),
+            // ── Animated right border ────────────────────────────────────
+            Positioned(
+              right: 0, top: 0, bottom: 0,
+              child: AnimatedBuilder(
+                animation: pulseAnim,
+                builder: (_, snap) => Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        accentColor2.withValues(alpha: pulseAnim.value * 1.2),
+                        accentColor2.withValues(alpha: pulseAnim.value * 3.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],            // closes Stack.children
+        ),              // closes Stack / ClipRRect child
+      ),                // closes ClipRRect
     );
   }
 
@@ -10876,6 +10976,13 @@ class _SessionEmojiBadge extends StatelessWidget {
     [Color(0xFFFA709A), Color(0xFFFEE140)], // pink-yellow
   ];
 
+  /// Returns the [start, end] gradient colours for [session], shared with the
+  /// card border so the accent colour is always consistent.
+  static List<Color> gradientFor(EventSession session) {
+    final hash = session.id.hashCode.abs();
+    return _gradients[(hash ~/ _emojis.length) % _gradients.length];
+  }
+
   @override
   Widget build(BuildContext context) {
     final hash = session.id.hashCode.abs();
@@ -11063,34 +11170,32 @@ class _SessionRosterRow extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Pre-event confirmation (not shown on waitlist or after event)
-                if (!isWaitlist && !showAttendance) ...[
+                // Paid marker — organizer taps to toggle paid/unpaid
+                if (!isWaitlist && onToggleConfirmed != null) ...[
                   Tooltip(
-                    message: isConfirmed ? 'Confirmed' : 'Not confirmed',
+                    message: isConfirmed ? 'Paid — tap to unmark' : 'Not paid — tap to mark paid',
                     child: AppTappable(
-                      onTap: onToggleConfirmed != null
-                          ? () => onToggleConfirmed!(!isConfirmed)
-                          : null,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: Icon(
-                          isConfirmed
-                              ? Icons.check_circle_rounded
-                              : onToggleConfirmed != null
-                                  ? Icons.radio_button_unchecked_rounded
-                                  : Icons.radio_button_unchecked_rounded,
-                          key: ValueKey(isConfirmed),
-                          size: 24,
-                          color: isConfirmed
-                              ? const Color(0xFF2E7D32)   // confirmed → green
-                              : onToggleConfirmed != null
-                                  ? AppTheme.primary       // yours, unconfirmed → blue (tap me!)
-                                  : Colors.grey[300],      // someone else's → clearly disabled
+                      onTap: () => onToggleConfirmed!(!isConfirmed),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 6),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            isConfirmed
+                                ? Icons.paid_rounded
+                                : Icons.money_off_csred_rounded,
+                            key: ValueKey(isConfirmed),
+                            size: 24,
+                            color: isConfirmed
+                                ? const Color(0xFF2E7D32)
+                                : Colors.grey[350],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 12),
                 ],
                 if (showAttendance) ...[
                   _AttendanceChip(
@@ -11549,7 +11654,12 @@ class _NewSessionConfig {
 class _AddSessionSheet extends StatefulWidget {
   final DateTime suggestion;
   final EventSession? template; // pre-fills settings when cloning
-  const _AddSessionSheet({required this.suggestion, this.template});
+  final List<String> memberNames; // event member names for pre-add suggestions
+  const _AddSessionSheet({
+    required this.suggestion,
+    this.template,
+    this.memberNames = const [],
+  });
 
   @override
   State<_AddSessionSheet> createState() => _AddSessionSheetState();
@@ -11566,6 +11676,16 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
   final List<String> _preAddNames = [];
   final _preAddCtrl = TextEditingController();
   bool _preAddHasText = false;
+
+  List<String> get _suggestions {
+    final query = _preAddCtrl.text.trim().toLowerCase();
+    if (query.isEmpty) return const [];
+    return widget.memberNames
+        .where((n) =>
+            n.toLowerCase().contains(query) && !_preAddNames.contains(n))
+        .take(5)
+        .toList();
+  }
 
   @override
   void initState() {
@@ -11590,6 +11710,16 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
   void _submitPreAdd() {
     final name = _preAddCtrl.text.trim();
     if (name.isNotEmpty && !_preAddNames.contains(name)) {
+      setState(() {
+        _preAddNames.add(name);
+        _preAddHasText = false;
+      });
+      _preAddCtrl.clear();
+    }
+  }
+
+  void _addSuggestion(String name) {
+    if (!_preAddNames.contains(name)) {
       setState(() {
         _preAddNames.add(name);
         _preAddHasText = false;
@@ -11626,7 +11756,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
     final fmt = DateFormat('EEE, MMM d · h:mm a');
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
           20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 28),
       child: Column(
@@ -11783,7 +11913,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
 
           // Pre-add participants
           Text('Pre-add participants',
@@ -11791,14 +11921,21 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
           const SizedBox(height: 6),
           if (_preAddNames.isNotEmpty) ...[
             Wrap(
-              spacing: 8,
-              runSpacing: 6,
+              spacing: 4,
+              runSpacing: 4,
               children: _preAddNames
                   .map((name) => Chip(
-                        label: Text(name, style: const TextStyle(fontSize: 13)),
-                        deleteIcon: const Icon(Icons.close, size: 16),
+                        label: Text(name,
+                            style: const TextStyle(fontSize: 11)),
+                        deleteIcon: const Icon(Icons.close_rounded, size: 13),
                         onDeleted: () =>
                             setState(() => _preAddNames.remove(name)),
+                        labelPadding: const EdgeInsets.only(left: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 0),
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
                         backgroundColor: const Color(0xFF2E7D32)
                             .withValues(alpha: 0.10),
                         side: BorderSide(
@@ -11833,6 +11970,39 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
                 setState(() => _preAddHasText = v.trim().isNotEmpty),
             onSubmitted: (_) => _submitPreAdd(),
           ),
+          if (_suggestions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _suggestions.map((name) {
+                return AppTappable(
+                  onTap: () => _addSuggestion(name),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: const Color(0xFF2E7D32)
+                              .withValues(alpha: 0.30)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('👤', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 5),
+                        Text(name,
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
           const SizedBox(height: 20),
 
           // Create button
