@@ -40,6 +40,14 @@ class EventProvider extends ChangeNotifier {
   String? _userId;
   RealtimeChannel? _realtimeChannel;
 
+  // Emits sessionIds whenever the current user's roster entry is removed
+  // (rejected, kicked, cancelled from another device). Widgets subscribe to
+  // this stream and call setState directly so the rebuild is guaranteed — it
+  // bypasses the notifyListeners → context.watch chain which can be swallowed
+  // when Flutter considers the widget already clean.
+  final _sessionStatusCleared = StreamController<String>.broadcast();
+  Stream<String> get sessionStatusCleared => _sessionStatusCleared.stream;
+
   // Per-event caches for photos and expenses (fetched on demand).
   final Map<String, List<EventPhoto>> _photos = {};
   final Map<String, List<EventExpense>> _expenses = {};
@@ -928,6 +936,13 @@ class EventProvider extends ChangeNotifier {
               }),
             );
             notifyListeners();
+            // The session count changed, meaning a roster entry was added,
+            // removed, promoted, or demoted. Refresh the roster so the player
+            // cards stay in sync for all members — this is the only Realtime
+            // signal that reliably reaches every subscriber regardless of RLS.
+            if (_sessionRosters.containsKey(sessionId)) {
+              unawaited(refreshSessionRoster(sessionId));
+            }
           },
         )
 
@@ -984,19 +999,38 @@ class EventProvider extends ChangeNotifier {
             final rosterId = row['id'] as String?;
             if (sessionId == null || rosterId == null) return;
 
-            // Keep the status chip in sync even when the roster isn't expanded.
+            final newStatus = row['status'] as String?;
             final uid = _db.auth.currentUser?.id;
             final rowUserId = row['user_id'] as String?;
-            if (uid != null && rowUserId == uid) {
-              final newStatus = row['status'] as String?;
-              final newOrder = row['signup_order'] as int?;
-              if (newStatus != null) {
-                _mySessionStatuses[sessionId] = (
-                  status: newStatus,
-                  order: newOrder ?? _mySessionStatuses[sessionId]?.order ?? 0,
-                );
-                notifyListeners();
+            final isOwnRow = uid != null && rowUserId == uid;
+
+            // 'rejected' / 'removed' are transient signals: the DB DELETEs the
+            // row immediately after. Clear state eagerly, then do a full DB
+            // refresh — the UPDATE and DELETE happen in the same transaction so
+            // Realtime may only deliver one event; the DB fetch is authoritative.
+            if (newStatus == 'rejected' || newStatus == 'removed') {
+              if (isOwnRow) {
+                _mySessionStatuses.remove(sessionId);
+                _sessionStatusCleared.add(sessionId);
               }
+              final roster = _sessionRosters[sessionId];
+              if (roster != null) {
+                _sessionRosters[sessionId] =
+                    roster.where((r) => r.id != rosterId).toList();
+              }
+              notifyListeners();
+              unawaited(refreshSessionRoster(sessionId));
+              return;
+            }
+
+            // Keep the status chip in sync even when the roster isn't expanded.
+            if (isOwnRow && newStatus != null) {
+              final newOrder = row['signup_order'] as int?;
+              _mySessionStatuses[sessionId] = (
+                status: newStatus,
+                order: newOrder ?? _mySessionStatuses[sessionId]?.order ?? 0,
+              );
+              notifyListeners();
             }
 
             if (!_sessionRosters.containsKey(sessionId)) return;
@@ -1010,7 +1044,7 @@ class EventProvider extends ChangeNotifier {
                 displayName: r.displayName,
                 email: r.email,
                 phone: r.phone,
-                status: row['status'] as String? ?? r.status,
+                status: newStatus ?? r.status,
                 signupOrder: row['signup_order'] as int? ?? r.signupOrder,
                 attended: row.containsKey('attended')
                     ? row['attended'] as bool?
@@ -1040,11 +1074,14 @@ class EventProvider extends ChangeNotifier {
             if (sessionId == null || rosterId == null) return;
 
             // Clear status badge if the current user's entry was deleted
-            // (handles cancellation from another device).
+            // (handles cancellation from another device, kick, reject).
             final uid = _db.auth.currentUser?.id;
             final rowUserId = old['user_id'] as String?;
-            if (uid != null && rowUserId == uid) {
+            final isOwnEntry = uid != null && rowUserId == uid;
+            if (isOwnEntry) {
               _mySessionStatuses.remove(sessionId);
+              _sessionStatusCleared.add(sessionId);
+              unawaited(refreshSessionRoster(sessionId));
             }
 
             // Remove from cached roster if loaded.
@@ -1055,6 +1092,59 @@ class EventProvider extends ChangeNotifier {
             }
 
             notifyListeners();
+          },
+        )
+
+        // ── Own-row subscriptions (filtered by user_id) ────────────────────
+        // The unfiltered handlers above rely on Supabase applying RLS to decide
+        // which events to deliver. For tables with restricted SELECT policies
+        // (like "guest reads own entry"), Supabase requires an explicit filter
+        // to reliably deliver events. These filtered subscriptions guarantee
+        // that the current user always receives their own row's status changes
+        // (approve, reject, demote, kick) regardless of RLS evaluation.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'event_session_roster',
+          filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq, column: 'user_id', value: _userId!),
+          callback: (payload) {
+            final row = payload.newRecord;
+            final sessionId = row['session_id'] as String?;
+            if (sessionId == null) return;
+            final newStatus = row['status'] as String?;
+            if (newStatus == null) return;
+
+            if (newStatus == 'rejected' || newStatus == 'removed') {
+              _mySessionStatuses.remove(sessionId);
+              _sessionStatusCleared.add(sessionId);
+              notifyListeners();
+              unawaited(refreshSessionRoster(sessionId));
+              return;
+            }
+            final newOrder = row['signup_order'] as int?;
+            _mySessionStatuses[sessionId] = (
+              status: newStatus,
+              order: newOrder ?? _mySessionStatuses[sessionId]?.order ?? 0,
+            );
+            notifyListeners();
+            unawaited(refreshSessionRoster(sessionId));
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_session_roster',
+          filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq, column: 'user_id', value: _userId!),
+          callback: (payload) {
+            final old = payload.oldRecord;
+            final sessionId = old['session_id'] as String?;
+            if (sessionId == null) return;
+            _mySessionStatuses.remove(sessionId);
+            _sessionStatusCleared.add(sessionId);
+            notifyListeners();
+            unawaited(refreshSessionRoster(sessionId));
           },
         )
 

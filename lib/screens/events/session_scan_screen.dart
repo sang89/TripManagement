@@ -54,46 +54,13 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
   }
 
   Future<void> _enterCodeManually() async {
-    final ctrl = TextEditingController();
     final input = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Enter invite code',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            Text('Paste the invite code or link you received.',
-                style: TextStyle(fontSize: 13, color: Colors.grey[600])),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              maxLines: 3,
-              minLines: 1,
-              decoration: InputDecoration(
-                hintText: 'e.g. JbKC7Iz8Snu46RIzVniQqw',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppButton(
-              label: 'Join',
-              onPressed: () => Navigator.pop(ctx, ctrl.text),
-            ),
-          ],
-        ),
-      ),
+      builder: (ctx) => const _EnterCodeSheet(),
     );
-    ctrl.dispose();
     if (input == null || !mounted) return;
     final uuid = InviteCodec.extract(input);
     if (uuid == null) {
@@ -528,4 +495,61 @@ class _Banner extends StatelessWidget {
         ),
         child: Text(text, style: TextStyle(color: color, fontSize: 14)),
       );
+}
+
+// ── Manual code entry sheet ───────────────────────────────────────────────────
+// Owns its own TextEditingController so Flutter disposes it with the widget,
+// not externally after the sheet's exit animation has already started.
+
+class _EnterCodeSheet extends StatefulWidget {
+  const _EnterCodeSheet();
+
+  @override
+  State<_EnterCodeSheet> createState() => _EnterCodeSheetState();
+}
+
+class _EnterCodeSheetState extends State<_EnterCodeSheet> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Enter invite code',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text('Paste the invite code or link you received.',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 1,
+            decoration: InputDecoration(
+              hintText: 'e.g. JbKC7Iz8Snu46RIzVniQqw',
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppButton(
+            label: 'Join',
+            onPressed: () => Navigator.pop(context, _ctrl.text),
+          ),
+        ],
+      ),
+    );
+  }
 }
