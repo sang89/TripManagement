@@ -1369,7 +1369,7 @@ class EventProvider extends ChangeNotifier {
     final rows = await _db
         .from('event_sessions')
         .select(
-            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours')
+            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval')
         .eq('event_id', eventId)
         .gte('start_at', now)
         .order('start_at', ascending: true)
@@ -1392,7 +1392,7 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval')
           .eq('event_id', eventId)
           .lt('start_at', now)
           .order('start_at', ascending: false) // most recent first
@@ -1420,7 +1420,7 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval')
           .eq('event_id', eventId)
           .lt('start_at', cursor) // next batch of older past sessions
           .order('start_at', ascending: false)
@@ -1561,6 +1561,8 @@ class EventProvider extends ChangeNotifier {
     int? capacity,
     bool waitlistEnabled = true,
     int? signupLockHours,
+    bool isPublic = true,
+    bool requiresApproval = false,
   }) async {
     final rows = await _db.rpc('add_event_session', params: {
       'p_event_id': eventId,
@@ -1569,6 +1571,8 @@ class EventProvider extends ChangeNotifier {
       'p_capacity': capacity,
       'p_waitlist_enabled': waitlistEnabled,
       'p_signup_lock_hours': signupLockHours,
+      'p_is_public': isPublic,
+      'p_requires_approval': requiresApproval,
     }) as List<dynamic>;
     if (rows.isEmpty) throw Exception('Failed to create session');
     final session = EventSession.fromJson(rows.first as Map<String, dynamic>);
@@ -1662,6 +1666,27 @@ class EventProvider extends ChangeNotifier {
       'p_attended': attended,
     });
     _patchRosterEntry(sessionId, rosterId, (r) => r.copyWith(attended: attended));
+  }
+
+  /// Organizer approves a pending_review request — entry moves to 'going'.
+  Future<void> approveSessionRosterEntry(
+      String rosterId, String sessionId, String eventId) async {
+    await _db.rpc('session_approve_request', params: {'p_roster_id': rosterId});
+    // The DB assigns the new signup_order in sequence — reload to get it.
+    await refreshSessionRoster(sessionId);
+    unawaited(_refreshSessionCounts(sessionId, eventId));
+  }
+
+  /// Organizer rejects (deletes) a pending_review request.
+  Future<void> rejectSessionRosterEntry(
+      String rosterId, String sessionId, String eventId) async {
+    await _db.rpc('session_reject_request', params: {'p_roster_id': rosterId});
+    final roster = _sessionRosters[sessionId];
+    if (roster != null) {
+      _sessionRosters[sessionId] =
+          roster.where((r) => r.id != rosterId).toList();
+      notifyListeners();
+    }
   }
 
   /// Toggle signup confirmation on a roster entry.

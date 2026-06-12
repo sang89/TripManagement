@@ -9105,6 +9105,23 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     }
   }
 
+  Future<void> _cloneSession(BuildContext context, EventSession source) async {
+    final provider = context.read<EventProvider>();
+    final suggestion = source.startAt.add(const Duration(days: 7));
+
+    if (!context.mounted) return;
+    final result = await showModalBottomSheet<_NewSessionConfig>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) =>
+          _AddSessionSheet(suggestion: suggestion, template: source),
+    );
+    if (result == null || !context.mounted) return;
+    await _applySessionConfig(context, provider, result);
+  }
+
   Future<void> _addSession(BuildContext context) async {
     final provider = context.read<EventProvider>();
     final upcoming = provider.upcomingSessionsFor(widget.event.id);
@@ -9124,8 +9141,18 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       builder: (_) => _AddSessionSheet(suggestion: suggestion),
     );
     if (result == null || !context.mounted) return;
+    await _applySessionConfig(context, provider, result);
+  }
 
+  /// Shared post-sheet logic for both _addSession and _cloneSession.
+  Future<void> _applySessionConfig(
+    BuildContext context,
+    EventProvider provider,
+    _NewSessionConfig result,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
+    // Read auth synchronously before any await.
+    final auth = context.read<AuthProvider>();
     try {
       final session = await provider.addSession(
         widget.event.id,
@@ -9134,18 +9161,37 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
         capacity: result.capacity,
         waitlistEnabled: result.waitlistEnabled,
         signupLockHours: result.signupLockHours,
+        isPublic: result.isPublic,
+        requiresApproval: result.requiresApproval,
       );
-      // Bulk-add pre-registered participants to this session.
-      if (result.preAddNames.isNotEmpty) {
-        for (var i = 0; i < result.preAddNames.length; i++) {
-          await provider.db.from('event_session_roster').insert({
-            'session_id': session.id,
-            'display_name': result.preAddNames[i],
-            'status': 'going',
-            'signup_order': i + 1,
-            'signed_up_at': DateTime.now().toUtc().toIso8601String(),
-          });
-        }
+
+      final now = DateTime.now().toUtc().toIso8601String();
+      // Signup order: organizer is #1 if autoAddSelf, pre-adds follow.
+      int nextOrder = 1;
+
+      if (result.autoAddSelf) {
+        await provider.db.from('event_session_roster').insert({
+          'session_id': session.id,
+          'user_id': auth.userId,
+          'display_name': auth.userName,
+
+          'status': 'going',
+          'signup_order': nextOrder++,
+          'signed_up_at': now,
+        });
+      }
+
+      for (final name in result.preAddNames) {
+        await provider.db.from('event_session_roster').insert({
+          'session_id': session.id,
+          'display_name': name,
+          'status': 'going',
+          'signup_order': nextOrder++,
+          'signed_up_at': now,
+        });
+      }
+
+      if (result.autoAddSelf || result.preAddNames.isNotEmpty) {
         await provider.refreshSessionRoster(session.id);
       }
       if (mounted) setState(() => _expandedSessionId = session.id);
@@ -9237,6 +9283,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
                 isExpanded: _expandedSessionId == session.id,
                 onToggle: () => setState(() => _expandedSessionId =
                     _expandedSessionId == session.id ? null : session.id),
+                onClone: widget.isOrganizer
+                    ? () => _cloneSession(context, session)
+                    : null,
               )),
 
         // ── Past sessions ─────────────────────────────────────────────────
@@ -9258,6 +9307,7 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
           },
           onToggleSession: (id) => setState(() =>
               _expandedSessionId = _expandedSessionId == id ? null : id),
+          onCloneSession: (session) => _cloneSession(context, session),
           onLoadMore: () =>
               context.read<EventProvider>().loadMorePastSessions(widget.event.id),
         ),
@@ -9278,6 +9328,7 @@ class _PastSessionsSection extends StatelessWidget {
   final String? expandedSessionId;
   final VoidCallback onToggleVisible;
   final void Function(String sessionId) onToggleSession;
+  final void Function(EventSession) onCloneSession;
   final VoidCallback onLoadMore;
 
   const _PastSessionsSection({
@@ -9290,6 +9341,7 @@ class _PastSessionsSection extends StatelessWidget {
     required this.expandedSessionId,
     required this.onToggleVisible,
     required this.onToggleSession,
+    required this.onCloneSession,
     required this.onLoadMore,
   });
 
@@ -9339,6 +9391,7 @@ class _PastSessionsSection extends StatelessWidget {
                   isOrganizer: isOrganizer,
                   isExpanded: expandedSessionId == session.id,
                   onToggle: () => onToggleSession(session.id),
+                  onClone: isOrganizer ? () => onCloneSession(session) : null,
                 )),
           if (hasMore) ...[
             const SizedBox(height: 8),
@@ -9368,6 +9421,7 @@ class _SessionCard extends StatefulWidget {
   final bool isOrganizer;
   final bool isExpanded;
   final VoidCallback onToggle;
+  final VoidCallback? onClone;
 
   const _SessionCard({
     super.key,
@@ -9377,6 +9431,7 @@ class _SessionCard extends StatefulWidget {
     required this.isOrganizer,
     required this.isExpanded,
     required this.onToggle,
+    this.onClone,
   });
 
   @override
@@ -9444,6 +9499,8 @@ class _SessionCardState extends State<_SessionCard>
         roster?.where((r) => r.status == 'going').toList() ?? [];
     final waitlist =
         roster?.where((r) => r.status == 'waitlisted').toList() ?? [];
+    final pending =
+        roster?.where((r) => r.status == 'pending_review').toList() ?? [];
     final myEntry = roster?.where((r) => r.userId == widget.authUid).firstOrNull;
     final hasMoreRoster = provider.hasMoreRosterFor(widget.session.id);
 
@@ -9500,6 +9557,8 @@ class _SessionCardState extends State<_SessionCard>
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (!widget.session.isPublic && widget.isOrganizer)
+                            _StatusChip(label: '🔒 Private', color: Colors.blueGrey),
                           if (isLocked)
                             _StatusChip(label: 'Locked', color: Colors.orange),
                           if (hasEnded)
@@ -9511,11 +9570,6 @@ class _SessionCardState extends State<_SessionCard>
                                 _StatusChip(
                                   label: '${cap - going} open',
                                   color: const Color(0xFF2E7D32),
-                                )
-                              else if (cap != null)
-                                _StatusChip(
-                                  label: 'Full',
-                                  color: AppTheme.danger,
                                 ),
                               if (waitlisted > 0)
                                 _StatusChip(
@@ -9540,14 +9594,61 @@ class _SessionCardState extends State<_SessionCard>
                                 );
                               }),
                             ],
+                          if (widget.isOrganizer && widget.onClone != null) ...[
+                            const SizedBox(width: 2),
+                            AppTappable(
+                              onTap: widget.onClone,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.copy_rounded,
+                                  size: 16,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(width: 4),
-                          Icon(
-                            widget.isExpanded
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            size: 20,
-                            color: Colors.grey[400],
-                          ),
+                          // Pending-review badge (shows dot when roster loaded)
+                          if (widget.isOrganizer && pending.isNotEmpty)
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(
+                                  widget.isExpanded
+                                      ? Icons.expand_less_rounded
+                                      : Icons.expand_more_rounded,
+                                  size: 20,
+                                  color: Colors.grey[400],
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF6A1B9A),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      '${pending.length}',
+                                      style: const TextStyle(
+                                          fontSize: 9,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Icon(
+                              widget.isExpanded
+                                  ? Icons.expand_less_rounded
+                                  : Icons.expand_more_rounded,
+                              size: 20,
+                              color: Colors.grey[400],
+                            ),
                         ],
                       ),
                     ],
@@ -9783,6 +9884,56 @@ class _SessionCardState extends State<_SessionCard>
                                 )),
                         ],
 
+                        // ── Pending Review (organizer only) ──────────────
+                        if (widget.isOrganizer && pending.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Row(children: [
+                            const Text('⏳', style: TextStyle(fontSize: 15)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Pending Review (${pending.length})',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF6A1B9A)),
+                            ),
+                          ]),
+                          const SizedBox(height: 8),
+                          ...pending.map((entry) =>
+                              _PendingReviewRow(
+                                key: ValueKey(entry.id),
+                                entry: entry,
+                                onApprove: () async {
+                                  try {
+                                    await context
+                                        .read<EventProvider>()
+                                        .approveSessionRosterEntry(
+                                            entry.id,
+                                            widget.session.id,
+                                            widget.event.id);
+                                  } catch (err) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(err.toString())));
+                                  }
+                                },
+                                onReject: () async {
+                                  try {
+                                    await context
+                                        .read<EventProvider>()
+                                        .rejectSessionRosterEntry(
+                                            entry.id,
+                                            widget.session.id,
+                                            widget.event.id);
+                                  } catch (err) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(err.toString())));
+                                  }
+                                },
+                              )),
+                        ],
+
                         // ── Current user CTA ──────────────────────────────
                         if (!hasEnded) ...[
                         const SizedBox(height: 16),
@@ -9798,12 +9949,19 @@ class _SessionCardState extends State<_SessionCard>
                             _SignupCTAButton(
                               label: widget.session.isFull
                                   ? '⏳  ${l10n.signupJoinWaitlist}'
-                                  : '🎟️  ${l10n.signupClaimSpot}',
+                                  : widget.session.requiresApproval
+                                      ? '🔍  Request to join'
+                                      : '🎟️  ${l10n.signupClaimSpot}',
                               isWaitlist: widget.session.isFull,
                               onPressed: () => _signupForSession(context, l10n),
                             ),
                         ] else ...[
-                          if (!isLocked)
+                          if (myEntry.status == 'pending_review')
+                            _LockedBanner(
+                              message: '🔍 Your request is pending organizer approval.',
+                              color: const Color(0xFF6A1B9A),
+                            )
+                          else if (!isLocked)
                             _CancelSpotButton(
                               label: l10n.signupCancelSpot,
                               isWaitlist: myEntry.status == 'waitlisted',
@@ -9844,7 +10002,9 @@ class _SessionCardState extends State<_SessionCard>
         messenger.showSnackBar(SnackBar(
           content: Text(status == 'waitlisted'
               ? l10n.signupWaitlistPosition(pos)
-              : l10n.signupConfirmedPosition(pos)),
+              : status == 'pending_review'
+                  ? 'Your request has been submitted — the organizer will review it.'
+                  : l10n.signupConfirmedPosition(pos)),
         ));
       }
       await provider.refreshSessionRoster(widget.session.id);
@@ -9857,6 +10017,10 @@ class _SessionCardState extends State<_SessionCard>
                 ? 'You are already signed up for this session.'
                 : msg),
       ));
+      // Roster may be stale — refresh so the correct state (cancel button) shows.
+      if (msg.contains('already_signed_up')) {
+        await provider.refreshSessionRoster(widget.session.id);
+      }
     }
   }
 
@@ -11342,6 +11506,9 @@ class _NewSessionConfig {
   final bool waitlistEnabled;
   final int? signupLockHours;
   final List<String> preAddNames;
+  final bool autoAddSelf;
+  final bool isPublic;
+  final bool requiresApproval;
 
   const _NewSessionConfig({
     required this.startAt,
@@ -11349,12 +11516,16 @@ class _NewSessionConfig {
     this.waitlistEnabled = true,
     this.signupLockHours,
     this.preAddNames = const [],
+    this.autoAddSelf = false,
+    this.isPublic = true,
+    this.requiresApproval = false,
   });
 }
 
 class _AddSessionSheet extends StatefulWidget {
   final DateTime suggestion;
-  const _AddSessionSheet({required this.suggestion});
+  final EventSession? template; // pre-fills settings when cloning
+  const _AddSessionSheet({required this.suggestion, this.template});
 
   @override
   State<_AddSessionSheet> createState() => _AddSessionSheetState();
@@ -11365,6 +11536,9 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
   final _capacityCtrl = TextEditingController();
   bool _waitlistEnabled = true;
   final _lockCtrl = TextEditingController();
+  bool _autoAddSelf = true;
+  bool _isPublic = true;
+  bool _requiresApproval = false;
   final List<String> _preAddNames = [];
   final _preAddCtrl = TextEditingController();
   bool _preAddHasText = false;
@@ -11373,6 +11547,12 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
   void initState() {
     super.initState();
     _startAt = widget.suggestion;
+    final t = widget.template;
+    if (t != null) {
+      if (t.capacity != null) _capacityCtrl.text = t.capacity.toString();
+      _waitlistEnabled = t.waitlistEnabled;
+      if (t.signupLockHours != null) _lockCtrl.text = t.signupLockHours.toString();
+    }
   }
 
   @override
@@ -11504,7 +11684,82 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
             ),
             keyboardType: TextInputType.number,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
+
+          // Auto-add myself as #1
+          Row(
+            children: [
+              const Text('👤', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Add myself as #1',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+              Switch(
+                value: _autoAddSelf,
+                onChanged: (v) => setState(() => _autoAddSelf = v),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          // Public / private toggle
+          Row(
+            children: [
+              const Text('🌐', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Make session public',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+              Switch(
+                value: _isPublic,
+                onChanged: (v) => setState(() => _isPublic = v),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 32, bottom: 4),
+            child: Text(
+              _isPublic
+                  ? 'Visible to all group members — anyone can sign up.'
+                  : 'Hidden from the session list. Members can only join via QR code or invite link.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          // Need Review toggle
+          Row(
+            children: [
+              const Text('🔍', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Need review',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+              Switch(
+                value: _requiresApproval,
+                onChanged: (v) => setState(() => _requiresApproval = v),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 32, bottom: 4),
+            child: Text(
+              _requiresApproval
+                  ? 'Sign-up requests go to pending — organizer must approve before they count as confirmed.'
+                  : 'Anyone who signs up is immediately confirmed (or waitlisted if full).',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ),
+
+          const SizedBox(height: 8),
 
           // Pre-add participants
           Text('Pre-add participants',
@@ -11570,9 +11825,97 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
                   waitlistEnabled: _waitlistEnabled,
                   signupLockHours: lock,
                   preAddNames: List.unmodifiable(_preAddNames),
+                  autoAddSelf: _autoAddSelf,
+                  isPublic: _isPublic,
+                  requiresApproval: _requiresApproval,
                 ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pending review row (organizer approve / reject) ──────────────────────────
+
+class _PendingReviewRow extends StatelessWidget {
+  final EventSessionRosterEntry entry;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  const _PendingReviewRow({
+    super.key,
+    required this.entry,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6A1B9A).withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: const Color(0xFF6A1B9A).withValues(alpha: 0.25)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          const Text('⏳', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry.displayName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14)),
+                if (entry.email != null)
+                  Text(entry.email!,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+          AppTappable(
+            onTap: onApprove,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.4)),
+              ),
+              child: const Text('✓ Approve',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2E7D32))),
+            ),
+          ),
+          const SizedBox(width: 8),
+          AppTappable(
+            onTap: onReject,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppTheme.danger.withValues(alpha: 0.35)),
+              ),
+              child: Text('✗ Reject',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.danger)),
+            ),
           ),
         ],
       ),

@@ -13,6 +13,8 @@ class EventSession {
   final int? capacity;
   final bool waitlistEnabled;
   final int? signupLockHours;
+  final bool isPublic;
+  final bool requiresApproval;
 
   const EventSession({
     required this.id,
@@ -27,6 +29,8 @@ class EventSession {
     this.capacity,
     this.waitlistEnabled = true,
     this.signupLockHours,
+    this.isPublic = true,
+    this.requiresApproval = false,
   });
 
   factory EventSession.fromJson(Map<String, dynamic> json) => EventSession(
@@ -44,6 +48,8 @@ class EventSession {
         capacity: json['capacity'] as int?,
         waitlistEnabled: (json['waitlist_enabled'] as bool?) ?? true,
         signupLockHours: json['signup_lock_hours'] as int?,
+        isPublic: (json['is_public'] as bool?) ?? true,
+        requiresApproval: (json['requires_approval'] as bool?) ?? false,
       );
 
   bool get isFull =>
@@ -75,6 +81,8 @@ class EventSession {
         capacity: capacity,
         waitlistEnabled: waitlistEnabled,
         signupLockHours: signupLockHours,
+        isPublic: isPublic,
+        requiresApproval: requiresApproval,
       );
 }
 
