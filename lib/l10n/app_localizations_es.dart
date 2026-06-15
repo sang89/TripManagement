@@ -1605,4 +1605,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'Por favor selecciona un tipo de evento';
+
+  @override
+  String get notifications => 'Notificaciones';
+
+  @override
+  String get notificationsEmpty => '¡Todo al día!';
+
+  @override
+  String get notificationsMarkAllRead => 'Marcar todo como leído';
 }

@@ -874,5 +874,8 @@
   "wishesTab": "Wishes",
   "predictionsTab": "Predictions",
   "wallTab": "Wall",
-  "pleaseSelectEventType": "Please select an event type"
+  "pleaseSelectEventType": "Please select an event type",
+  "notifications": "Notifications",
+  "notificationsEmpty": "You're all caught up!",
+  "notificationsMarkAllRead": "Mark all read"
 }

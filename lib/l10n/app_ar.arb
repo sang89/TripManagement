@@ -635,5 +635,8 @@
   "wishesTab": "أمنيات",
   "predictionsTab": "تنبؤات",
   "wallTab": "الجدار",
-  "pleaseSelectEventType": "الرجاء اختيار نوع الحدث"
+  "pleaseSelectEventType": "الرجاء اختيار نوع الحدث",
+  "notifications": "الإشعارات",
+  "notificationsEmpty": "لقد اطلعت على كل شيء!",
+  "notificationsMarkAllRead": "تحديد الكل كمقروء"
 }

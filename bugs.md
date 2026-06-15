@@ -61,6 +61,65 @@ below before marking the task complete.
 
 ---
 
+## Realtime delivery rules — hard-won lessons
+
+### Rule 1: Unfiltered Postgres Changes + restricted RLS = unreliable delivery
+
+Supabase Realtime Postgres Changes **requires an explicit `filter` parameter** for tables where the subscriber has a restricted SELECT policy. Without a filter, Supabase evaluates RLS server-side to decide who gets each event — and for non-organizer members this evaluation is unreliable in practice (events are silently dropped).
+
+**What works:**
+- Organizer subscriptions (unfiltered) — organizer has "full access" SELECT policy, always receives all events ✓
+- Filtered subscriptions `user_id = eq.<userId>` — Supabase matches the filter directly without RLS evaluation ✓
+- `event_sessions UPDATE` (unfiltered) — all members have unrestricted SELECT on sessions ✓
+
+**What doesn't work reliably:**
+- Unfiltered `event_session_roster` DELETE for non-organizer members (e.g. kick, reject)
+- Unfiltered `event_session_roster` UPDATE for non-organizer members
+
+### Rule 2: SECURITY DEFINER DELETE in a function = UPDATE-before-DELETE pattern required
+
+When a SECURITY DEFINER function does `DELETE FROM table`, the WAL change is generated under the function owner's role. Supabase Realtime may not reliably deliver this DELETE to subscribers with restricted policies.
+
+**Fix pattern:** UPDATE the row status to a transient signal value (`'rejected'`, `'removed'`) first, then DELETE. The UPDATE event is reliably received (row still exists during RLS evaluation). The app treats `'rejected'`/`'removed'` as a removal signal.
+
+Migrations: `20260612000002_reject_realtime_fix.sql`, `20260612000003_remove_realtime_fix.sql`
+
+### Rule 3: `notifyListeners()` can be swallowed when Flutter considers the widget already clean
+
+If `notifyListeners()` fires twice in quick succession (e.g. once from the Realtime handler and once from the subsequent async `refreshSessionRoster`), Flutter may process the first rebuild and mark the widget clean before the second fires. The second `notifyListeners()` is then a no-op.
+
+**Fix:** Use a `StreamController<String>.broadcast()` (see `EventProvider.sessionStatusCleared`). Widgets subscribe to this stream and call `setState()` directly — this is unconditional and always triggers a rebuild, bypassing the scheduler/dirty-check mechanism.
+
+### Rule 4: `event_sessions UPDATE` is the universal reliable signal
+
+The DB trigger `trg_session_roster_counts` fires `event_sessions UPDATE` whenever `going_count` or `waitlist_count` changes. This event reliably reaches ALL subscribers (every member can SELECT event_sessions). Piggybacking `refreshSessionRoster` on this event keeps roster cards in sync for everyone — including non-organizer members who wouldn't otherwise receive individual `event_session_roster` DELETE events.
+
+---
+
+## Notification system
+
+### Rule 5: `insert_notification` originally used `ON CONFLICT DO NOTHING` — silent deduplication
+
+The `notifications` table has a partial unique index on `(user_id, type, reference_id) WHERE reference_id IS NOT NULL` (from PropertyManagement's `lease_expiry` deduplication). `insert_notification` originally used `ON CONFLICT DO NOTHING`, which silently swallowed any notification that shared the same `(user_id, type, session_id/event_id)` combination as an existing row. When a user tested the same action more than once (e.g. invite, remove from session, approve join request), the second notification was silently dropped — the trigger fired and ran to completion without error, but the row was never inserted.
+
+**Symptom:** Bell badge never changed, even after waiting for the 30-second polling cycle.
+
+**Fix:** Changed `insert_notification` to `ON CONFLICT ... DO UPDATE SET is_read = false, created_at = now(), title/body/metadata = EXCLUDED.*`. Repeat actions now refresh the existing notification to unread rather than disappearing silently. Migration: `20260613000003_fix_notification_upsert.sql`.
+
+### Rule 6: `broadcast_notification` trigger must fire on INSERT OR UPDATE
+
+The DB trigger that sends a Realtime Broadcast to wake the Flutter client originally fired `AFTER INSERT` only. After the ON CONFLICT fix (Rule 5), a duplicate notification becomes an UPDATE, not an INSERT. The broadcast trigger never fired, so the Flutter client was not notified in real time. The 30-second poll would eventually catch new inserts, but not upserted (refreshed) notifications.
+
+**Fix:** Changed `on_notification_inserted` trigger to `AFTER INSERT OR UPDATE`; added a guard `IF NEW.is_read = true THEN RETURN NEW` so mark-as-read operations do not trigger unnecessary broadcasts. Migration: `20260613000003_fix_notification_upsert.sql`.
+
+### Rule 7: Broadcast callback should do a full reload, not incremental fetch
+
+The `_fetchLatest()` incremental fetch deduplicates by notification ID. When an existing notification is upserted (same ID, new `is_read = false`), `_fetchLatest()` sees the row again (updated `created_at` satisfies the `gte` filter) but filters it out as "already known". The local state never reflects the refreshed unread status.
+
+**Fix:** Changed the broadcast callback from `_fetchLatest()` to `_fetch()` (full reload). The 30-second poll timer still uses `_fetchLatest()` for efficiency — it only misses the upsert-refresh edge case, which the broadcast handles in real time.
+
+---
+
 ## General gotchas
 
 ### Realtime UPDATE handlers must reconstruct all columns

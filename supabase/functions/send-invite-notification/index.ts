@@ -207,7 +207,8 @@ serve(async (req) => {
     const { data: tokenRows, error: tokenErr } = await supabase
       .from("device_tokens")
       .select("id, token")
-      .eq("user_id", invitee_user_id);
+      .eq("user_id", invitee_user_id)
+      .eq("app", "trip_management");
 
     if (tokenErr) throw tokenErr;
     if (!tokenRows || tokenRows.length === 0) {
@@ -277,6 +278,24 @@ serve(async (req) => {
 
     const sent = results.filter((r) => r.success).length;
     console.log(`Invite notification sent to ${sent}/${tokenRows.length} device(s)`);
+
+    try {
+      await fetch(`${supabaseUrl}/realtime/v1/api/broadcast`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": expectedKey,
+          "Authorization": `Bearer ${expectedKey}`,
+        },
+        body: JSON.stringify({
+          messages: [{
+            topic: `realtime:trip_notifications_${invitee_user_id}`,
+            event: "new_notification",
+            payload: { type: "event_invite" },
+          }],
+        }),
+      });
+    } catch (_) { /* non-fatal */ }
 
     return new Response(
       JSON.stringify({ sent, total: tokenRows.length }),

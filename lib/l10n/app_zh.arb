@@ -635,5 +635,8 @@
   "wishesTab": "祝福",
   "predictionsTab": "预言",
   "wallTab": "回忆墙",
-  "pleaseSelectEventType": "请选择活动类型"
+  "pleaseSelectEventType": "请选择活动类型",
+  "notifications": "通知",
+  "notificationsEmpty": "您已全部查看！",
+  "notificationsMarkAllRead": "全部标为已读"
 }

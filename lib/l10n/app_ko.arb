@@ -635,5 +635,8 @@
   "wishesTab": "소원",
   "predictionsTab": "예언",
   "wallTab": "추억 벽",
-  "pleaseSelectEventType": "이벤트 유형을 선택해 주세요"
+  "pleaseSelectEventType": "이벤트 유형을 선택해 주세요",
+  "notifications": "알림",
+  "notificationsEmpty": "모두 확인했습니다!",
+  "notificationsMarkAllRead": "모두 읽음으로 표시"
 }

@@ -94,6 +94,7 @@ lib/
 │   ├── event_chat_provider.dart    # Event-scoped chat; paginated load + Realtime INSERT; scoped to /event/:id route
 │   ├── invitations_provider.dart   # Pending trip-event invitations for the current user; Realtime
 │   ├── friends_provider.dart       # Friend list + requests; two Realtime channels; searchUsers RPC
+│   ├── notifications_provider.dart # In-app notification center; fetches notifications table, Realtime INSERT subscription; unreadCount badge; markRead/markAllRead/deleteNotification
 │   ├── blocked_users_provider.dart # Global block list; blockUser RPC + optimistic unblock
 │   └── settings_provider.dart      # Theme mode + language persistence
 ├── screens/
@@ -115,8 +116,10 @@ lib/
 │   ├── settings/
 │   │   ├── settings_screen.dart      # Theme, language, account, notifications, privacy sections
 │   │   └── blocked_users_screen.dart # List of globally blocked users with Unblock action
+│   ├── notifications/
+│   │   └── notifications_screen.dart  # Notification center; ListView of AppNotification tiles with relative timestamps; swipe-to-delete; mark-all-read action; empty state; navigates to target route on tap
 │   └── shell/
-│       └── shell_scaffold.dart     # StatefulShellRoute wrapper; bottom nav with 3 tabs (Events + pending badge, Friends + request badge, Profile) + 1 action button (Join / QR scanner → SessionScanScreen)
+│       └── shell_scaffold.dart     # StatefulShellRoute wrapper; AppBar with bell icon (NotificationsProvider badge) → /notifications; bottom nav with 3 tabs (Events + pending badge, Friends + request badge, Profile) + 1 action button (Join / QR scanner → SessionScanScreen)
 ├── services/
 │   ├── ai_chat_service.dart            # Abstract interface + factory
 │   ├── edge_function_ai_chat_service.dart   # Release — proxies through Supabase Edge Function
@@ -170,6 +173,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 /trip/:id/edit           → redirects to /event/:id/edit (backward-compat)
 /login                   → LoginScreen
 /register                → RegisterScreen
+/notifications           → NotificationsScreen
 /event/invite/:code      → EventInviteScreen (public — no auth required)
 /session/invite/:code    → SessionInviteScreen (public — no auth required; QR code deep-link for session signup)
 ```
@@ -190,6 +194,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; **signup sessions:** `fetchUpcomingSessions(eventId)`, `fetchPastSessions(eventId)`, `loadMorePastSessions(eventId)`, `fetchSessionRoster(sessionId)`, `loadMoreRoster(sessionId)`, `refreshSessionRoster(sessionId)`, `addSession(eventId, startAt, endAt, {capacity, waitlistEnabled, signupLockHours, isPublic, requiresApproval})`, `cancelSessionSignup(rosterId, sessionId, eventId)`, `removeSessionRosterEntry()`, `promoteSessionRosterEntry()`, `demoteSessionRosterEntry()`, `reorderSessionRoster()`, `markSessionAttendance()`, `toggleSessionConfirmed()`, `approveSessionRosterEntry()`, `rejectSessionRosterEntry()`; session accessors: `upcomingSessionsFor(eventId)`, `pastSessionsFor(eventId)`, `rosterFor(sessionId)`, `myStatusFor(sessionId)`, `hasMoreUpcomingFor()`, `hasMorePastFor()`, `hasMoreRosterFor()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; static `applyOrder(events, order)`; Realtime via `event_sync_<userId>` channel |
 | `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel; scoped to `/event/:id` route |
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
+| `NotificationsProvider` | In-app notification center | `init(userId)`, `clear()`, `reload()`, `markRead(id)`, `markAllRead()`, `deleteNotification(id)`; `unreadCount` (bell badge); Realtime INSERT subscription on `notifications` table |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
 | `BlockedUsersProvider` | Global block list | `load()`, `clear()`, `blockUser(userId)`, `unblockUser(userId)`, `isBlocked(userId)`; optimistic unblock with revert on error; loaded on login, cleared on logout |
 | `SubscriptionProvider` | Pro entitlement state | `load(userId)`, `clear()`, `purchaseMobile(packageId)`, `restore()`; computed `isPro`, `currentPeriodEnd`; web reads Supabase `user_subscriptions`; mobile reads RevenueCat entitlement `'pro'` |
@@ -197,7 +202,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `ConnectivityService` | Network state | `init()`, `isOnline` — notifies on change |
 | `OfflineQueue` | Pending write operations | `init()`, `enqueue()`, `flush()`, `pendingCount`, `hasPending` |
 
-Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `EventProvider.load()` / `EventProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, `FriendsProvider.init()` / `FriendsProvider.clear()`, `BlockedUsersProvider.load()` / `BlockedUsersProvider.clear()`.
+Providers are pre-loaded on startup if the user is already logged in. `AuthProvider` notifies on auth state change, which triggers `EventProvider.load()` / `EventProvider.clear()`, `InvitationsProvider.init()` / `InvitationsProvider.clear()`, `FriendsProvider.init()` / `FriendsProvider.clear()`, `BlockedUsersProvider.load()` / `BlockedUsersProvider.clear()`, `NotificationsProvider.init()` / `NotificationsProvider.clear()`.
 
 `EventChatProvider` is **not global** — it is instantiated in the GoRouter `/event/:id` route builder (not in `MultiProvider`), scoped to one event, and disposed when the user navigates away.
 
@@ -564,7 +569,7 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 
 **Storage:** `event-photos` bucket (public read); path = `{event_id}/{filename}`.
 
-**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items`, `event_sessions`, `event_session_roster` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`.
+**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items`, `event_sessions`, `event_session_roster`, `notifications` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`. `NotificationsProvider` channel: `notifications_<userId>` (INSERT only, filtered by `user_id`).
 
 ---
 
@@ -636,18 +641,37 @@ DELETE votes: `user_id = auth.uid()` (own vote only).
 
 | Trigger | Table | Event | Function | Effect |
 |---|---|---|---|---|
-| `on_invite_inserted` | `event_guests` | AFTER INSERT OR UPDATE | `handle_new_invite()` | Calls `send-invite-notification` Edge Function via `pg_net` when `status = 'pending'` AND `user_id IS NOT NULL`. Fires on INSERT (new invite) and on UPDATE where status changes *to* `pending` (re-invite). |
-| `on_guest_reinvite_check` | `event_guests` | BEFORE UPDATE | `prevent_blocked_reinvite()` | Raises exception `blocked_reinvite` if `old.block_reinvite = true` and `new.status = 'pending'`. Prevents re-inviting a user who opted out. |
+| `on_event_guest_invite` | `event_guests` | AFTER INSERT OR UPDATE | `handle_new_event_invite()` | Writes `event_invite` in-app notification + calls `send-invite-notification` Edge Function when `status = 'pending'` AND `user_id IS NOT NULL`. |
+| `on_invite_response` | `event_guests` | AFTER UPDATE | `notify_invite_response()` | Writes `event_invite_accepted` or `event_invite_declined` notification to organizer and calls `send-push-notification`. |
+| `on_member_kicked` | `event_guests` | AFTER DELETE | `notify_member_kicked()` | Writes `event_kicked` notification to the deleted user and calls `send-push-notification`. |
+| `on_guest_reinvite_check` | `event_guests` | BEFORE UPDATE | `prevent_blocked_reinvite()` | Raises exception `blocked_reinvite` if `old.block_reinvite = true` and `new.status = 'pending'`. |
+| `on_waitlist_promoted` | `event_session_roster` | AFTER UPDATE | `handle_waitlist_promotion()` | Writes `session_promoted` in-app notification + calls `send-waitlist-promoted-notification` Edge Function on `waitlisted → going`. |
+| `on_session_join_request` | `event_session_roster` | AFTER INSERT | `notify_session_join_request()` | Writes `session_join_request` notification to organizer when `status = 'pending_review'`. |
+| `on_session_decision` | `event_session_roster` | AFTER UPDATE | `notify_session_decision()` | Writes `session_approved` or `session_rejected` notification to user on `pending_review → going/rejected`. |
+| `on_session_demoted` | `event_session_roster` | AFTER UPDATE | `notify_session_demoted()` | Writes `session_demoted` notification to user on `going → waitlisted`. |
+| `on_friend_request` | `friendships` | AFTER INSERT | `notify_friend_request()` | Writes `friend_request` notification to addressee and calls `send-push-notification`. |
+| `on_friend_accepted` | `friendships` | AFTER UPDATE | `notify_friend_accepted()` | Writes `friend_accepted` notification to requester on `pending → accepted`. |
 | `on_new_user` | `auth.users` | AFTER INSERT | `handle_new_user()` | Auto-creates `user_profiles` row on sign-up. |
+
+**Helpers:** `insert_notification(user_id, type, title, body, reference_id, metadata)` — SECURITY DEFINER, bypasses RLS to write notification for any user. `call_push_edge_function(user_id, type, title, body, data)` — calls `send-push-notification` via pg_net.
 
 ---
 
 ### Edge Functions
 
 #### `send-invite-notification`
-Called by the `on_invite_inserted` trigger via `pg_net.http_post`. Reads FCM tokens from `device_tokens`, exchanges the service-account JSON for an OAuth2 access token, and sends an FCM v1 API push notification. Stale/unregistered tokens are deleted automatically.
+Called by the `on_event_guest_invite` trigger. Reads FCM tokens from `device_tokens`, exchanges the service-account JSON for an OAuth2 access token, and sends an FCM v1 API push notification. Stale/unregistered tokens are deleted automatically.
 
-**Secrets required:**
+#### `send-waitlist-promoted-notification`
+Called by the `on_waitlist_promoted` trigger. Sends FCM push when a roster entry is promoted from waitlist to confirmed.
+
+#### `send-push-notification`
+Generic push notification function — called by `call_push_edge_function()` helper for all new notification types. Accepts `{ user_id, type, title, body, data }`, sends FCM to all device tokens for the user.
+
+#### `send-mention-notification`
+Client-initiated (called directly from Flutter). Sends FCM push when a user is @mentioned in event chat.
+
+**Secrets required (all functions):**
 ```
 supabase secrets set FCM_SERVICE_ACCOUNT_JSON='<json>'
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY='<key>'
@@ -733,9 +757,19 @@ If the user had set `block_reinvite = true`:
 1. Calls `requestPermission()`. If denied → returns early; no token is registered, no DB entry created.
 2. Gets the FCM token and upserts it into `device_tokens`.
 3. Listens for token refresh → upserts new token.
-4. Handles cold-start / background notification taps → navigates to the relevant trip.
+4. Handles cold-start / background notification taps → routes by type.
 
-If the user has not granted notification permission, the in-app invite banner (driven by `InvitationsProvider`) is the primary delivery path — the app works fully without push permission.
+**Notification types and routing:**
+| Type | Navigates to |
+|---|---|
+| `trip_invite`, `event_invite` | `/events` |
+| `chat_mention` | `/event/:eventId` |
+| `event_invite_accepted`, `event_invite_declined` | `/event/:eventId` |
+| `event_kicked` | `/events` (user no longer has access) |
+| `session_join_request`, `session_approved`, `session_rejected`, `session_demoted`, `session_promoted` | `/event/:eventId` |
+| `friend_request`, `friend_accepted` | `/friends` |
+
+If the user has not granted notification permission, the in-app notification center (driven by `NotificationsProvider`) is the primary delivery path — the app works fully without push permission.
 
 ---
 

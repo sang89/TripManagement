@@ -1605,4 +1605,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'Por favor selecione um tipo de evento';
+
+  @override
+  String get notifications => 'Notificações';
+
+  @override
+  String get notificationsEmpty => 'Você está em dia!';
+
+  @override
+  String get notificationsMarkAllRead => 'Marcar tudo como lido';
 }

@@ -1593,4 +1593,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'الرجاء اختيار نوع الحدث';
+
+  @override
+  String get notifications => 'الإشعارات';
+
+  @override
+  String get notificationsEmpty => 'لقد اطلعت على كل شيء!';
+
+  @override
+  String get notificationsMarkAllRead => 'تحديد الكل كمقروء';
 }

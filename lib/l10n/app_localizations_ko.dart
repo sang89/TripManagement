@@ -1583,4 +1583,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => '이벤트 유형을 선택해 주세요';
+
+  @override
+  String get notifications => '알림';
+
+  @override
+  String get notificationsEmpty => '모두 확인했습니다!';
+
+  @override
+  String get notificationsMarkAllRead => '모두 읽음으로 표시';
 }

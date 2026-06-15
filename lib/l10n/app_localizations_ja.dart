@@ -1581,4 +1581,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'イベントの種類を選択してください';
+
+  @override
+  String get notifications => '通知';
+
+  @override
+  String get notificationsEmpty => 'すべて確認済みです！';
+
+  @override
+  String get notificationsMarkAllRead => 'すべて既読にする';
 }

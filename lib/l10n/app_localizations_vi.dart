@@ -1601,4 +1601,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'Vui lòng chọn loại sự kiện';
+
+  @override
+  String get notifications => 'Thông báo';
+
+  @override
+  String get notificationsEmpty => 'Bạn đã xem tất cả!';
+
+  @override
+  String get notificationsMarkAllRead => 'Đánh dấu tất cả là đã đọc';
 }

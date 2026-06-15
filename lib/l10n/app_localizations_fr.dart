@@ -1612,4 +1612,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get pleaseSelectEventType =>
       'Veuillez sélectionner un type d\'événement';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'Tout est à jour !';
+
+  @override
+  String get notificationsMarkAllRead => 'Tout marquer comme lu';
 }

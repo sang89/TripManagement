@@ -1598,4 +1598,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'Please select an event type';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'You\'re all caught up!';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all read';
 }
