@@ -94,7 +94,7 @@ lib/
 │   ├── event_chat_provider.dart    # Event-scoped chat; paginated load + Realtime INSERT; scoped to /event/:id route
 │   ├── invitations_provider.dart   # Pending trip-event invitations for the current user; Realtime
 │   ├── friends_provider.dart       # Friend list + requests; two Realtime channels; searchUsers RPC
-│   ├── notifications_provider.dart # In-app notification center; fetches notifications table, Realtime INSERT subscription; unreadCount badge; markRead/markAllRead/deleteNotification
+│   ├── notifications_provider.dart # In-app notification center; fetches trip_notifications table (TM-only; never the shared notifications table); Realtime Broadcast subscription on trip_notifications_{userId}; unreadCount badge; markRead/markAllRead/deleteNotification; static tripTypes + propertyManagementTypes for isolation tests
 │   ├── blocked_users_provider.dart # Global block list; blockUser RPC + optimistic unblock
 │   └── settings_provider.dart      # Theme mode + language persistence
 ├── screens/
@@ -194,7 +194,7 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; **signup sessions:** `fetchUpcomingSessions(eventId)`, `fetchPastSessions(eventId)`, `loadMorePastSessions(eventId)`, `fetchSessionRoster(sessionId)`, `loadMoreRoster(sessionId)`, `refreshSessionRoster(sessionId)`, `addSession(eventId, startAt, endAt, {capacity, waitlistEnabled, signupLockHours, isPublic, requiresApproval})`, `cancelSessionSignup(rosterId, sessionId, eventId)`, `removeSessionRosterEntry()`, `promoteSessionRosterEntry()`, `demoteSessionRosterEntry()`, `reorderSessionRoster()`, `markSessionAttendance()`, `toggleSessionConfirmed()`, `approveSessionRosterEntry()`, `rejectSessionRosterEntry()`; session accessors: `upcomingSessionsFor(eventId)`, `pastSessionsFor(eventId)`, `rosterFor(sessionId)`, `myStatusFor(sessionId)`, `hasMoreUpcomingFor()`, `hasMorePastFor()`, `hasMoreRosterFor()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; static `applyOrder(events, order)`; Realtime via `event_sync_<userId>` channel |
 | `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel; scoped to `/event/:id` route |
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
-| `NotificationsProvider` | In-app notification center | `init(userId)`, `clear()`, `reload()`, `markRead(id)`, `markAllRead()`, `deleteNotification(id)`; `unreadCount` (bell badge); Realtime INSERT subscription on `notifications` table |
+| `NotificationsProvider` | In-app notification center | `init(userId)`, `clear()`, `reload()`, `markRead(id)`, `markAllRead()`, `deleteNotification(id)`; `unreadCount` (bell badge); Realtime Broadcast subscription on channel `trip_notifications_<userId>`; reads/writes `trip_notifications` only — never the shared `notifications` table |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
 | `BlockedUsersProvider` | Global block list | `load()`, `clear()`, `blockUser(userId)`, `unblockUser(userId)`, `isBlocked(userId)`; optimistic unblock with revert on error; loaded on login, cleared on logout |
 | `SubscriptionProvider` | Pro entitlement state | `load(userId)`, `clear()`, `purchaseMobile(packageId)`, `restore()`; computed `isPro`, `currentPeriodEnd`; web reads Supabase `user_subscriptions`; mobile reads RevenueCat entitlement `'pro'` |
@@ -569,7 +569,7 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 
 **Storage:** `event-photos` bucket (public read); path = `{event_id}/{filename}`.
 
-**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items`, `event_sessions`, `event_session_roster`, `notifications` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`. `NotificationsProvider` channel: `notifications_<userId>` (INSERT only, filtered by `user_id`).
+**Realtime publication:** `events`, `event_guests`, `event_messages`, `event_photos`, `event_expenses`, `event_stops`, `event_bring_list_items`, `event_sessions`, `event_session_roster`, and `trip_notifications` all added to `supabase_realtime`. `EventProvider` channel: `event_sync_<userId>`. `NotificationsProvider` channel: `trip_notifications_<userId>` (Realtime Broadcast — the `broadcast_trip_notification` DB trigger posts to this channel after INSERT/UPDATE on `trip_notifications`). Note: the shared `notifications` table is PropertyManagement's — TripManagement must never subscribe to or query it.
 
 ---
 
@@ -637,6 +637,34 @@ DELETE votes: `user_id = auth.uid()` (own vote only).
 
 ---
 
+### Cross-app notification isolation (hard rule — do not break)
+
+TripManagement and PropertyManagement share the same Supabase project. The `notifications` table is owned by PropertyManagement. TripManagement owns `trip_notifications`. These tables must remain completely separate.
+
+**The rule, in full:**
+
+| What | TripManagement | PropertyManagement |
+|---|---|---|
+| Write notifications to | `trip_notifications` via `insert_trip_notification()` | `notifications` via `insert_notification()` |
+| Read notifications from | `trip_notifications` only | `notifications` only |
+| Realtime channel | `trip_notifications_<userId>` | `notifications_<userId>` |
+| Dart query | `.from('trip_notifications')` | `.from('notifications')` |
+
+**Why this matters:** PM reads its table without a type filter. If TM ever writes to `notifications`, every TM notification (session join requests, kicks, friend requests…) immediately appears in the PM notification centre. This is silent — no error is thrown, no alarm fires.
+
+**Regression guard:** `test/regression/notification_isolation_test.dart` enforces this at three levels:
+1. **Source scanner** — fails if any file in `lib/` contains `.from('notifications')`.
+2. **Migration guard** — fails if the isolation migration is missing or reverted.
+3. **Type classification** — fails if any notification type is unclassified or appears in both lists.
+
+**Adding a new notification type:**
+1. Add the type to `NotificationsProvider.tripTypes`.
+2. Add it to `allKnownTypes` in `test/regression/notification_isolation_test.dart`.
+3. Add a DB trigger function that calls `insert_trip_notification()` (never `insert_notification()`).
+4. Add migration, run `supabase db push`.
+
+---
+
 ### DB Triggers
 
 | Trigger | Table | Event | Function | Effect |
@@ -653,7 +681,9 @@ DELETE votes: `user_id = auth.uid()` (own vote only).
 | `on_friend_accepted` | `friendships` | AFTER UPDATE | `notify_friend_accepted()` | Writes `friend_accepted` notification to requester on `pending → accepted`. |
 | `on_new_user` | `auth.users` | AFTER INSERT | `handle_new_user()` | Auto-creates `user_profiles` row on sign-up. |
 
-**Helpers:** `insert_notification(user_id, type, title, body, reference_id, metadata)` — SECURITY DEFINER, bypasses RLS to write notification for any user. `call_push_edge_function(user_id, type, title, body, data)` — calls `send-push-notification` via pg_net.
+**TripManagement helpers:** `insert_trip_notification(user_id, type, title, body, reference_id, metadata)` — SECURITY DEFINER, bypasses RLS to write a row into `trip_notifications` for any user. All 10 TM trigger functions call this. `call_push_edge_function(user_id, type, title, body, data)` — calls `send-push-notification` via pg_net.
+
+**PropertyManagement helper (do not call from TM):** `insert_notification(…)` — writes to the shared `notifications` table. TripManagement trigger functions must NEVER call this function.
 
 ---
 

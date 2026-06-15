@@ -211,7 +211,8 @@ class NotificationsProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
-  // Public so tests can verify the whitelist without a Supabase connection.
+  // Every type TripManagement can write. Used in tests to guard against
+  // accidental addition of PropertyManagement types (lease_expiry, etc.).
   static const tripTypes = [
     'event_invite', 'event_invite_accepted', 'event_invite_declined',
     'event_kicked',
@@ -221,13 +222,27 @@ class NotificationsProvider extends ChangeNotifier with WidgetsBindingObserver {
     'system',
   ];
 
+  // Types owned exclusively by PropertyManagement — must never appear in
+  // tripTypes or be written to trip_notifications.
+  static const propertyManagementTypes = [
+    'lease_expiry',
+    'monthly_summary',
+    'rent_reminder',
+    'maintenance_update',
+    'payment_received',
+  ];
+
   Future<void> _fetch() async {
     if (_userId == null) return;
     _isLoading = true;
     notifyListeners();
     try {
+      // Queries trip_notifications — a TripManagement-only table that
+      // PropertyManagement never writes to or reads from. No type filter
+      // needed since the table is already isolated, but we keep it as a
+      // second line of defence against accidental cross-table row leakage.
       final data = await _db
-          .from('notifications')
+          .from('trip_notifications')
           .select()
           .eq('user_id', _userId!)
           .inFilter('type', tripTypes)
@@ -279,7 +294,7 @@ class NotificationsProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       await _db
-          .from('notifications')
+          .from('trip_notifications')
           .update({'is_read': true})
           .eq('id', id)
           .eq('user_id', _userId!);
@@ -297,7 +312,7 @@ class NotificationsProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       await _db
-          .from('notifications')
+          .from('trip_notifications')
           .update({'is_read': true})
           .eq('user_id', _userId!)
           .eq('is_read', false);
@@ -313,7 +328,7 @@ class NotificationsProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       await _db
-          .from('notifications')
+          .from('trip_notifications')
           .delete()
           .eq('id', id)
           .eq('user_id', _userId!);
