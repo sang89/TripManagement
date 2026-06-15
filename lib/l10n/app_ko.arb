@@ -454,6 +454,33 @@
   "setAsVenueButton": "장소로 설정",
   "restaurantSearchHint": "식당 검색...",
   "addRestaurantOption": "식당 추가",
+  "exploreTab": "탐색",
+  "exploreTitle": "{destination} 활동",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "저렴한 순",
+  "exploreSortTopRated": "높은 평점 순",
+  "exploreMorePlatforms": "다른 플랫폼",
+  "bookOnViator": "Viator에서 예약",
+  "bookNow": "지금 예약",
+  "browseGetYourGuide": "GetYourGuide 보기",
+  "browseKlook": "Klook 보기",
+  "exploreFromPrice": "{price}부터",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "이 목적지에 대한 활동을 찾을 수 없습니다.",
+  "exploreLoadError": "제안을 불러올 수 없습니다. 탭하여 다시 시도하세요.",
   "restaurantPollTitle": "장소 선택",
   "foodMoodDDMode": "지정 운전자",
   "foodMoodNibble": "조금만 먹을게",

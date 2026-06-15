@@ -1068,6 +1068,49 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cravingsPitched => '그룹 투표에 추가됐어요!';
 
   @override
+  String get exploreTab => '탐색';
+
+  @override
+  String exploreTitle(String destination) {
+    return '$destination 활동';
+  }
+
+  @override
+  String get exploreSubtitle => 'Powered by Viator • GetYourGuide • Klook';
+
+  @override
+  String get exploreSortCheapest => '저렴한 순';
+
+  @override
+  String get exploreSortTopRated => '높은 평점 순';
+
+  @override
+  String get exploreMorePlatforms => '다른 플랫폼';
+
+  @override
+  String get bookOnViator => 'Viator에서 예약';
+
+  @override
+  String get bookNow => '지금 예약';
+
+  @override
+  String get browseGetYourGuide => 'GetYourGuide 보기';
+
+  @override
+  String get browseKlook => 'Klook 보기';
+
+  @override
+  String exploreFromPrice(String price) {
+    return '$price부터';
+  }
+
+  @override
+  String get exploreNoResults => '이 목적지에 대한 활동을 찾을 수 없습니다.';
+
+  @override
+  String get exploreLoadError => '제안을 불러올 수 없습니다. 탭하여 다시 시도하세요.';
+
+  @override
   String get restaurantPollTitle => '장소 선택';
 
   @override

@@ -31,10 +31,20 @@ The feature that justifies the subscription. Gemini is already wired up.
 ## Phase 4 — Affiliate Booking Links
 Passive revenue. ~2 days of work, scales with event volume.
 
+### Explore Tab — pre-production checklist
+
+- [ ] **4.0a** **Viator key go-live** — sandbox key (`79e2abef-...`) takes up to 24h to activate; test Explore tab once active. Then flip `kViatorSandbox = false` in `api_keys.dart` to switch to production key. PID (`P00305761`) and MCID (`42383`) already set.
+- [ ] **4.0b** **GYG affiliate ID** — `kGYGAffiliateId` is still `REPLACE_ME` in `api_keys.dart`. Sign up via Awin or CJ Affiliate → paste partner ID to make the "Browse GetYourGuide" button track commissions.
+- [ ] **4.0c** **Klook affiliate ID** — `kKlookAffiliateId` is still `REPLACE_ME`. Sign up via CJ Affiliate or affiliate.klook.com → paste affiliate ID.
+- [ ] **4.0d** **Test on a real trip event** — open a trip with a city destination (not a street address) and verify: (1) Viator results load, (2) "Book on Viator" opens browser with `pid=P00305761` in the URL, (3) pagination works, (4) keyword search works.
+- [ ] **4.0e** **Viator terms compliance check** — before release, confirm: no Viator content indexed by search engines (native app = fine), no cross-bidding on "Viator" in any ads, only used in TripManagement app. See `viator.md`.
+- [ ] **4.0f** **Phase 2 — GYG & Klook native listings** — apply for GYG Partner API and Klook Partner API once you have booking volume. Replaces the "Browse" buttons with native cards merged into a single price-sorted list across all 3 platforms.
+
+### Other affiliate buttons (same phase)
+
 - [ ] **4.1** Add a "Book accommodation" button on the event Info tab (trip-type events) — deep-links to Booking.com affiliate URL with destination pre-filled
-- [ ] **4.2** Add a "Find activities" button on stop cards — deep-links to Viator/GetYourGuide affiliate URL with stop location pre-filled
-- [ ] **4.3** Add an "Explore flights" button on the event Info tab — deep-links to Skyscanner affiliate URL with origin + destination + dates pre-filled
-- [ ] **4.4** Store affiliate partner IDs in `api_keys.dart` (git-ignored)
+- [ ] **4.2** Add an "Explore flights" button on the event Info tab — deep-links to Skyscanner affiliate URL with origin + destination + dates pre-filled
+- [ ] **4.3** Store remaining affiliate partner IDs in `api_keys.dart` (git-ignored) once signed up for Booking.com / Skyscanner affiliate programs
 
 ## Phase 5 — Pro Quality-of-Life Features
 Rounds out the Pro tier value beyond the AI planner.

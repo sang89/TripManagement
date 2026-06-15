@@ -454,6 +454,33 @@
   "setAsVenueButton": "Đặt làm địa điểm",
   "restaurantSearchHint": "Tìm nhà hàng...",
   "addRestaurantOption": "Thêm nhà hàng",
+  "exploreTab": "Khám phá",
+  "exploreTitle": "Hoạt động tại {destination}",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "Rẻ nhất",
+  "exploreSortTopRated": "Đánh giá cao nhất",
+  "exploreMorePlatforms": "NỀN TẢNG KHÁC",
+  "bookOnViator": "Đặt trên Viator",
+  "bookNow": "Đặt ngay",
+  "browseGetYourGuide": "Xem trên GetYourGuide",
+  "browseKlook": "Xem trên Klook",
+  "exploreFromPrice": "Từ {price}",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "Không tìm thấy hoạt động nào cho điểm đến này.",
+  "exploreLoadError": "Không thể tải gợi ý. Nhấn để thử lại.",
   "restaurantPollTitle": "Chọn địa điểm",
   "foodMoodDDMode": "Tài xế hôm nay",
   "foodMoodNibble": "Nhấm nháp thôi",

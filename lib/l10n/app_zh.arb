@@ -454,6 +454,33 @@
   "setAsVenueButton": "设为场地",
   "restaurantSearchHint": "搜索餐厅...",
   "addRestaurantOption": "添加餐厅",
+  "exploreTab": "探索",
+  "exploreTitle": "{destination}的活动",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "最低价",
+  "exploreSortTopRated": "评分最高",
+  "exploreMorePlatforms": "更多平台",
+  "bookOnViator": "在Viator预订",
+  "bookNow": "立即预订",
+  "browseGetYourGuide": "浏览GetYourGuide",
+  "browseKlook": "浏览Klook",
+  "exploreFromPrice": "起价{price}",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "未找到该目的地的活动。",
+  "exploreLoadError": "无法加载建议。点击重试。",
   "restaurantPollTitle": "选个地方",
   "foodMoodDDMode": "代驾模式",
   "foodMoodNibble": "随便吃点",

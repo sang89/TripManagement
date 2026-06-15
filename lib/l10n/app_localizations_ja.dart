@@ -1067,6 +1067,49 @@ class AppLocalizationsJa extends AppLocalizations {
   String get cravingsPitched => 'グループ投票に追加しました！';
 
   @override
+  String get exploreTab => '探索';
+
+  @override
+  String exploreTitle(String destination) {
+    return '$destinationのアクティビティ';
+  }
+
+  @override
+  String get exploreSubtitle => 'Powered by Viator • GetYourGuide • Klook';
+
+  @override
+  String get exploreSortCheapest => '安い順';
+
+  @override
+  String get exploreSortTopRated => '評価が高い順';
+
+  @override
+  String get exploreMorePlatforms => 'その他のプラットフォーム';
+
+  @override
+  String get bookOnViator => 'Viatorで予約';
+
+  @override
+  String get bookNow => '今すぐ予約';
+
+  @override
+  String get browseGetYourGuide => 'GetYourGuideで探す';
+
+  @override
+  String get browseKlook => 'Klookで探す';
+
+  @override
+  String exploreFromPrice(String price) {
+    return '$priceから';
+  }
+
+  @override
+  String get exploreNoResults => 'このデスティネーションのアクティビティは見つかりませんでした。';
+
+  @override
+  String get exploreLoadError => '候補を読み込めませんでした。タップして再試行してください。';
+
+  @override
   String get restaurantPollTitle => '場所を選ぶ';
 
   @override

@@ -1080,6 +1080,50 @@ class AppLocalizationsVi extends AppLocalizations {
   String get cravingsPitched => 'Đã thêm vào bình chọn nhóm!';
 
   @override
+  String get exploreTab => 'Khám phá';
+
+  @override
+  String exploreTitle(String destination) {
+    return 'Hoạt động tại $destination';
+  }
+
+  @override
+  String get exploreSubtitle => 'Powered by Viator • GetYourGuide • Klook';
+
+  @override
+  String get exploreSortCheapest => 'Rẻ nhất';
+
+  @override
+  String get exploreSortTopRated => 'Đánh giá cao nhất';
+
+  @override
+  String get exploreMorePlatforms => 'NỀN TẢNG KHÁC';
+
+  @override
+  String get bookOnViator => 'Đặt trên Viator';
+
+  @override
+  String get bookNow => 'Đặt ngay';
+
+  @override
+  String get browseGetYourGuide => 'Xem trên GetYourGuide';
+
+  @override
+  String get browseKlook => 'Xem trên Klook';
+
+  @override
+  String exploreFromPrice(String price) {
+    return 'Từ $price';
+  }
+
+  @override
+  String get exploreNoResults =>
+      'Không tìm thấy hoạt động nào cho điểm đến này.';
+
+  @override
+  String get exploreLoadError => 'Không thể tải gợi ý. Nhấn để thử lại.';
+
+  @override
   String get restaurantPollTitle => 'Chọn địa điểm';
 
   @override

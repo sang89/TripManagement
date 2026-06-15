@@ -104,7 +104,7 @@ lib/
 │   ├── events/
 │   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type tiles grid (Trip/Birthday/Wedding/Social/Quick Bites)
 │   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; quick-bites shows budget/vibe/cuisine/rsvp fields; birthday shows honoree name + birth year fields
-│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Organize inner tabs: Roster/Expenses/Polls/Invite (signup); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
+│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Organize inner tabs: Roster/Expenses/Polls/Invite (signup); Todo/Expenses/Polls/Explore (trip); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Trip Explore tab: _ExploreTab fetches Viator Affiliate API activities (sorted by cheapest/top-rated), shows _ActivityCard per result (image/rating/price/platform badge/"Book on Viator" button), plus _PlatformBrowseButton rows for GetYourGuide and Klook affiliate browse links. Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
 │   │   ├── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   │   ├── session_invite_screen.dart # Public session signup — no auth required; fetches session by invite_code via get_session_by_invite_code; calls rsvp_session; route /session/invite/:code
 │   │   └── session_scan_screen.dart # In-app QR scanner (mobile_scanner) — scans a session QR, shows join sheet (session info + claim/waitlist button), calls rsvp_session; opened from the signup Invite tab "Scan a QR code" button
@@ -131,6 +131,7 @@ lib/
 │   ├── trip_places_service.dart        # Google Places autocomplete + details (mobile + web)
 │   ├── trip_places_web.dart            # Web impl via Google Maps JS SDK + dart:js_interop
 │   ├── trip_places_stub.dart           # Stub for non-web builds
+│   ├── activity_suggestions_service.dart # Viator Affiliate API product search + GYG/Klook affiliate deep-link builders; 10-min in-memory cache per destination
 │   ├── directions_service.dart         # Google Maps Directions API; decodes encoded polyline
 │   ├── cache_entry.dart                # Generic TTL cache wrapper
 │   ├── local_cache.dart                # SharedPreferences JSON cache (offline read support)

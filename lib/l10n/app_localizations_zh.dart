@@ -1065,6 +1065,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cravingsPitched => '已添加到群组投票！';
 
   @override
+  String get exploreTab => '探索';
+
+  @override
+  String exploreTitle(String destination) {
+    return '$destination的活动';
+  }
+
+  @override
+  String get exploreSubtitle => 'Powered by Viator • GetYourGuide • Klook';
+
+  @override
+  String get exploreSortCheapest => '最低价';
+
+  @override
+  String get exploreSortTopRated => '评分最高';
+
+  @override
+  String get exploreMorePlatforms => '更多平台';
+
+  @override
+  String get bookOnViator => '在Viator预订';
+
+  @override
+  String get bookNow => '立即预订';
+
+  @override
+  String get browseGetYourGuide => '浏览GetYourGuide';
+
+  @override
+  String get browseKlook => '浏览Klook';
+
+  @override
+  String exploreFromPrice(String price) {
+    return '起价$price';
+  }
+
+  @override
+  String get exploreNoResults => '未找到该目的地的活动。';
+
+  @override
+  String get exploreLoadError => '无法加载建议。点击重试。';
+
+  @override
   String get restaurantPollTitle => '选个地方';
 
   @override

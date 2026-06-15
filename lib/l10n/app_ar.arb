@@ -454,6 +454,33 @@
   "setAsVenueButton": "تعيين كموقع",
   "restaurantSearchHint": "ابحث عن المطاعم...",
   "addRestaurantOption": "إضافة مطعم",
+  "exploreTab": "استكشف",
+  "exploreTitle": "أنشطة في {destination}",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "الأرخص أولاً",
+  "exploreSortTopRated": "الأعلى تقييماً",
+  "exploreMorePlatforms": "منصات أخرى",
+  "bookOnViator": "احجز على Viator",
+  "bookNow": "احجز الآن",
+  "browseGetYourGuide": "تصفح GetYourGuide",
+  "browseKlook": "تصفح Klook",
+  "exploreFromPrice": "من {price}",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "لم يتم العثور على أنشطة لهذه الوجهة.",
+  "exploreLoadError": "تعذّر تحميل الاقتراحات. انقر للمحاولة مرة أخرى.",
   "restaurantPollTitle": "اختيار مكان",
   "foodMoodDDMode": "سائق مخصص",
   "foodMoodNibble": "سأتناول شيئاً خفيفاً",

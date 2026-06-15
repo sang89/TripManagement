@@ -454,6 +454,33 @@
   "setAsVenueButton": "Establecer como lugar",
   "restaurantSearchHint": "Buscar restaurantes...",
   "addRestaurantOption": "Añadir restaurante",
+  "exploreTab": "Explorar",
+  "exploreTitle": "Actividades en {destination}",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "Más baratos",
+  "exploreSortTopRated": "Mejor valorados",
+  "exploreMorePlatforms": "MÁS PLATAFORMAS",
+  "bookOnViator": "Reservar en Viator",
+  "bookNow": "Reservar",
+  "browseGetYourGuide": "Ver en GetYourGuide",
+  "browseKlook": "Ver en Klook",
+  "exploreFromPrice": "Desde {price}",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "No se encontraron actividades para este destino.",
+  "exploreLoadError": "No se pudieron cargar las sugerencias. Toca para reintentar.",
   "restaurantPollTitle": "Elegir un lugar",
   "foodMoodDDMode": "Conductor designado",
   "foodMoodNibble": "Picaré algo",
