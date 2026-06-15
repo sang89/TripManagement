@@ -1225,6 +1225,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get chooseEventType => 'ماذا تخطط؟';
+
+  @override
   String get eventTypePicker => 'نوع الحدث';
 
   @override

@@ -2370,6 +2370,12 @@ abstract class AppLocalizations {
   /// **'Part of a {interval} series'**
   String signupPartOfSeries(String interval);
 
+  /// No description provided for @chooseEventType.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you planning?'**
+  String get chooseEventType;
+
   /// No description provided for @eventTypePicker.
   ///
   /// In en, this message translates to:

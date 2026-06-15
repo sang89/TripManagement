@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "Inscribir automáticamente a los confirmados",
   "signupCarryOverGuestsHint": "Los invitados recibirán una notificación y podrán cancelar",
   "signupPartOfSeries": "Parte de una serie {interval}",
+  "chooseEventType": "¿Qué estás planeando?",
   "eventTypePicker": "Tipo de evento",
   "routeTab": "Ruta",
   "leaveEventTitle": "¿Salir del evento?",

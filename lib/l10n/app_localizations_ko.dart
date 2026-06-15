@@ -1217,6 +1217,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get chooseEventType => '무엇을 계획하고 있나요?';
+
+  @override
   String get eventTypePicker => '이벤트 유형';
 
   @override

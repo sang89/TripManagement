@@ -1214,6 +1214,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get chooseEventType => '您在计划什么？';
+
+  @override
   String get eventTypePicker => '活动类型';
 
   @override

@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "تسجيل الضيوف المؤكدين تلقائيًا",
   "signupCarryOverGuestsHint": "سيتلقى الضيوف إشعارًا ويمكنهم إلغاء التسجيل",
   "signupPartOfSeries": "جزء من سلسلة {interval}",
+  "chooseEventType": "ماذا تخطط؟",
   "eventTypePicker": "نوع الحدث",
   "routeTab": "المسار",
   "leaveEventTitle": "مغادرة الحدث؟",

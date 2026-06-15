@@ -1216,6 +1216,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get chooseEventType => '何を計画していますか？';
+
+  @override
   String get eventTypePicker => 'イベントの種類';
 
   @override

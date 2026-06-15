@@ -342,38 +342,45 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Event type card grid
-                  _EventTypePicker(
-                    selected: _eventType,
-                    labelOf: (t) => _eventTypeLabel(t, l10n),
-                    onChanged: (t) => setState(() {
-                      _eventType = t;
-                      _triedToSave = false;
-                    }),
-                  ),
-
-                  // Inline error when user tries to save without a type.
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    child: _triedToSave && _eventType == null
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 6, bottom: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline_rounded,
-                                    size: 14, color: AppTheme.danger),
-                                const SizedBox(width: 4),
-                                Text(
-                                  l10n.pleaseSelectEventType,
-                                  style: const TextStyle(
-                                      color: AppTheme.danger, fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
+                  // Event type — single chip when pre-selected (new event
+                  // from modal), full picker strip when editing.
+                  if (!_isEdit && widget.defaultEventType != null)
+                    _SingleTypeChip(
+                      type: _eventType!,
+                      label: _eventTypeLabel(_eventType!, l10n),
+                    )
+                  else ...[
+                    _EventTypePicker(
+                      selected: _eventType,
+                      labelOf: (t) => _eventTypeLabel(t, l10n),
+                      onChanged: (t) => setState(() {
+                        _eventType = t;
+                        _triedToSave = false;
+                      }),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      child: _triedToSave && _eventType == null
+                          ? Padding(
+                              padding:
+                                  const EdgeInsets.only(top: 6, bottom: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline_rounded,
+                                      size: 14, color: AppTheme.danger),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l10n.pleaseSelectEventType,
+                                    style: const TextStyle(
+                                        color: AppTheme.danger, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   // Title *
@@ -676,6 +683,53 @@ class _DateTimeTile extends StatelessWidget {
           ),
         ),
       );
+}
+
+// ── Single type chip (shown in form after picking from the modal) ─────────────
+
+class _SingleTypeChip extends StatelessWidget {
+  final EventType type;
+  final String label;
+
+  const _SingleTypeChip({required this.type, required this.label});
+
+  static const _icons = {
+    EventType.trip: Icons.luggage_rounded,
+    EventType.birthday: Icons.cake_rounded,
+    EventType.wedding: Icons.favorite_rounded,
+    EventType.social: Icons.celebration_rounded,
+    EventType.quickBites: Icons.restaurant_rounded,
+    EventType.signup: Icons.how_to_reg_rounded,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = bannerThemeFor(type);
+    final accent = theme.gradientColors.first;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.40), width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_icons[type]!, size: 20, color: accent),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: accent,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Event type picker ─────────────────────────────────────────────────────────
