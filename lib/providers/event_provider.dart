@@ -915,6 +915,8 @@ class EventProvider extends ChangeNotifier {
             final sessionId = row['id'] as String?;
             final eventId = row['event_id'] as String?;
             if (sessionId == null || eventId == null) return;
+            // B9: skip rebuild for events the user isn't currently viewing.
+            if (_watchedEventId != null && _watchedEventId != eventId) return;
             _patchSessionInCache(
               eventId,
               sessionId,
@@ -928,6 +930,7 @@ class EventProvider extends ChangeNotifier {
                 'created_at': s.createdAt.toIso8601String(),
                 'going_count': row['going_count'] as int? ?? s.goingCount,
                 'waitlist_count': row['waitlist_count'] as int? ?? s.waitlistCount,
+                'pending_count': row['pending_count'] as int? ?? s.pendingCount,
                 'capacity': row.containsKey('capacity') ? row['capacity'] : s.capacity,
                 'waitlist_enabled': row.containsKey('waitlist_enabled') ? row['waitlist_enabled'] : s.waitlistEnabled,
                 'signup_lock_hours': row.containsKey('signup_lock_hours') ? row['signup_lock_hours'] : s.signupLockHours,
@@ -1061,8 +1064,9 @@ class EventProvider extends ChangeNotifier {
         )
 
         // DELETE: cancelled or removed by organizer.
-        // Always notify — even when the roster isn't expanded the count badge
-        // needs to update, and _mySessionStatuses must clear on other devices.
+        // B8: own-row status clearing is handled exclusively by the filtered
+        // subscription below — skip it here to avoid duplicate notifyListeners()
+        // and double refreshSessionRoster() calls for the current user's entry.
         .onPostgresChanges(
           event: PostgresChangeEvent.delete,
           schema: 'public',
@@ -1073,23 +1077,19 @@ class EventProvider extends ChangeNotifier {
             final rosterId = old['id'] as String?;
             if (sessionId == null || rosterId == null) return;
 
-            // Clear status badge if the current user's entry was deleted
-            // (handles cancellation from another device, kick, reject).
-            final uid = _db.auth.currentUser?.id;
-            final rowUserId = old['user_id'] as String?;
-            final isOwnEntry = uid != null && rowUserId == uid;
-            if (isOwnEntry) {
-              _mySessionStatuses.remove(sessionId);
-              _sessionStatusCleared.add(sessionId);
-              unawaited(refreshSessionRoster(sessionId));
-            }
-
             // Remove from cached roster if loaded.
             final roster = _sessionRosters[sessionId];
             if (roster != null) {
               _sessionRosters[sessionId] =
                   roster.where((r) => r.id != rosterId).toList();
             }
+
+            // B9: skip rebuild if the deleted row belongs to an event the user
+            // isn't currently viewing (the filtered handler will fire for own rows).
+            final uid = _db.auth.currentUser?.id;
+            final rowUserId = old['user_id'] as String?;
+            final isOwnEntry = uid != null && rowUserId == uid;
+            if (isOwnEntry) return; // filtered handler owns this case
 
             notifyListeners();
           },
@@ -1417,6 +1417,10 @@ class EventProvider extends ChangeNotifier {
   // sessionId → ('going'|'waitlisted', signup_order) for the current user
   final Map<String, ({String status, int order})> _mySessionStatuses = {};
 
+  // B9: event currently open in the detail screen; Realtime callbacks skip
+  // notifyListeners() for unrelated events to avoid unnecessary rebuilds.
+  String? _watchedEventId;
+
   // ── Public accessors ────────────────────────────────────────────────────
 
   List<EventSession> upcomingSessionsFor(String eventId) =>
@@ -1437,6 +1441,10 @@ class EventProvider extends ChangeNotifier {
   /// Returns the current user's status for [sessionId], or null if not signed up.
   ({String status, int order})? myStatusFor(String sessionId) =>
       _mySessionStatuses[sessionId];
+
+  // B9: Call from event detail screen initState/dispose to scope Realtime
+  // notifyListeners() to the currently viewed event.
+  void watchEvent(String? eventId) => _watchedEventId = eventId;
 
   // ── Session list fetching ───────────────────────────────────────────────
 
@@ -1554,11 +1562,13 @@ class EventProvider extends ChangeNotifier {
 
   /// Always reloads from the first page, replacing the cache for [sessionId].
   Future<void> refreshSessionRoster(String sessionId) async {
+    // B10: order by (signed_up_at, id) — stable even after reorder mutations.
     final rows = await _db
         .from('event_session_roster')
         .select()
         .eq('session_id', sessionId)
-        .order('signup_order', ascending: true, nullsFirst: false)
+        .order('signed_up_at', ascending: true)
+        .order('id', ascending: true)
         .limit(_kRosterPageSize + 1) as List<dynamic>;
     final hasMore = rows.length > _kRosterPageSize;
     final entries = rows
@@ -1590,16 +1600,20 @@ class EventProvider extends ChangeNotifier {
   Future<void> loadMoreRoster(String sessionId) async {
     final existing = _sessionRosters[sessionId] ?? [];
     if (!(_hasMoreRoster[sessionId] ?? false)) return;
-    // Use the highest known signup_order as cursor.
-    final maxOrder = existing
-        .where((r) => r.signupOrder != null)
-        .fold<int>(0, (m, r) => r.signupOrder! > m ? r.signupOrder! : m);
+    // B10: use (signed_up_at, id) as the stable cursor — immune to reorder
+    // mutations that change signup_order values after page 1 was fetched.
+    final last = existing.isNotEmpty ? existing.last : null;
+    final afterAt = last?.signedUpAt.toUtc().toIso8601String();
+    final afterId = last?.id;
     final rows = await _db
         .from('event_session_roster')
         .select()
         .eq('session_id', sessionId)
-        .gt('signup_order', maxOrder)
-        .order('signup_order', ascending: true, nullsFirst: false)
+        .or(afterAt == null || afterId == null
+            ? 'id.neq.null'
+            : 'signed_up_at.gt.$afterAt,and(signed_up_at.eq.$afterAt,id.gt.$afterId)')
+        .order('signed_up_at', ascending: true)
+        .order('id', ascending: true)
         .limit(_kRosterPageSize + 1) as List<dynamic>;
     final hasMore = rows.length > _kRosterPageSize;
     final page = rows

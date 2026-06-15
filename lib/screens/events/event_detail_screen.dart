@@ -9132,7 +9132,18 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
   @override
   void initState() {
     super.initState();
+    // B9: tell the provider which event is active so Realtime callbacks
+    // can skip notifyListeners() for unrelated events.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<EventProvider>().watchEvent(widget.event.id);
+    });
     _fetchUpcoming();
+  }
+
+  @override
+  void dispose() {
+    context.read<EventProvider>().watchEvent(null);
+    super.dispose();
   }
 
   Future<void> _fetchUpcoming() async {
@@ -9354,20 +9365,21 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
                   ? 'No upcoming sessions — tap "Add session" to schedule one.'
                   : 'No upcoming sessions scheduled yet.')
         else
-          ...upcoming.map((session) => _SessionCard(
-                key: ValueKey(session.id),
-                session: session,
+          ...upcoming.asMap().entries.map((e) => _SessionCard(
+                key: ValueKey(e.value.id),
+                session: e.value,
                 event: widget.event,
                 authUid: widget.authUid,
                 isOrganizer: widget.isOrganizer,
-                isExpanded: _expandedSessionId == session.id,
+                isExpanded: _expandedSessionId == e.value.id,
+                position: e.key + 1,
                 onToggle: () => setState(() => _expandedSessionId =
-                    _expandedSessionId == session.id ? null : session.id),
+                    _expandedSessionId == e.value.id ? null : e.value.id),
                 onClone: widget.isOrganizer
-                    ? () => _cloneSession(context, session)
+                    ? () => _cloneSession(context, e.value)
                     : null,
                 onDelete: widget.isOrganizer
-                    ? () => _deleteSession(context, session)
+                    ? () => _deleteSession(context, e.value)
                     : null,
               )),
 
@@ -9471,17 +9483,18 @@ class _PastSessionsSection extends StatelessWidget {
               ),
             )
           else
-            ...sessions.map((session) => _SessionCard(
-                  key: ValueKey(session.id),
-                  session: session,
+            ...sessions.asMap().entries.map((e) => _SessionCard(
+                  key: ValueKey(e.value.id),
+                  session: e.value,
                   event: event,
                   authUid: authUid,
                   isOrganizer: isOrganizer,
-                  isExpanded: expandedSessionId == session.id,
-                  onToggle: () => onToggleSession(session.id),
-                  onClone: isOrganizer ? () => onCloneSession(session) : null,
+                  isExpanded: expandedSessionId == e.value.id,
+                  position: e.key + 1,
+                  onToggle: () => onToggleSession(e.value.id),
+                  onClone: isOrganizer ? () => onCloneSession(e.value) : null,
                   onDelete: onDeleteSession != null
-                      ? () => onDeleteSession!(session)
+                      ? () => onDeleteSession!(e.value)
                       : null,
                 )),
           if (hasMore) ...[
@@ -9514,6 +9527,8 @@ class _SessionCard extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback? onClone;
   final VoidCallback? onDelete;
+  // B6: ordinal position in the sorted session list (1-based) for the info sheet.
+  final int position;
 
   const _SessionCard({
     super.key,
@@ -9525,6 +9540,7 @@ class _SessionCard extends StatefulWidget {
     required this.onToggle,
     this.onClone,
     this.onDelete,
+    this.position = 1,
   });
 
   @override
@@ -9616,6 +9632,10 @@ class _SessionCardState extends State<_SessionCard>
         cap != null && cap > 0 ? (going / cap).clamp(0.0, 1.0) : 0.0;
 
     // Roster is loaded on demand.
+    // B11: cap displayed rows to avoid building hundreds of widgets eagerly.
+    // TODO(perf): replace ReorderableListView with a SliverReorderableList
+    // backed by a real scroll view for true O(visible) virtualization.
+    const kMaxDisplayRows = 50;
     final roster = provider.rosterFor(widget.session.id);
     final confirmed =
         roster?.where((r) => r.status == 'going').toList() ?? [];
@@ -9625,6 +9645,10 @@ class _SessionCardState extends State<_SessionCard>
         roster?.where((r) => r.status == 'pending_review').toList() ?? [];
     final myEntry = roster?.where((r) => r.userId == widget.authUid).firstOrNull;
     final hasMoreRoster = provider.hasMoreRosterFor(widget.session.id);
+    final displayedConfirmed = confirmed.take(kMaxDisplayRows).toList();
+    final hiddenConfirmed = confirmed.length - displayedConfirmed.length;
+    final displayedWaitlist = waitlist.take(kMaxDisplayRows).toList();
+    final hiddenWaitlist = waitlist.length - displayedWaitlist.length;
 
     final grad = _SessionEmojiBadge.gradientFor(widget.session);
     final accentColor = grad[0];
@@ -9753,8 +9777,11 @@ class _SessionCardState extends State<_SessionCard>
                               ),
                             ),
                           ],
-                          // Pending-review badge (shows dot when roster loaded)
-                          if (widget.isOrganizer && pending.isNotEmpty)
+                          // B5: Pending-review badge — shown from DB column even
+                          // before the roster is expanded; refined by loaded list.
+                          if (widget.isOrganizer &&
+                              (widget.session.pendingCount > 0 ||
+                                  pending.isNotEmpty))
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: const BoxDecoration(
@@ -9762,7 +9789,7 @@ class _SessionCardState extends State<_SessionCard>
                                 shape: BoxShape.circle,
                               ),
                               child: Text(
-                                '${pending.length}',
+                                '${pending.isNotEmpty ? pending.length : widget.session.pendingCount}',
                                 style: const TextStyle(
                                     fontSize: 9,
                                     color: Colors.white,
@@ -9820,7 +9847,7 @@ class _SessionCardState extends State<_SessionCard>
                             buildDefaultDragHandles: false,
                             onReorderItem: (oldIdx, newIdx) {
                               final reordered =
-                                  List<EventSessionRosterEntry>.from(confirmed);
+                                  List<EventSessionRosterEntry>.from(displayedConfirmed);
                               reordered.insert(
                                   newIdx, reordered.removeAt(oldIdx));
                               context.read<EventProvider>().reorderSessionRoster(
@@ -9829,7 +9856,7 @@ class _SessionCardState extends State<_SessionCard>
                                     reordered.map((r) => r.id).toList(),
                                   );
                             },
-                            children: confirmed.asMap().entries.map((e) =>
+                            children: displayedConfirmed.asMap().entries.map((e) =>
                                 _SessionRosterRow(
                                   key: ValueKey(e.value.id),
                                   position: e.key + 1,
@@ -9879,7 +9906,7 @@ class _SessionCardState extends State<_SessionCard>
                                 )).toList(),
                           )
                         else
-                          ...confirmed.asMap().entries.map((e) =>
+                          ...displayedConfirmed.asMap().entries.map((e) =>
                               _cancelAnimWrapper(
                                 id: e.value.id,
                                 child: _SessionRosterRow(
@@ -9891,6 +9918,17 @@ class _SessionCardState extends State<_SessionCard>
                                   showAttendance: false,
                                 ),
                               )),
+
+                        // B11: hidden-row notice when capped at _kMaxDisplayRows.
+                        if (hiddenConfirmed > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              '+ $hiddenConfirmed more — load next page to see all',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500]),
+                            ),
+                          ),
 
                         // ── Load more confirmed ──────────────────────────
                         if (hasMoreRoster) ...[
@@ -9926,7 +9964,7 @@ class _SessionCardState extends State<_SessionCard>
                               onReorderItem: (oldIdx, newIdx) {
                                 final reordered =
                                     List<EventSessionRosterEntry>.from(
-                                        waitlist);
+                                        displayedWaitlist);
                                 reordered.insert(
                                     newIdx, reordered.removeAt(oldIdx));
                                 context
@@ -9938,7 +9976,7 @@ class _SessionCardState extends State<_SessionCard>
                                   startOrder: 1,
                                 );
                               },
-                              children: waitlist.asMap().entries.map((e) =>
+                              children: displayedWaitlist.asMap().entries.map((e) =>
                                   _SessionRosterRow(
                                     key: ValueKey(e.value.id),
                                     position: e.key + 1,
@@ -9979,7 +10017,7 @@ class _SessionCardState extends State<_SessionCard>
                                   )).toList(),
                             )
                           else
-                            ...waitlist.asMap().entries.map((e) =>
+                            ...displayedWaitlist.asMap().entries.map((e) =>
                                 _cancelAnimWrapper(
                                   id: e.value.id,
                                   child: _SessionRosterRow(
@@ -9992,6 +10030,15 @@ class _SessionCardState extends State<_SessionCard>
                                     showAttendance: false,
                                   ),
                                 )),
+                          if (hiddenWaitlist > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                '+ $hiddenWaitlist more in waitlist',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey[500]),
+                              ),
+                            ),
                         ],
 
                         // ── Pending Review (organizer only) ──────────────
@@ -10176,7 +10223,10 @@ class _SessionCardState extends State<_SessionCard>
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _SessionInfoSheet(session: widget.session),
+      builder: (_) => _SessionInfoSheet(
+        session: widget.session,
+        position: widget.position,
+      ),
     );
   }
 
@@ -10227,7 +10277,9 @@ class _SessionCardState extends State<_SessionCard>
                   : l10n.signupConfirmedPosition(pos)),
         ));
       }
-      await provider.refreshSessionRoster(widget.session.id);
+      // B12: background-refresh only — the Realtime INSERT handler already
+      // patches the cache; awaiting here would cause a double round-trip.
+      unawaited(provider.refreshSessionRoster(widget.session.id));
     } catch (e) {
       final msg = e.toString();
       messenger.showSnackBar(SnackBar(
@@ -10235,11 +10287,13 @@ class _SessionCardState extends State<_SessionCard>
             ? l10n.signupLocked
             : msg.contains('already_signed_up')
                 ? 'You are already signed up for this session.'
-                : msg),
+                : msg.contains('auth_required')
+                    ? 'Please log in to sign up for sessions.'
+                    : msg),
       ));
       // Roster may be stale — refresh so the correct state (cancel button) shows.
       if (msg.contains('already_signed_up')) {
-        await provider.refreshSessionRoster(widget.session.id);
+        unawaited(provider.refreshSessionRoster(widget.session.id));
       }
     }
   }
@@ -10344,8 +10398,11 @@ class _SessionCardState extends State<_SessionCard>
 
 class _SessionInfoSheet extends StatelessWidget {
   final EventSession session;
+  // B6: ordinal position in the sorted session list — stable display label
+  // that doesn't have gaps after deletions the way session_number can.
+  final int position;
 
-  const _SessionInfoSheet({required this.session});
+  const _SessionInfoSheet({required this.session, this.position = 1});
 
   // Picks one string from [options] deterministically based on session id.
   String _pick(List<String> options) {
@@ -10531,7 +10588,7 @@ class _SessionInfoSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Session #${session.sessionNumber}',
+                        'Session #$position',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
