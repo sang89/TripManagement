@@ -43,7 +43,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/event_chat_provider.dart';
 import '../../providers/event_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../notifications/notifications_screen.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/trip_places_service.dart';
 import '../../services/user_lookup_service.dart';
@@ -57,8 +59,9 @@ import '../../widgets/event_stop_form_sheet.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
+  final int initialTab;
 
-  const EventDetailScreen({super.key, required this.eventId});
+  const EventDetailScreen({super.key, required this.eventId, this.initialTab = 0});
 
   @override
   State<EventDetailScreen> createState() => _EventDetailScreenState();
@@ -76,8 +79,10 @@ class _EventDetailScreenState extends State<EventDetailScreen>
     // initial tab count — avoids a dispose-during-build crash on birthday events.
     final event = Provider.of<EventProvider>(context, listen: false)
         .getById(widget.eventId);
+    final tabCount = event?.isBirthday == true ? 5 : 4;
+    final clampedInitial = widget.initialTab.clamp(0, tabCount - 1);
     _tabController =
-        TabController(length: event?.isBirthday == true ? 5 : 4, vsync: this);
+        TabController(length: tabCount, initialIndex: clampedInitial, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -209,6 +214,26 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               ],
             ),
             actions: [
+              Consumer<NotificationsProvider>(
+                builder: (_, notifs, _) => Badge(
+                  isLabelVisible: notifs.unreadCount > 0,
+                  label: Text(
+                    notifs.unreadCount > 9 ? '9+' : '${notifs.unreadCount}',
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      notifs.unreadCount > 0
+                          ? Icons.notifications_rounded
+                          : Icons.notifications_outlined,
+                      color: Colors.white,
+                    ),
+                    tooltip: l10n.notifications,
+                    onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    ),
+                  ),
+                ),
+              ),
               if (event.isTrip)
                 IconButton(
                   icon: const Icon(Icons.auto_awesome_outlined),
@@ -10007,7 +10032,7 @@ class _SessionCardState extends State<_SessionCard>
                           else
                             _SignupCTAButton(
                               label: widget.session.isFull
-                                  ? '⏳  ${l10n.signupJoinWaitlist}'
+                                  ? l10n.signupJoinWaitlist
                                   : widget.session.requiresApproval
                                       ? '🔍  Request to join'
                                       : '🎟️  ${l10n.signupClaimSpot}',
@@ -12003,8 +12028,6 @@ class _PendingReviewRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          const Text('⏳', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -17,6 +17,7 @@ import 'providers/event_chat_provider.dart';
 import 'providers/event_provider.dart';
 import 'providers/friends_provider.dart';
 import 'providers/invitations_provider.dart';
+import 'providers/notifications_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/user_profile_provider.dart';
@@ -85,6 +86,7 @@ void main() async {
   final blockedUsers = BlockedUsersProvider();
   final events = EventProvider();
   final subscription = SubscriptionProvider();
+  final notifications = NotificationsProvider();
   final biometricService = BiometricService();
 
   if (auth.isLoggedIn) {
@@ -95,6 +97,7 @@ void main() async {
       await invitations.init(uid);
       await friends.init(uid);
       await subscription.load(uid);
+      await notifications.init(uid);
     }
     await events.load();
   }
@@ -108,6 +111,7 @@ void main() async {
     blockedUsers: blockedUsers,
     events: events,
     subscription: subscription,
+    notifications: notifications,
     connectivity: connectivity,
     offlineQueue: offlineQueue,
     biometricService: biometricService,
@@ -123,6 +127,7 @@ class TripManagementApp extends StatefulWidget {
   final BlockedUsersProvider blockedUsers;
   final EventProvider events;
   final SubscriptionProvider subscription;
+  final NotificationsProvider notifications;
   final ConnectivityService connectivity;
   final OfflineQueue offlineQueue;
   final BiometricService biometricService;
@@ -137,6 +142,7 @@ class TripManagementApp extends StatefulWidget {
     required this.blockedUsers,
     required this.events,
     required this.subscription,
+    required this.notifications,
     required this.connectivity,
     required this.offlineQueue,
     required this.biometricService,
@@ -157,6 +163,8 @@ class _TripManagementAppState extends State<TripManagementApp> {
     _push = PushNotificationService(
       onTripInviteTap: () => _router.go('/events'),
       onMentionTap: (eventId) => _router.go('/event/$eventId'),
+      onEventTap: (eventId) => _router.go('/event/$eventId'),
+      onFriendsTap: () => _router.go('/friends'),
     );
 
     widget.auth.addListener(_onAuthChanged);
@@ -269,6 +277,8 @@ class _TripManagementAppState extends State<TripManagementApp> {
                   final eventId = state.pathParameters['id']!;
                   final userId =
                       context.read<AuthProvider>().userId ?? '';
+                  final tabParam = state.uri.queryParameters['tab'];
+                  final initialTab = tabParam == 'session' ? 3 : 0;
                   return ChangeNotifierProvider(
                     create: (_) {
                       final p = EventChatProvider(
@@ -276,7 +286,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
                       p.init();
                       return p;
                     },
-                    child: EventDetailScreen(eventId: eventId),
+                    child: EventDetailScreen(eventId: eventId, initialTab: initialTab),
                   );
                 },
               ),
@@ -326,6 +336,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         widget.invitations.init(uid);
         widget.friends.init(uid);
         widget.subscription.load(uid);
+        widget.notifications.init(uid);
         _push.init();
       }
     } else {
@@ -336,6 +347,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
       widget.profile.clear();
       widget.events.clear();
       widget.subscription.clear();
+      widget.notifications.clear();
     }
   }
 
@@ -357,6 +369,7 @@ class _TripManagementAppState extends State<TripManagementApp> {
         ChangeNotifierProvider.value(value: widget.blockedUsers),
         ChangeNotifierProvider.value(value: widget.events),
         ChangeNotifierProvider.value(value: widget.subscription),
+        ChangeNotifierProvider.value(value: widget.notifications),
         ChangeNotifierProvider.value(value: widget.connectivity),
         ChangeNotifierProvider.value(value: widget.offlineQueue),
         Provider<BiometricService>.value(value: widget.biometricService),

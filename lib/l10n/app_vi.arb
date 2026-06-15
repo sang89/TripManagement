@@ -635,5 +635,8 @@
   "wishesTab": "Lời chúc",
   "predictionsTab": "Dự đoán",
   "wallTab": "Tường",
-  "pleaseSelectEventType": "Vui lòng chọn loại sự kiện"
+  "pleaseSelectEventType": "Vui lòng chọn loại sự kiện",
+  "notifications": "Thông báo",
+  "notificationsEmpty": "Bạn đã xem tất cả!",
+  "notificationsMarkAllRead": "Đánh dấu tất cả là đã đọc"
 }

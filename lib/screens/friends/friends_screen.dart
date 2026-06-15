@@ -11,8 +11,10 @@ import '../../models/friendship.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/blocked_users_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../utils/avatar_utils.dart';
 import 'contacts_screen.dart';
+import '../notifications/notifications_screen.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -46,6 +48,27 @@ class _FriendsScreenState extends State<FriendsScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.navFriends),
+        actions: [
+          Consumer<NotificationsProvider>(
+            builder: (_, notifs, _) => Badge(
+              isLabelVisible: notifs.unreadCount > 0,
+              label: Text(
+                notifs.unreadCount > 9 ? '9+' : '${notifs.unreadCount}',
+              ),
+              child: IconButton(
+                icon: Icon(
+                  notifs.unreadCount > 0
+                      ? Icons.notifications_rounded
+                      : Icons.notifications_outlined,
+                ),
+                tooltip: l10n.notifications,
+                onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                ),
+              ),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [

@@ -9,9 +9,11 @@ import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/event_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../widgets/event_card.dart';
 import '../../widgets/event_type_banner.dart';
+import '../notifications/notifications_screen.dart';
 
 enum _EventTab { upcoming, invited, past }
 
@@ -153,6 +155,64 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
           title: Text(l10n.navEvents),
           actions: [
+            Consumer<NotificationsProvider>(
+              builder: (_, notifs, _) => AppTappable(
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                ),
+                // UnconstrainedBox breaks the AppBar's stretch constraint
+                // (which inflates action widgets to the full AppBar height,
+                // ~104px with the TabBar bottom). Without it, SizedBox(40,40)
+                // is overridden to 104px tall and Positioned(top:N) anchors
+                // to the top of that giant box, far from the icon.
+                child: UnconstrainedBox(
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          notifs.unreadCount > 0
+                              ? Icons.notifications_rounded
+                              : Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        if (notifs.unreadCount > 0)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              constraints: const BoxConstraints(
+                                  minWidth: 16, minHeight: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white, width: 1.5),
+                              ),
+                              child: Text(
+                                notifs.unreadCount > 9
+                                    ? '9+'
+                                    : '${notifs.unreadCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             IconButton(
               icon: Icon(
                 _calendarView

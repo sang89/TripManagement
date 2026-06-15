@@ -1608,4 +1608,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => 'Bitte einen Veranstaltungstyp auswählen';
+
+  @override
+  String get notifications => 'Benachrichtigungen';
+
+  @override
+  String get notificationsEmpty => 'Alles erledigt!';
+
+  @override
+  String get notificationsMarkAllRead => 'Alle als gelesen markieren';
 }

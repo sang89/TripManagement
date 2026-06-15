@@ -3005,6 +3005,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please select an event type'**
   String get pleaseSelectEventType;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @notificationsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all caught up!'**
+  String get notificationsEmpty;
+
+  /// No description provided for @notificationsMarkAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get notificationsMarkAllRead;
 }
 
 class _AppLocalizationsDelegate

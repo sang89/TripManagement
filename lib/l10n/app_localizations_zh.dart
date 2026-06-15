@@ -1578,4 +1578,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pleaseSelectEventType => '请选择活动类型';
+
+  @override
+  String get notifications => '通知';
+
+  @override
+  String get notificationsEmpty => '您已全部查看！';
+
+  @override
+  String get notificationsMarkAllRead => '全部标为已读';
 }

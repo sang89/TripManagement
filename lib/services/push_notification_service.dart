@@ -13,8 +13,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class PushNotificationService {
   final void Function()? onTripInviteTap;
   final void Function(String tripId)? onMentionTap;
+  final void Function(String eventId)? onEventTap;
+  final void Function()? onFriendsTap;
 
-  PushNotificationService({this.onTripInviteTap, this.onMentionTap});
+  PushNotificationService({
+    this.onTripInviteTap,
+    this.onMentionTap,
+    this.onEventTap,
+    this.onFriendsTap,
+  });
 
   SupabaseClient get _db => Supabase.instance.client;
 
@@ -68,7 +75,7 @@ class PushNotificationService {
       if (uid == null) return;
       final platform = Platform.isIOS ? 'ios' : 'android';
       await _db.from('device_tokens').upsert(
-        {'user_id': uid, 'token': token, 'platform': platform},
+        {'user_id': uid, 'token': token, 'platform': platform, 'app': 'trip_management'},
         onConflict: 'user_id, token',
       );
       debugPrint('PushNotificationService: token saved ($platform)');
@@ -104,11 +111,38 @@ class PushNotificationService {
   void _handleMessage(RemoteMessage? message) {
     if (message == null) return;
     final type = message.data['type'] as String?;
-    if (type == 'trip_invite') {
-      onTripInviteTap?.call();
-    } else if (type == 'chat_mention') {
-      final tripId = message.data['trip_id'] as String?;
-      if (tripId != null) onMentionTap?.call(tripId);
+    switch (type) {
+      case 'trip_invite':
+      case 'event_invite':
+        onTripInviteTap?.call();
+      case 'chat_mention':
+        final tripId = message.data['trip_id'] as String?;
+        if (tripId != null) onMentionTap?.call(tripId);
+      case 'event_invite_accepted':
+      case 'event_invite_declined':
+        final eventId = message.data['event_id'] as String?;
+        if (eventId != null) {
+          onEventTap?.call(eventId);
+        } else {
+          onTripInviteTap?.call();
+        }
+      case 'event_kicked':
+        // User no longer has access — navigate to events list
+        onTripInviteTap?.call();
+      case 'session_join_request':
+      case 'session_approved':
+      case 'session_rejected':
+      case 'session_demoted':
+      case 'session_promoted':
+        final eventId = message.data['event_id'] as String?;
+        if (eventId != null) {
+          onEventTap?.call(eventId);
+        } else {
+          onTripInviteTap?.call();
+        }
+      case 'friend_request':
+      case 'friend_accepted':
+        onFriendsTap?.call();
     }
   }
 }

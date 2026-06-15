@@ -635,5 +635,8 @@
   "wishesTab": "Wünsche",
   "predictionsTab": "Vorhersagen",
   "wallTab": "Wand",
-  "pleaseSelectEventType": "Bitte einen Veranstaltungstyp auswählen"
+  "pleaseSelectEventType": "Bitte einen Veranstaltungstyp auswählen",
+  "notifications": "Benachrichtigungen",
+  "notificationsEmpty": "Alles erledigt!",
+  "notificationsMarkAllRead": "Alle als gelesen markieren"
 }

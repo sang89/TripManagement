@@ -9,10 +9,12 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../utils/avatar_utils.dart';
 import '../../utils/formatters.dart';
+import '../notifications/notifications_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -307,6 +309,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ]
             : [
+                Consumer<NotificationsProvider>(
+                  builder: (_, notifs, _) => Badge(
+                    isLabelVisible: notifs.unreadCount > 0,
+                    label: Text(
+                      notifs.unreadCount > 9 ? '9+' : '${notifs.unreadCount}',
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        notifs.unreadCount > 0
+                            ? Icons.notifications_rounded
+                            : Icons.notifications_outlined,
+                      ),
+                      tooltip: l10n.notifications,
+                      onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                      ),
+                    ),
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),
                   tooltip: l10n.settingsTooltip,

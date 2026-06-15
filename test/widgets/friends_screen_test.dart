@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:trip_management/l10n/app_localizations.dart';
 import 'package:trip_management/models/friendship.dart';
 import 'package:trip_management/providers/friends_provider.dart';
+import 'package:trip_management/providers/notifications_provider.dart';
 import 'package:trip_management/screens/friends/friends_screen.dart';
 
 // ── Fake provider ──────────────────────────────────────────────────────────────
@@ -56,8 +57,13 @@ Friendship _friendship({
       otherDisplayName: displayName,
     );
 
-Widget _wrap(_FakeFriendsProvider provider) => ChangeNotifierProvider<FriendsProvider>.value(
-      value: provider,
+Widget _wrap(_FakeFriendsProvider provider) => MultiProvider(
+      providers: [
+        ChangeNotifierProvider<FriendsProvider>.value(value: provider),
+        ChangeNotifierProvider<NotificationsProvider>.value(
+          value: NotificationsProvider(),
+        ),
+      ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

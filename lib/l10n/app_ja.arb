@@ -635,5 +635,8 @@
   "wishesTab": "ウィッシュ",
   "predictionsTab": "予言",
   "wallTab": "ウォール",
-  "pleaseSelectEventType": "イベントの種類を選択してください"
+  "pleaseSelectEventType": "イベントの種類を選択してください",
+  "notifications": "通知",
+  "notificationsEmpty": "すべて確認済みです！",
+  "notificationsMarkAllRead": "すべて既読にする"
 }
