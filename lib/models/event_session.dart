@@ -9,6 +9,7 @@ class EventSession {
   // Denormalized by DB trigger — never requires a COUNT(*) on the roster.
   final int goingCount;
   final int waitlistCount;
+  final int pendingCount;
   // Per-session signup settings (moved from events table).
   final int? capacity;
   final bool waitlistEnabled;
@@ -26,6 +27,7 @@ class EventSession {
     required this.createdAt,
     this.goingCount = 0,
     this.waitlistCount = 0,
+    this.pendingCount = 0,
     this.capacity,
     this.waitlistEnabled = true,
     this.signupLockHours,
@@ -45,6 +47,7 @@ class EventSession {
         createdAt: DateTime.parse(json['created_at'] as String),
         goingCount: json['going_count'] as int? ?? 0,
         waitlistCount: json['waitlist_count'] as int? ?? 0,
+        pendingCount: json['pending_count'] as int? ?? 0,
         capacity: json['capacity'] as int?,
         waitlistEnabled: (json['waitlist_enabled'] as bool?) ?? true,
         signupLockHours: json['signup_lock_hours'] as int?,
@@ -67,7 +70,7 @@ class EventSession {
 
   bool get isUpcoming => startAt.isAfter(DateTime.now());
 
-  EventSession copyWithCounts({int? goingCount, int? waitlistCount}) =>
+  EventSession copyWithCounts({int? goingCount, int? waitlistCount, int? pendingCount}) =>
       EventSession(
         id: id,
         eventId: eventId,
@@ -78,6 +81,7 @@ class EventSession {
         createdAt: createdAt,
         goingCount: goingCount ?? this.goingCount,
         waitlistCount: waitlistCount ?? this.waitlistCount,
+        pendingCount: pendingCount ?? this.pendingCount,
         capacity: capacity,
         waitlistEnabled: waitlistEnabled,
         signupLockHours: signupLockHours,

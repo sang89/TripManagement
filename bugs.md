@@ -31,7 +31,23 @@ below before marking the task complete.
 
 ### Known limitation (low priority, documented)
 
-- **`loadMoreRoster` drops `pending_review` entries in paginated sessions** — The cursor uses `.gt('signup_order', maxOrder)` which never satisfies `null`. Sessions with >100 going/waitlisted entries AND pending_review entries beyond page 1 will not load those pending entries via loadMore. In practice this only matters for very large sessions. The roster header always shows the count badge (from `session.waitlistCount`) so the organizer knows entries exist.
+- **`loadMoreRoster` drops `pending_review` entries in paginated sessions** — Fixed in B10 (cursor now uses `signed_up_at + id`). Previously the `signup_order`-based cursor never matched `null`-order pending_review entries.
+
+### Design decision (B4): `pending_review` entries are NOT auto-promoted
+
+When a `going` member cancels or is removed, `cancel_session_signup` and
+`session_remove_roster_entry` auto-promote the **top waitlisted** entry only.
+`pending_review` entries are **intentionally skipped** — they require explicit
+organizer approval via `session_approve_request`.
+
+**Why:** `pending_review` means the organizer has not yet decided to admit this
+person. Auto-promoting them would bypass the approval gate entirely. The correct
+flow is: spot opens → organizer sees the pending badge → organizer approves the
+candidate they prefer.
+
+**Invariant:** A `pending_review` entry NEVER automatically becomes `going` or
+`waitlisted`. Only `session_approve_request` (sets `going`) or
+`session_reject_request` (deletes + notifies) can change its state.
 
 ### Invariants to verify on every signup change
 
