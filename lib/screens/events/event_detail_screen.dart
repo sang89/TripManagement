@@ -9166,6 +9166,19 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       ..sort();
   }
 
+  Future<void> _deleteSession(
+      BuildContext context, EventSession session) async {
+    try {
+      await context
+          .read<EventProvider>()
+          .deleteSession(session.id, widget.event.id);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   Future<void> _cloneSession(BuildContext context, EventSession source) async {
     final provider = context.read<EventProvider>();
     final suggestion = source.startAt.add(const Duration(days: 7));
@@ -9353,6 +9366,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
                 onClone: widget.isOrganizer
                     ? () => _cloneSession(context, session)
                     : null,
+                onDelete: widget.isOrganizer
+                    ? () => _deleteSession(context, session)
+                    : null,
               )),
 
         // ── Past sessions ─────────────────────────────────────────────────
@@ -9375,6 +9391,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
           onToggleSession: (id) => setState(() =>
               _expandedSessionId = _expandedSessionId == id ? null : id),
           onCloneSession: (session) => _cloneSession(context, session),
+          onDeleteSession: widget.isOrganizer
+              ? (session) => _deleteSession(context, session)
+              : null,
           onLoadMore: () =>
               context.read<EventProvider>().loadMorePastSessions(widget.event.id),
         ),
@@ -9396,6 +9415,7 @@ class _PastSessionsSection extends StatelessWidget {
   final VoidCallback onToggleVisible;
   final void Function(String sessionId) onToggleSession;
   final void Function(EventSession) onCloneSession;
+  final void Function(EventSession)? onDeleteSession;
   final VoidCallback onLoadMore;
 
   const _PastSessionsSection({
@@ -9409,6 +9429,7 @@ class _PastSessionsSection extends StatelessWidget {
     required this.onToggleVisible,
     required this.onToggleSession,
     required this.onCloneSession,
+    this.onDeleteSession,
     required this.onLoadMore,
   });
 
@@ -9459,6 +9480,9 @@ class _PastSessionsSection extends StatelessWidget {
                   isExpanded: expandedSessionId == session.id,
                   onToggle: () => onToggleSession(session.id),
                   onClone: isOrganizer ? () => onCloneSession(session) : null,
+                  onDelete: onDeleteSession != null
+                      ? () => onDeleteSession!(session)
+                      : null,
                 )),
           if (hasMore) ...[
             const SizedBox(height: 8),
@@ -9489,6 +9513,7 @@ class _SessionCard extends StatefulWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
   final VoidCallback? onClone;
+  final VoidCallback? onDelete;
 
   const _SessionCard({
     super.key,
@@ -9499,6 +9524,7 @@ class _SessionCard extends StatefulWidget {
     required this.isExpanded,
     required this.onToggle,
     this.onClone,
+    this.onDelete,
   });
 
   @override
@@ -9608,7 +9634,7 @@ class _SessionCardState extends State<_SessionCard>
     if (_pulseCtrl == null) _initAnims();
     final pulseAnim = _pulseAnim!;
 
-    return AnimatedBuilder(
+    final card = AnimatedBuilder(
       animation: pulseAnim,
       builder: (_, child) => Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -10033,7 +10059,8 @@ class _SessionCardState extends State<_SessionCard>
                             _SignupCTAButton(
                               label: widget.session.isFull
                                   ? l10n.signupJoinWaitlist
-                                  : widget.session.requiresApproval
+                                  : (widget.session.requiresApproval &&
+                                          !widget.isOrganizer)
                                       ? '🔍  Request to join'
                                       : '🎟️  ${l10n.signupClaimSpot}',
                               isWaitlist: widget.session.isFull,
@@ -10107,6 +10134,71 @@ class _SessionCardState extends State<_SessionCard>
         ),              // closes Stack / ClipRRect child
       ),                // closes ClipRRect
     );
+
+    final cardWithLongPress = GestureDetector(
+      onLongPress: () => _showSessionInfo(context),
+      child: card,
+    );
+
+    if (widget.onDelete == null) return cardWithLongPress;
+
+    return Slidable(
+      key: ValueKey('slide-${widget.session.id}'),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.50,
+        children: [
+          SlidableAction(
+            onPressed: (_) => _showSessionInfo(context),
+            backgroundColor: const Color(0xFF7C3AED),
+            foregroundColor: Colors.white,
+            icon: Icons.bar_chart_rounded,
+            label: 'Info',
+            borderRadius: BorderRadius.circular(14),
+          ),
+          SlidableAction(
+            onPressed: (_) => _confirmDelete(context),
+            backgroundColor: Colors.red.shade400,
+            foregroundColor: Colors.white,
+            icon: Icons.delete_rounded,
+            label: 'Delete',
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ],
+      ),
+      child: cardWithLongPress,
+    );
+  }
+
+  void _showSessionInfo(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SessionInfoSheet(session: widget.session),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete session?'),
+        content: const Text(
+            'All signed-up members will be notified and the session will be removed.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete',
+                  style: TextStyle(color: AppTheme.danger))),
+        ],
+      ),
+    );
+    if (ok == true) widget.onDelete?.call();
   }
 
   Future<void> _signupForSession(
@@ -10247,6 +10339,453 @@ class _SessionCardState extends State<_SessionCard>
   }
 }
 
+
+// ── Session info sheet ────────────────────────────────────────────────────────
+
+class _SessionInfoSheet extends StatelessWidget {
+  final EventSession session;
+
+  const _SessionInfoSheet({required this.session});
+
+  // Picks one string from [options] deterministically based on session id.
+  String _pick(List<String> options) {
+    final i = session.id.hashCode.abs() % options.length;
+    return options[i];
+  }
+
+  String get _statusPhrase {
+    if (session.hasEnded) {
+      return _pick([
+        '🏁 That\'s a wrap — session complete!',
+        '🎬 And... scene. This one\'s done!',
+        '📜 History. This session has ended.',
+        '🏆 Another one in the books!',
+      ]);
+    }
+    if (session.isLocked) {
+      return _pick([
+        '🔒 Signups are closed — doors shut!',
+        '⛔ No new signups — the list is locked.',
+        '🚪 Too late to join — it\'s locked in!',
+      ]);
+    }
+
+    final cap = session.capacity;
+    final going = session.goingCount;
+    final waiting = session.waitlistCount;
+
+    if (cap == null) {
+      if (going == 0) {
+        return _pick([
+          '✨ Open to all — no cap, literally!',
+          '🌍 Room for everyone. Be first!',
+          '🎉 Unlimited spots — bring the whole crew!',
+        ]);
+      }
+      return _pick([
+        '🎊 $going people in — join the party!',
+        '🌊 $going going and counting — hop on!',
+        '🔓 Open to all — $going already in!',
+      ]);
+    }
+
+    final open = (cap - going).clamp(0, cap);
+    final fill = cap > 0 ? going / cap : 0.0;
+
+    // Full
+    if (open <= 0 && waiting > 0) {
+      return _pick([
+        '🔥 Fully booked + $waiting on the waitlist! It\'s giving sold-out vibes',
+        '🎭 Zero spots, $waiting waiting — this session is POPPING',
+        '🏟️ Packed house! $waiting people hoping for a no-show',
+        '⚡ $waiting people are literally queuing for your spot',
+      ]);
+    }
+    if (open <= 0) {
+      return _pick([
+        '😤 Fully booked — catch the next one!',
+        '🚫 Zero spots left. You snooze, you lose!',
+        '💥 Sold out! This one\'s full.',
+        '🎯 Full house — no more room!',
+      ]);
+    }
+
+    // Last spot
+    if (open == 1) {
+      return _pick([
+        '🚨 LAST SPOT. This is your sign.',
+        '⚡ One spot left — and it has your name on it',
+        '🎯 Final seat in the house. Go!',
+        '🔔 Last call! One spot remaining.',
+      ]);
+    }
+
+    // Very few (2–3)
+    if (open <= 3) {
+      return _pick([
+        '⏳ Only $open spots left — tell your bestie NOW',
+        '🌡️ Down to the wire! $open spots remain',
+        '💨 $open spots going fast — don\'t blink!',
+        '🎪 Almost gone! Grab one of the $open spots left',
+      ]);
+    }
+
+    // Almost full (80–99%)
+    if (fill >= 0.80) {
+      return _pick([
+        '🔥 Filling up FAST — $open spots left!',
+        '🌋 Nearly there — only $open still available',
+        '📉 $open spots left and shrinking. Act now!',
+        '⚡ $open spots remaining — things are heating up',
+      ]);
+    }
+
+    // More than half (50–79%)
+    if (fill >= 0.50) {
+      return _pick([
+        '🎯 $open of $cap spots left — the vibe is building',
+        '📈 Over halfway full — $open spots still up for grabs',
+        '🎶 The crowd is gathering... $open spots to go!',
+        '🚀 Momentum is building — $open spots remain',
+      ]);
+    }
+
+    // Getting started (20–49%)
+    if (fill >= 0.20) {
+      return _pick([
+        '🌱 Getting warmed up — $open spots still available',
+        '🎈 Early days — $open spots wide open',
+        '😎 Plenty of room — $open spots left, no rush... yet',
+        '🛋️ Still comfy — $open of $cap spots free',
+      ]);
+    }
+
+    // Just started / almost empty
+    if (going > 0) {
+      return _pick([
+        '🐣 Just $going brave soul${going == 1 ? '' : 's'} so far — $open spots free!',
+        '🌅 Early bird territory — $open spots open!',
+        '🦗 Barely started — $open spots just waiting',
+        '🎠 Lots of room — only $going signed up so far',
+      ]);
+    }
+
+    // Completely empty
+    return _pick([
+      '👻 Ghost town! Be the legend who signs up first',
+      '🦗 Crickets... someone\'s gotta be first!',
+      '🌵 Empty as a desert — $cap spots available',
+      '🎪 $cap spots, zero takers — your moment to shine!',
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('EEEE, MMM d · h:mm a');
+    final grad = _SessionEmojiBadge.gradientFor(session);
+    final cap = session.capacity;
+    final going = session.goingCount;
+    final waiting = session.waitlistCount;
+    final fillFraction =
+        cap != null && cap > 0 ? (going / cap).clamp(0.0, 1.0) : null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Header gradient band ──────────────────────────────────────────
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [grad[0], grad[1]],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                _SessionEmojiBadge(session: session, size: 64),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Session #${session.sessionNumber}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        fmt.format(session.startAt.toLocal()),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      if (session.endAt != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Ends ${DateFormat('h:mm a').format(session.endAt!.toLocal())}',
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.80),
+                              fontSize: 12),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Capacity bar ──────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _statusPhrase,
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87),
+                      ),
+                    ),
+                    if (cap != null)
+                      Text(
+                        '$going/$cap',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: fillFraction != null && fillFraction >= 1.0
+                                ? Colors.red
+                                : grad[0]),
+                      ),
+                  ],
+                ),
+                if (fillFraction != null) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: fillFraction,
+                      minHeight: 10,
+                      backgroundColor:
+                          grad[0].withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        fillFraction >= 1.0 ? Colors.redAccent : grad[0],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Stats row ─────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                _StatBubble(
+                  emoji: '✅',
+                  count: going,
+                  label: 'Going',
+                  color: const Color(0xFF2E7D32),
+                ),
+                const SizedBox(width: 12),
+                _StatBubble(
+                  emoji: '⏳',
+                  count: waiting,
+                  label: 'Waitlist',
+                  color: Colors.orange,
+                ),
+                if (cap != null) ...[
+                  const SizedBox(width: 12),
+                  _StatBubble(
+                    emoji: '🪑',
+                    count: (cap - going).clamp(0, cap),
+                    label: 'Open',
+                    color: const Color(0xFF1565C0),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Settings chips ────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(
+                  icon: session.isPublic
+                      ? Icons.public_rounded
+                      : Icons.lock_outline_rounded,
+                  label: session.isPublic ? 'Public' : 'Private',
+                  color: session.isPublic
+                      ? const Color(0xFF1565C0)
+                      : Colors.blueGrey,
+                ),
+                if (session.waitlistEnabled)
+                  const _InfoChip(
+                    icon: Icons.list_alt_rounded,
+                    label: 'Waitlist on',
+                    color: Colors.orange,
+                  ),
+                if (session.requiresApproval)
+                  const _InfoChip(
+                    icon: Icons.how_to_reg_rounded,
+                    label: 'Approval required',
+                    color: Color(0xFF6A1B9A),
+                  ),
+                if (session.isLocked)
+                  const _InfoChip(
+                    icon: Icons.lock_rounded,
+                    label: 'Signups locked',
+                    color: Colors.red,
+                  )
+                else if (session.signupLockHours != null)
+                  _InfoChip(
+                    icon: Icons.timer_outlined,
+                    label: 'Locks ${session.signupLockHours}h before',
+                    color: Colors.teal,
+                  ),
+                if (session.hasEnded)
+                  const _InfoChip(
+                    icon: Icons.flag_rounded,
+                    label: 'Ended',
+                    color: Colors.grey,
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 28),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatBubble extends StatelessWidget {
+  final String emoji;
+  final int count;
+  final String label;
+  final Color color;
+
+  const _StatBubble({
+    required this.emoji,
+    required this.count,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.20)),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 20)),
+            const SizedBox(height: 4),
+            Text(
+              '$count',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: color.withValues(alpha: 0.80),
+                  fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Signup empty state ────────────────────────────────────────────────────────
 
