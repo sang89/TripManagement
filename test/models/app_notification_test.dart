@@ -241,11 +241,110 @@ void main() {
     });
   });
 
-  // ── NotificationsProvider._tripTypes filter ───────────────────────────────────
+  // ── App isolation: TripManagement must NEVER contaminate PropertyManagement ───
   //
-  // Bug: PropertyManagement notification types (lease_expiry, monthly_summary)
-  //      were showing in TripManagement notification center.
-  // Fix: _tripTypes whitelist filters only TripManagement-relevant types.
+  // Root cause (June 2026): both apps shared the `notifications` table.
+  // PM has no type filter so it displayed every TripManagement notification.
+  //
+  // Fix: TripManagement now writes exclusively to `trip_notifications` (a
+  // separate table with its own RLS). PM never reads that table.
+  //
+  // These tests are the regression guard. If any of them break, stop and fix
+  // the isolation before shipping.
+
+  group('App isolation — trip_notifications vs notifications', () {
+    // The canonical list of ALL TripManagement notification types.
+    const tmTypes = [
+      'event_invite', 'event_invite_accepted', 'event_invite_declined',
+      'event_kicked',
+      'session_join_request', 'session_approved', 'session_rejected',
+      'session_demoted', 'session_promoted', 'session_removed',
+      'friend_request', 'friend_accepted',
+      'system',
+    ];
+
+    // Known PropertyManagement types that must NEVER appear in TripManagement.
+    const pmTypes = [
+      'lease_expiry',
+      'monthly_summary',
+      'rent_reminder',
+      'maintenance_update',
+      'payment_received',
+    ];
+
+    test('tripTypes contains every TripManagement notification type', () {
+      for (final type in tmTypes) {
+        expect(
+          NotificationsProvider.tripTypes.contains(type),
+          isTrue,
+          reason: '$type is a TM type and must be in tripTypes',
+        );
+      }
+    });
+
+    test('propertyManagementTypes lists all known PM types', () {
+      for (final type in pmTypes) {
+        expect(
+          NotificationsProvider.propertyManagementTypes.contains(type),
+          isTrue,
+          reason: '$type is a PM type and must be in propertyManagementTypes',
+        );
+      }
+    });
+
+    test('no PropertyManagement type is in tripTypes — cross-app guard', () {
+      for (final pmType in NotificationsProvider.propertyManagementTypes) {
+        expect(
+          NotificationsProvider.tripTypes.contains(pmType),
+          isFalse,
+          reason: 'PM type "$pmType" must NEVER appear in TM tripTypes '
+              '— this would cause PM notifications to show in TripManagement',
+        );
+      }
+    });
+
+    test('no TripManagement type is in propertyManagementTypes', () {
+      for (final tmType in NotificationsProvider.tripTypes) {
+        expect(
+          NotificationsProvider.propertyManagementTypes.contains(tmType),
+          isFalse,
+          reason: 'TM type "$tmType" must NEVER appear in propertyManagementTypes',
+        );
+      }
+    });
+
+    test('tripTypes and propertyManagementTypes are completely disjoint', () {
+      final tmSet = NotificationsProvider.tripTypes.toSet();
+      final pmSet = NotificationsProvider.propertyManagementTypes.toSet();
+      final overlap = tmSet.intersection(pmSet);
+      expect(
+        overlap,
+        isEmpty,
+        reason: 'Overlapping types would cause cross-app notification '
+            'contamination: $overlap',
+      );
+    });
+
+    test('AppNotification.fromMap rejects unknown type gracefully', () {
+      // A PM notification that somehow appeared in a query should not crash.
+      final n = AppNotification.fromMap({
+        'id': 'x',
+        'type': 'lease_expiry',   // PM type
+        'title': 'Lease expiring',
+        'body': '',
+        'reference_id': null,
+        'metadata': null,
+        'is_read': false,
+        'created_at': '2026-06-15T00:00:00.000Z',
+      });
+      // Should parse without throwing; the type just gets a default icon/color.
+      expect(n.type, 'lease_expiry');
+      expect(n.iconEmoji, '📢');   // default fallback
+      expect(n.targetRoute, '/events');
+    });
+  });
+
+  // ── NotificationsProvider._tripTypes filter (legacy group kept for context) ──
 
   group('NotificationsProvider._tripTypes', () {
     test('includes all TripManagement notification types', () {
