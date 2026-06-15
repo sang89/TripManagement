@@ -454,6 +454,33 @@
   "setAsVenueButton": "会場に設定",
   "restaurantSearchHint": "レストランを検索...",
   "addRestaurantOption": "レストランを追加",
+  "exploreTab": "探索",
+  "exploreTitle": "{destination}のアクティビティ",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "安い順",
+  "exploreSortTopRated": "評価が高い順",
+  "exploreMorePlatforms": "その他のプラットフォーム",
+  "bookOnViator": "Viatorで予約",
+  "bookNow": "今すぐ予約",
+  "browseGetYourGuide": "GetYourGuideで探す",
+  "browseKlook": "Klookで探す",
+  "exploreFromPrice": "{price}から",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "このデスティネーションのアクティビティは見つかりませんでした。",
+  "exploreLoadError": "候補を読み込めませんでした。タップして再試行してください。",
   "restaurantPollTitle": "場所を選ぶ",
   "foodMoodDDMode": "ドライバー当番",
   "foodMoodNibble": "少し食べる",

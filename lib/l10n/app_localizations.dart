@@ -2100,6 +2100,84 @@ abstract class AppLocalizations {
   /// **'Added to group vote!'**
   String get cravingsPitched;
 
+  /// No description provided for @exploreTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get exploreTab;
+
+  /// No description provided for @exploreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities in {destination}'**
+  String exploreTitle(String destination);
+
+  /// No description provided for @exploreSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Powered by Viator • GetYourGuide • Klook'**
+  String get exploreSubtitle;
+
+  /// No description provided for @exploreSortCheapest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheapest first'**
+  String get exploreSortCheapest;
+
+  /// No description provided for @exploreSortTopRated.
+  ///
+  /// In en, this message translates to:
+  /// **'Top rated'**
+  String get exploreSortTopRated;
+
+  /// No description provided for @exploreMorePlatforms.
+  ///
+  /// In en, this message translates to:
+  /// **'MORE PLATFORMS'**
+  String get exploreMorePlatforms;
+
+  /// No description provided for @bookOnViator.
+  ///
+  /// In en, this message translates to:
+  /// **'Book on Viator'**
+  String get bookOnViator;
+
+  /// No description provided for @bookNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Book now'**
+  String get bookNow;
+
+  /// No description provided for @browseGetYourGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse GetYourGuide'**
+  String get browseGetYourGuide;
+
+  /// No description provided for @browseKlook.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Klook'**
+  String get browseKlook;
+
+  /// No description provided for @exploreFromPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'From {price}'**
+  String exploreFromPrice(String price);
+
+  /// No description provided for @exploreNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities found for this destination.'**
+  String get exploreNoResults;
+
+  /// No description provided for @exploreLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load suggestions. Tap to retry.'**
+  String get exploreLoadError;
+
   /// No description provided for @restaurantPollTitle.
   ///
   /// In en, this message translates to:

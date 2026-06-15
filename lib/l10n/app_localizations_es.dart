@@ -1082,6 +1082,51 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cravingsPitched => '¡Añadido a la votación del grupo!';
 
   @override
+  String get exploreTab => 'Explorar';
+
+  @override
+  String exploreTitle(String destination) {
+    return 'Actividades en $destination';
+  }
+
+  @override
+  String get exploreSubtitle => 'Powered by Viator • GetYourGuide • Klook';
+
+  @override
+  String get exploreSortCheapest => 'Más baratos';
+
+  @override
+  String get exploreSortTopRated => 'Mejor valorados';
+
+  @override
+  String get exploreMorePlatforms => 'MÁS PLATAFORMAS';
+
+  @override
+  String get bookOnViator => 'Reservar en Viator';
+
+  @override
+  String get bookNow => 'Reservar';
+
+  @override
+  String get browseGetYourGuide => 'Ver en GetYourGuide';
+
+  @override
+  String get browseKlook => 'Ver en Klook';
+
+  @override
+  String exploreFromPrice(String price) {
+    return 'Desde $price';
+  }
+
+  @override
+  String get exploreNoResults =>
+      'No se encontraron actividades para este destino.';
+
+  @override
+  String get exploreLoadError =>
+      'No se pudieron cargar las sugerencias. Toca para reintentar.';
+
+  @override
   String get restaurantPollTitle => 'Elegir un lugar';
 
   @override

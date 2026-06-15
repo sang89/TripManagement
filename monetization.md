@@ -212,6 +212,19 @@ One "Find me a spot" session = 1 text search + up to 5 photo fetches (one per re
 
 > **Photo caching note:** `Image.network` caches images in memory for the session and on disk via the platform HTTP cache. A user who searches, then opens the Polls tab, will NOT re-fetch the same photos — the platform cache serves them. Cost above is the worst case (cold cache).
 
+#### Explore tab — activity suggestions (trip-type events only)
+
+Powered by affiliate APIs from Viator, GetYourGuide, and Klook. **No per-call API cost** — affiliate programs are free to query; revenue is earned only on completed user bookings.
+
+| Action | API calls | Cost | Revenue |
+|---|---|---|---|
+| Load activity suggestions (Viator) | 1 `POST /partner/products/search` | **$0** (free for affiliates) | 8% of any booking made |
+| Browse GetYourGuide (link redirect) | 0 — opens affiliate deep link in browser | **$0** | 7–8% of any booking made |
+| Browse Klook (link redirect) | 0 — opens affiliate deep link in browser | **$0** | 5–20% of any booking made (varies by category) |
+| Results cached | In-memory cache, 10-min TTL per destination | — | — |
+
+> **Attribution note:** Commission is tracked via browser cookie set when the user taps a "Book" or "Browse" button and is redirected to the platform's website (via `LaunchMode.externalApplication`). Mobile attribution may be imperfect if the user switches browsers or clears cookies — this is industry-standard for affiliate programs.
+
 #### Route display (trip-type events)
 
 | Scenario | Calls | Cost |

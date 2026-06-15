@@ -513,6 +513,33 @@
   "cravingsEmpty": "No results found. Try different keywords.",
   "cravingsPitchButton": "Pitch to group",
   "cravingsPitched": "Added to group vote!",
+  "exploreTab": "Explore",
+  "exploreTitle": "Activities in {destination}",
+  "@exploreTitle": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSubtitle": "Powered by Viator • GetYourGuide • Klook",
+  "exploreSortCheapest": "Cheapest first",
+  "exploreSortTopRated": "Top rated",
+  "exploreMorePlatforms": "MORE PLATFORMS",
+  "bookOnViator": "Book on Viator",
+  "bookNow": "Book now",
+  "browseGetYourGuide": "Browse GetYourGuide",
+  "browseKlook": "Browse Klook",
+  "exploreFromPrice": "From {price}",
+  "@exploreFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreNoResults": "No activities found for this destination.",
+  "exploreLoadError": "Couldn't load suggestions. Tap to retry.",
   "restaurantPollTitle": "Pick a Spot",
   "addRestaurantOption": "Add restaurant",
   "restaurantSearchHint": "Search restaurants...",

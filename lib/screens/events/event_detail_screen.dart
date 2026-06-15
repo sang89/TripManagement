@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_keys.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/activity_suggestion.dart';
 import '../../models/event.dart';
 import '../../models/event_bring_item.dart';
 import '../../models/event_expense.dart';
@@ -46,6 +47,7 @@ import '../../providers/friends_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../notifications/notifications_screen.dart';
+import '../../services/activity_suggestions_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/trip_places_service.dart';
 import '../../services/user_lookup_service.dart';
@@ -717,7 +719,11 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
       ? 4
       : widget.event.isQuickBites
           ? 4
-          : (widget.event.isBirthday ? 5 : 3);
+          : widget.event.isBirthday
+              ? 5
+              : widget.event.isTrip
+                  ? 4
+                  : 3;
 
   @override
   void initState() {
@@ -730,7 +736,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
     super.didUpdateWidget(old);
     if (old.event.isSignup != widget.event.isSignup ||
         old.event.isQuickBites != widget.event.isQuickBites ||
-        old.event.isBirthday != widget.event.isBirthday) {
+        old.event.isBirthday != widget.event.isBirthday ||
+        old.event.isTrip != widget.event.isTrip) {
       _ctrl.dispose();
       _ctrl = TabController(length: _tabCount, vsync: this);
     }
@@ -779,6 +786,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
               Tab(icon: const Icon(Icons.how_to_vote_outlined, size: 18), text: l10n.pollsTab),
               if (widget.event.isSignup)
                 Tab(icon: const Icon(Icons.qr_code_outlined, size: 18), text: l10n.signupInviteTab),
+              if (widget.event.isTrip)
+                Tab(icon: const Icon(Icons.explore_outlined, size: 18), text: l10n.exploreTab),
               if (widget.event.isQuickBites)
                 Tab(icon: const Icon(Icons.ramen_dining_outlined, size: 18), text: l10n.cravingsTab),
               if (widget.event.isBirthday) ...[
@@ -819,6 +828,8 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
               ),
               if (widget.event.isSignup)
                 _SignupInviteTab(event: widget.event),
+              if (widget.event.isTrip)
+                _ExploreTab(event: widget.event),
               if (widget.event.isQuickBites)
                 _CravingsTab(
                   event: widget.event,
@@ -12797,5 +12808,686 @@ class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
   Widget build(BuildContext context) => AppButton(
         label: 'Add Guest Manually',
         onPressed: _show,
+      );
+}
+
+// ── Explore tab (trip events — affiliate activity suggestions) ────────────────
+
+enum _ExploreSort { cheapest, topRated }
+
+class _ExploreTab extends StatefulWidget {
+  final Event event;
+  const _ExploreTab({required this.event});
+
+  @override
+  State<_ExploreTab> createState() => _ExploreTabState();
+}
+
+// 100 fun quotes shown randomly in the Explore tab header.
+const _exploreQuotes = [
+  'Life is short. Book the tour. 🎉',
+  'Adventures are better than souvenirs ✨',
+  'You can sleep when you\'re home 🌍',
+  'Do it for the stories',
+  'Collect moments, not things',
+  'The best view comes after the hardest climb 🏔️',
+  'Go where the WiFi is weak and the adventures are strong',
+  'Every trip needs at least one spontaneous detour',
+  'Not all who wander are lost — some are just finding tours',
+  'The world is a book. Don\'t skip any chapters 📖',
+  'Making memories one activity at a time',
+  'Your couch has zero adventure. Just saying. 🛋️',
+  'Good vibes and great experiences ahead 🙌',
+  'If in doubt, book the tour',
+  'Life\'s too short for boring trips',
+  'Say yes to new adventures',
+  'The trip you almost didn\'t take is usually the best one',
+  'Experiences > Things',
+  'You\'ll never regret doing something amazing',
+  'Less planning. More doing. 🚀',
+  'Wander often. Wonder always.',
+  'A bad day of adventure beats a good day at the office',
+  'The world won\'t explore itself 🌎',
+  'Every destination has a hidden gem. Go find it.',
+  'Tour today, brag forever',
+  'Adventure is out there. Seriously, go get it.',
+  'Turn the map upside down and see what happens 🗺️',
+  'Eat. Explore. Repeat.',
+  'Be the person who did the thing',
+  'No tour, no story. Big tour, big story. 🎢',
+  'Life begins at the end of your comfort zone',
+  'The only trip you\'ll regret is the one you didn\'t take',
+  'Make every trip count ⭐',
+  'Go fast. See things. Tell everyone.',
+  'The world is too big to stay in one spot',
+  'An adventure a day keeps the boredom away 🎠',
+  'Find your next great story here',
+  'This is your sign to book something fun',
+  'Spontaneity is the spice of travel 🌶️',
+  'You came, you saw, you booked a tour',
+  'Less Netflix. More experiences. 🎡',
+  'Your future self will thank you for this one',
+  'Today\'s adventure is tomorrow\'s greatest story',
+  'Don\'t just visit. Experience.',
+  'The best souvenir is a great memory 📸',
+  'See the world differently — from a kayak 🚣',
+  'Find the fun in every destination',
+  'Great trips are made of great experiences',
+  'Why sightsee when you can do-see? 🏄',
+  'New place, new adventure, new you 🌟',
+  'If it scares you a little, book it immediately',
+  'Life is an adventure. Add more chapters.',
+  'Get out there before you run out of time ⏳',
+  'Every adventure starts with a single booking',
+  'Make memories that outlast your tan',
+  'The best journeys answer questions that begin with \'what if\'',
+  'Happiness is planning a trip and then doing it 🎶',
+  'Boring is not an option here',
+  'Find something to do that you\'ll talk about for years',
+  'Take only photos, leave only footprints... after the tour 📍',
+  'You didn\'t come this far to only go this far',
+  'Somewhere out there is your perfect adventure',
+  'Keep calm and book a tour 🎫',
+  'See more. Do more. Be more.',
+  'Adventures are the best way to learn',
+  'Go somewhere you\'ve never been. Do something you\'ve never done.',
+  'The world is full of magic. Go find yours. ✨',
+  'Stop dreaming. Start exploring.',
+  'Your story needs a great next chapter 📝',
+  'Adventure: because adulthood is overrated anyway 🎪',
+  'Travel far enough to meet yourself',
+  'The earth is calling. Pick up. 📞',
+  'Explore more. Regret nothing.',
+  'Less scroll, more stroll 🚶',
+  'Make it a trip worth remembering',
+  'The world has a lot to offer. Start here.',
+  'Good things happen outside your routine',
+  'Chase experiences, not just check-ins',
+  'One tour away from a great mood 🎉',
+  'Adventure: cheaper than therapy, better than TV',
+  'Find the thing that makes this trip unforgettable',
+  'A great tour is the best icebreaker with your group',
+  'You packed the bags. Now fill them with memories. 🎒',
+  'Some trips are planned. The best ones have moments like this.',
+  'The map is not the territory — go explore the territory',
+  'Life moves fast. Stop and do something cool.',
+  'Not all superheroes wear capes. Some book tours. 🦸',
+  'Find your extraordinary in the ordinary',
+  'Travel: the one thing you buy that makes you richer 💫',
+  'The best tour is the one you haven\'t taken yet',
+  'On the road again? Make it count.',
+  'Your group deserves something epic',
+  'Pick the adventure, not the itinerary',
+  'Great experiences are just one tap away 👇',
+  'Do something your future self will Instagram about',
+  'The party doesn\'t stop until the tour starts 🥳',
+  'Real talk: you should do this',
+  'Here\'s to the trips that change everything 🥂',
+  'You only get so many trips. Make this one count.',
+  'The adventure is always just around the corner',
+];
+
+class _ExploreTabState extends State<_ExploreTab>
+    with AutomaticKeepAliveClientMixin {
+  final _svc = ActivitySuggestionsService();
+  final _scrollCtrl = ScrollController();
+  final _searchCtrl = TextEditingController();
+  List<ActivitySuggestion> _activities = [];
+  bool _loading = false;
+  String? _error;
+  _ExploreSort _sort = _ExploreSort.cheapest;
+  int _currentPage = 1;
+  int _totalCount = 0;
+  late final String _quote;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  int get _totalPages =>
+      (_totalCount / ActivitySuggestionsService.pageSize).ceil().clamp(1, 9999);
+
+  // Empty search bar → auto-load by destination.
+  // User keyword → sent as-is so they can include any location (stop, city en route, etc.).
+  String get _searchTerm {
+    final kw = _searchCtrl.text.trim();
+    if (kw.isNotEmpty) return kw;
+    return ActivitySuggestionsService.searchQueryForTest(
+        widget.event.location.trim());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _quote = _exploreQuotes[Random().nextInt(_exploreQuotes.length)];
+    _loadPage(1);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPage(int page) async {
+    if (widget.event.location.trim().isEmpty) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() { _loading = true; _error = null; });
+    try {
+      final start = (page - 1) * ActivitySuggestionsService.pageSize + 1;
+      final result = await _svc.searchViator(_searchTerm, start: start);
+      if (mounted) {
+        setState(() {
+          _activities = result.items;
+          _totalCount = result.totalCount;
+          _currentPage = page;
+          _loading = false;
+        });
+        if (_scrollCtrl.hasClients) {
+          _scrollCtrl.animateTo(0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut);
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  List<ActivitySuggestion> get _sorted {
+    final list = List<ActivitySuggestion>.from(_activities);
+    if (_sort == _ExploreSort.cheapest) {
+      list.sort((a, b) {
+        if (a.priceFrom == null && b.priceFrom == null) return 0;
+        if (a.priceFrom == null) return 1;
+        if (b.priceFrom == null) return -1;
+        return a.priceFrom!.compareTo(b.priceFrom!);
+      });
+    } else {
+      list.sort((a, b) {
+        if (a.rating == null && b.rating == null) return 0;
+        if (a.rating == null) return 1;
+        if (b.rating == null) return -1;
+        return b.rating!.compareTo(a.rating!);
+      });
+    }
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // required by AutomaticKeepAliveClientMixin
+    final l10n = AppLocalizations.of(context);
+    final dest = widget.event.location;
+    final gygUrl = ActivitySuggestionsService.gygBrowseUrl(dest);
+    final klookUrl = ActivitySuggestionsService.klookBrowseUrl(dest);
+
+    return ListView(
+      controller: _scrollCtrl,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      children: [
+        // Header
+        Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Text('🎭', style: TextStyle(fontSize: 22)),
+                  SizedBox(width: 6),
+                  Text('🏄', style: TextStyle(fontSize: 22)),
+                  SizedBox(width: 6),
+                  Text('🗺️', style: TextStyle(fontSize: 22)),
+                  SizedBox(width: 6),
+                  Text('🎪', style: TextStyle(fontSize: 22)),
+                  SizedBox(width: 6),
+                  Text('🚵', style: TextStyle(fontSize: 22)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _quote,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0D47A1),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.exploreSubtitle,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF1565C0)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        // Search bar
+        TextField(
+          controller: _searchCtrl,
+          decoration: InputDecoration(
+            hintText: 'kayaking Santa Barbara, wine tour Napa...',
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+            suffixIcon: _searchCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      _loadPage(1);
+                    },
+                  )
+                : null,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          textInputAction: TextInputAction.search,
+          onChanged: (_) => setState(() {}), // refresh clear button visibility
+          onSubmitted: (_) => _loadPage(1),
+        ),
+        const SizedBox(height: 10),
+        // Sort chips
+        if (_activities.isNotEmpty) ...[
+          Row(
+            children: [
+              _ExploreSortChip(
+                label: l10n.exploreSortCheapest,
+                icon: Icons.sell_outlined,
+                selected: _sort == _ExploreSort.cheapest,
+                onTap: () => setState(() => _sort = _ExploreSort.cheapest),
+              ),
+              const SizedBox(width: 8),
+              _ExploreSortChip(
+                label: l10n.exploreSortTopRated,
+                icon: Icons.star_outline_rounded,
+                selected: _sort == _ExploreSort.topRated,
+                onTap: () => setState(() => _sort = _ExploreSort.topRated),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        // Loading
+        if (_loading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 48),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        // Error
+        if (!_loading && _error != null)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  Text(l10n.exploreLoadError,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _loadPage(_currentPage),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: Text(l10n.retry),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        // Activity cards
+        if (!_loading && _error == null) ...[
+          for (final activity in _sorted)
+            _ActivityCard(activity: activity, l10n: l10n),
+          if (_activities.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(l10n.exploreNoResults,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+              ),
+            ),
+          if (_totalPages > 1) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                IconButton.outlined(
+                  onPressed: _currentPage > 1
+                      ? () => _loadPage(_currentPage - 1)
+                      : null,
+                  icon: const Icon(Icons.chevron_left_rounded),
+                  style: IconButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Page $_currentPage of $_totalPages',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[700]),
+                  ),
+                ),
+                IconButton.outlined(
+                  onPressed: _currentPage < _totalPages
+                      ? () => _loadPage(_currentPage + 1)
+                      : null,
+                  icon: const Icon(Icons.chevron_right_rounded),
+                  style: IconButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+        // More platforms
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 12),
+        Text(l10n.exploreMorePlatforms,
+            style: const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey)),
+        const SizedBox(height: 10),
+        _PlatformBrowseButton(
+          emoji: '🗺️',
+          label: l10n.browseGetYourGuide,
+          subtitle: 'Strong in Europe & worldwide · 300k+ experiences',
+          url: gygUrl,
+        ),
+        const SizedBox(height: 8),
+        _PlatformBrowseButton(
+          emoji: '🎡',
+          label: l10n.browseKlook,
+          subtitle: 'Best for Asia-Pacific · Attractions, transport & tours',
+          url: klookUrl,
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  final ActivitySuggestion activity;
+  final AppLocalizations l10n;
+
+  const _ActivityCard({required this.activity, required this.l10n});
+
+  String _formatDuration(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h == 0) return '${m}m';
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+
+  String _formatPrice(double price, String currency) {
+    final symbol = currency == 'USD' ? '\$' : '$currency ';
+    return '$symbol${price.toStringAsFixed(0)}';
+  }
+
+  Future<void> _launch(BuildContext context) async {
+    final uri = Uri.parse(activity.affiliateUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final a = activity;
+    return AppTappable(
+      onTap: () => _launch(context),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (a.imageUrl != null)
+              SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: Image.network(
+                  a.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    color: Colors.grey[100],
+                    child: const Center(
+                      child: Icon(Icons.explore_outlined,
+                          size: 36, color: Colors.black12),
+                    ),
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          a.title,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _ActivityPlatformBadge(a.platform),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (a.rating != null) ...[
+                        const Icon(Icons.star_rounded,
+                            size: 15, color: Colors.amber),
+                        const SizedBox(width: 2),
+                        Text(a.rating!.toStringAsFixed(1),
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w500)),
+                        if (a.reviewCount != null) ...[
+                          const SizedBox(width: 2),
+                          Text('(${a.reviewCount})',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500])),
+                        ],
+                        const SizedBox(width: 10),
+                      ],
+                      if (a.durationMinutes != null) ...[
+                        Icon(Icons.schedule_outlined,
+                            size: 13, color: Colors.grey[500]),
+                        const SizedBox(width: 2),
+                        Text(_formatDuration(a.durationMinutes!),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600])),
+                      ],
+                      const Spacer(),
+                      if (a.priceFrom != null)
+                        Text(
+                          l10n.exploreFromPrice(
+                              _formatPrice(a.priceFrom!, a.currency)),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 38,
+                    child: ElevatedButton(
+                      onPressed: () => _launch(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: Text(
+                        a.platform == ActivityPlatform.viator
+                            ? l10n.bookOnViator
+                            : l10n.bookNow,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityPlatformBadge extends StatelessWidget {
+  final ActivityPlatform platform;
+  const _ActivityPlatformBadge(this.platform);
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (platform) {
+      ActivityPlatform.viator => ('Viator', const Color(0xFF1565C0)),
+      ActivityPlatform.getYourGuide => ('GYG', const Color(0xFF2E7D32)),
+      ActivityPlatform.klook => ('Klook', const Color(0xFFE65100)),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+    );
+  }
+}
+
+class _ExploreSortChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ExploreSortChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => AppTappable(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.primary : Colors.grey[100],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 14,
+                  color: selected ? Colors.white : Colors.grey[700]),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: selected ? Colors.white : Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _PlatformBrowseButton extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final String subtitle;
+  final Uri url;
+
+  const _PlatformBrowseButton({
+    required this.emoji,
+    required this.label,
+    required this.subtitle,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) => AppTappable(
+        onTap: () async {
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+          }
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+              Icon(Icons.open_in_new_rounded,
+                  size: 16, color: Colors.grey[500]),
+            ],
+          ),
+        ),
       );
 }
