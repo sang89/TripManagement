@@ -1794,6 +1794,16 @@ class EventProvider extends ChangeNotifier {
     unawaited(_refreshSessionCounts(sessionId, eventId));
   }
 
+  /// Organizer deletes a session entirely.
+  Future<void> deleteSession(String sessionId, String eventId) async {
+    await _db.rpc('delete_event_session', params: {'p_session_id': sessionId});
+    _upcomingSessions[eventId]?.removeWhere((s) => s.id == sessionId);
+    _pastSessions[eventId]?.removeWhere((s) => s.id == sessionId);
+    _sessionRosters.remove(sessionId);
+    _mySessionStatuses.remove(sessionId);
+    notifyListeners();
+  }
+
   /// Organizer rejects (deletes) a pending_review request.
   Future<void> rejectSessionRosterEntry(
       String rosterId, String sessionId, String eventId) async {

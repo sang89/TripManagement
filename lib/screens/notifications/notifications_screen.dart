@@ -149,9 +149,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Consumer<NotificationsProvider>(
             builder: (_, notifs, _) {
               if (notifs.unreadCount == 0) return const SizedBox.shrink();
-              return TextButton(
-                onPressed: notifs.markAllRead,
-                child: Text(l10n.notificationsMarkAllRead),
+              return Tooltip(
+                message: l10n.notificationsMarkAllRead,
+                child: IconButton(
+                  icon: const Icon(Icons.done_all_rounded),
+                  onPressed: notifs.markAllRead,
+                ),
               );
             },
           ),
