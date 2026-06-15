@@ -1238,6 +1238,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get chooseEventType => 'Was planen Sie?';
+
+  @override
   String get eventTypePicker => 'Ereignistyp';
 
   @override

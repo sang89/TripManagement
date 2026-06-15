@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "自动报名已确认嘉宾",
   "signupCarryOverGuestsHint": "嘉宾将收到通知并可选择退出",
   "signupPartOfSeries": "系列活动的一部分（{interval}）",
+  "chooseEventType": "您在计划什么？",
   "eventTypePicker": "活动类型",
   "routeTab": "路线",
   "leaveEventTitle": "离开活动？",

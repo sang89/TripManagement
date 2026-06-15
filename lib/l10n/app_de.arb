@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "Bestätigte Gäste automatisch einschreiben",
   "signupCarryOverGuestsHint": "Gäste erhalten eine Benachrichtigung und können sich abmelden",
   "signupPartOfSeries": "Teil einer {interval}-Serie",
+  "chooseEventType": "Was planen Sie?",
   "eventTypePicker": "Ereignistyp",
   "routeTab": "Route",
   "leaveEventTitle": "Ereignis verlassen?",

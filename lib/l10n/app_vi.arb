@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "Tự động đăng ký khách đã xác nhận",
   "signupCarryOverGuestsHint": "Khách sẽ nhận được thông báo và có thể hủy",
   "signupPartOfSeries": "Một phần của chuỗi {interval}",
+  "chooseEventType": "Bạn đang lên kế hoạch gì?",
   "eventTypePicker": "Loại sự kiện",
   "routeTab": "Lộ trình",
   "leaveEventTitle": "Rời sự kiện?",

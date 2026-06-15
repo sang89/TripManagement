@@ -1232,6 +1232,9 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get chooseEventType => 'Bạn đang lên kế hoạch gì?';
+
+  @override
   String get eventTypePicker => 'Loại sự kiện';
 
   @override

@@ -134,7 +134,23 @@ class _EventsScreenState extends State<EventsScreen> {
       context.push('/paywall');
       return;
     }
-    context.push('/event/new');
+    _showEventTypePicker();
+  }
+
+  Future<void> _showEventTypePicker() async {
+    final l10n = AppLocalizations.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _EventTypePickerSheet(
+        onSelected: (type) {
+          Navigator.of(ctx).pop();
+          context.push('/event/new?type=${type.dbValue}');
+        },
+        l10n: l10n,
+      ),
+    );
   }
 
   @override
@@ -851,6 +867,132 @@ class _EmptyState extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Event type picker bottom sheet ──────────────────────────────────────────
+
+class _EventTypePickerSheet extends StatelessWidget {
+  final ValueChanged<EventType> onSelected;
+  final AppLocalizations l10n;
+
+  const _EventTypePickerSheet({
+    required this.onSelected,
+    required this.l10n,
+  });
+
+  static const _icons = {
+    EventType.trip: Icons.luggage_rounded,
+    EventType.birthday: Icons.cake_rounded,
+    EventType.wedding: Icons.favorite_rounded,
+    EventType.social: Icons.celebration_rounded,
+    EventType.quickBites: Icons.restaurant_rounded,
+    EventType.signup: Icons.how_to_reg_rounded,
+  };
+
+  String _label(EventType type) => switch (type) {
+        EventType.trip => l10n.eventTypeTrip,
+        EventType.birthday => l10n.eventTypeBirthday,
+        EventType.wedding => l10n.eventTypeWedding,
+        EventType.social => l10n.eventTypeSocial,
+        EventType.quickBites => l10n.eventTypeQuickBites,
+        EventType.signup => l10n.eventTypeSignup,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPadding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.chooseEventType,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.05,
+            children: EventType.values.map((type) {
+              final theme = bannerThemeFor(type);
+              return AppTappable(
+                onTap: () => onSelected(type),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: theme.gradientColors,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.gradientColors.last.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Stack(
+                      children: [
+                        CustomPaint(
+                          painter: EventIconPatternPainter(
+                            icons: theme.icons,
+                            color: Colors.white.withValues(alpha: 0.10),
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_icons[type]!, size: 36, color: Colors.white),
+                              const SizedBox(height: 8),
+                              Text(
+                                _label(type),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

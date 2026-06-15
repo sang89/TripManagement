@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "확정 게스트 자동 등록",
   "signupCarryOverGuestsHint": "게스트에게 알림이 전송되며 취소할 수 있습니다",
   "signupPartOfSeries": "{interval} 시리즈의 일부",
+  "chooseEventType": "무엇을 계획하고 있나요?",
   "eventTypePicker": "이벤트 유형",
   "routeTab": "경로",
   "leaveEventTitle": "이벤트를 떠나시겠습니까?",

@@ -598,6 +598,7 @@
       "interval": {"type": "String"}
     }
   },
+  "chooseEventType": "What are you planning?",
   "eventTypePicker": "Event type",
   "routeTab": "Route",
   "leaveEventTitle": "Leave event?",

@@ -516,6 +516,7 @@
   "signupCarryOverGuests": "確定ゲストを自動登録",
   "signupCarryOverGuestsHint": "ゲストに通知が届き、キャンセルできます",
   "signupPartOfSeries": "{interval}シリーズの一部",
+  "chooseEventType": "何を計画していますか？",
   "eventTypePicker": "イベントの種類",
   "routeTab": "ルート",
   "leaveEventTitle": "イベントを退出しますか？",
