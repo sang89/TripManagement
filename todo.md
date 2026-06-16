@@ -28,23 +28,24 @@ The feature that justifies the subscription. Gemini is already wired up.
 - [x] **3.5** Add a "Add more stops" follow-up chat within the same AI session (conversation history preserved in `AiItinerarySheet`)
 - [x] **3.6** AI itinerary generation gated: organizer always free on own events; non-organizer needs Pro (handled in `_RouteTabState._openAiSheet`). Group chat tab remains free for all users.
 
-## Phase 4 — Affiliate Booking Links
-Passive revenue. ~2 days of work, scales with event volume.
+## Phase 4 — Affiliate Booking Links (Explore Tab)
 
-### Explore Tab — pre-production checklist
+The Explore tab currently shows Viator activity suggestions only. Other affiliate categories (Hotels, Cars, Flights) were prototyped and reverted — affiliate programs need to be verified directly with each provider before re-integrating.
 
-- [ ] **4.0a** **Viator key go-live** — sandbox key (`79e2abef-...`) takes up to 24h to activate; test Explore tab once active. Then flip `kViatorSandbox = false` in `api_keys.dart` to switch to production key. PID (`P00305761`) and MCID (`42383`) already set.
-- [ ] **4.0b** **GYG affiliate ID** — `kGYGAffiliateId` is still `REPLACE_ME` in `api_keys.dart`. Sign up via Awin or CJ Affiliate → paste partner ID to make the "Browse GetYourGuide" button track commissions.
-- [ ] **4.0c** **Klook affiliate ID** — `kKlookAffiliateId` is still `REPLACE_ME`. Sign up via CJ Affiliate or affiliate.klook.com → paste affiliate ID.
-- [ ] **4.0d** **Test on a real trip event** — open a trip with a city destination (not a street address) and verify: (1) Viator results load, (2) "Book on Viator" opens browser with `pid=P00305761` in the URL, (3) pagination works, (4) keyword search works.
-- [ ] **4.0e** **Viator terms compliance check** — before release, confirm: no Viator content indexed by search engines (native app = fine), no cross-bidding on "Viator" in any ads, only used in TripManagement app. See `viator.md`.
-- [ ] **4.0f** **Phase 2 — GYG & Klook native listings** — apply for GYG Partner API and Klook Partner API once you have booking volume. Replaces the "Browse" buttons with native cards merged into a single price-sorted list across all 3 platforms.
+### 🎭 Activities (Viator) — live, needs production key
 
-### Other affiliate buttons (same phase)
+- [x] **4.0** Viator Explore tab built — `/search/freetext` API, pagination, keyword search, random quote header, GYG + Klook browse buttons
+- [ ] **4.1** **Viator production key** — flip `kViatorSandbox = false` in `api_keys.dart` once sandbox activates (up to 24h). Production key `31b1a78a-...` already stored. PID `P00305761` and MCID `42383` confirmed correct.
+- [ ] **4.2** **Viator terms compliance** — before release: no cross-bidding on "Viator" in ads, content not indexed by search engines. See `viator.md`.
+- [ ] **4.3** **GYG affiliate ID** — verify affiliate program exists directly at getyourguide.com, then paste ID as `kGYGAffiliateId` in `api_keys.dart` to track commissions on the "Browse GetYourGuide" button.
+- [ ] **4.4** **Klook affiliate ID** — verify affiliate program exists directly at klook.com, then paste ID as `kKlookAffiliateId`.
 
-- [ ] **4.1** Add a "Book accommodation" button on the event Info tab (trip-type events) — deep-links to Booking.com affiliate URL with destination pre-filled
-- [ ] **4.2** Add an "Explore flights" button on the event Info tab — deep-links to Skyscanner affiliate URL with origin + destination + dates pre-filled
-- [ ] **4.3** Store remaining affiliate partner IDs in `api_keys.dart` (git-ignored) once signed up for Booking.com / Skyscanner affiliate programs
+### 🏨 Hotels / 🚗 Cars / ✈️ Flights — research needed before re-integrating
+
+- [ ] **4.5** Verify **Booking.com** affiliate program directly at `booking.com/affiliate-program` — confirm commission rate, then re-integrate. Signup is via CJ Affiliate.
+- [ ] **4.6** Verify **Discover Cars** affiliate program directly at `discovercars.com/affiliate` — confirmed real ($20/booking avg, 365-day cookie, free signup). Re-integrate once signed up.
+- [ ] **4.7** Verify **Skyscanner** partner program directly at `partners.skyscanner.net` — CPC model. Apply for API access before re-integrating.
+- [ ] **4.8** Research other affiliate programs (Hotels, Flights) — only integrate once affiliate URLs and commission structures are verified directly with each provider, not from third-party blogs.
 
 ## Phase 5 — Pro Quality-of-Life Features
 Rounds out the Pro tier value beyond the AI planner.

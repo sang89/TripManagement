@@ -829,7 +829,7 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
               if (widget.event.isSignup)
                 _SignupInviteTab(event: widget.event),
               if (widget.event.isTrip)
-                _ExploreTab(event: widget.event),
+                _ExploreTab(event: widget.event, tabController: _ctrl, tabIndex: 3),
               if (widget.event.isQuickBites)
                 _CravingsTab(
                   event: widget.event,
@@ -12817,7 +12817,9 @@ enum _ExploreSort { cheapest, topRated }
 
 class _ExploreTab extends StatefulWidget {
   final Event event;
-  const _ExploreTab({required this.event});
+  final TabController tabController;
+  final int tabIndex;
+  const _ExploreTab({required this.event, required this.tabController, required this.tabIndex});
 
   @override
   State<_ExploreTab> createState() => _ExploreTabState();
@@ -12938,7 +12940,7 @@ class _ExploreTabState extends State<_ExploreTab>
   _ExploreSort _sort = _ExploreSort.cheapest;
   int _currentPage = 1;
   int _totalCount = 0;
-  late final String _quote;
+  late String _quote;
 
   @override
   bool get wantKeepAlive => true;
@@ -12959,11 +12961,20 @@ class _ExploreTabState extends State<_ExploreTab>
   void initState() {
     super.initState();
     _quote = _exploreQuotes[Random().nextInt(_exploreQuotes.length)];
+    widget.tabController.addListener(_onTabChange);
     _loadPage(1);
+  }
+
+  void _onTabChange() {
+    if (!widget.tabController.indexIsChanging &&
+        widget.tabController.index == widget.tabIndex) {
+      setState(() => _quote = _exploreQuotes[Random().nextInt(_exploreQuotes.length)]);
+    }
   }
 
   @override
   void dispose() {
+    widget.tabController.removeListener(_onTabChange);
     _scrollCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
