@@ -47,6 +47,13 @@ The Explore tab currently shows Viator activity suggestions only. Other affiliat
 - [ ] **4.7** Verify **Skyscanner** partner program directly at `partners.skyscanner.net` — CPC model. Apply for API access before re-integrating.
 - [ ] **4.8** Research other affiliate programs (Hotels, Flights) — only integrate once affiliate URLs and commission structures are verified directly with each provider, not from third-party blogs.
 
+## Phase 4.5 — Chat Enhancements (shipped June 2026)
+
+- [x] **4.5.1** **@mention** — type `@` to autocomplete event members; inserts `@[userId:displayName]` token; renders as teal span in bubbles; triggers push + in-app notification via `send-mention-notification` Edge Function
+- [x] **4.5.2** **GIF messages** — GIF button opens `_GifPickerSheet` (Giphy API, `kGiphyApiKey`); `event_messages.message_type = 'gif'`; rendered with `CachedNetworkImage`; beta key in place, **needs production key before release**
+- [x] **4.5.3** **Chat background themes** — 8 presets (gradient + solid); stored in `events.chat_background`; any member can change; propagates live via Realtime
+- [ ] **4.5.4** **Giphy production key** — current key `VYp5rjs3lqSmUCzTrWQfjeo18v371OEC` is beta (limited). Apply for production key at developers.giphy.com before release.
+
 ## Phase 5 — Pro Quality-of-Life Features
 Rounds out the Pro tier value beyond the AI planner.
 

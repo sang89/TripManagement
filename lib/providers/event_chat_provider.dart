@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -46,7 +49,7 @@ class EventChatProvider extends ChangeNotifier {
     try {
       List<Map<String, dynamic>> data;
       const select =
-          'id, event_id, user_id, content, created_at, event_message_reactions(*)';
+          'id, event_id, user_id, content, message_type, created_at, event_message_reactions(*)';
       if (!initial && _messages.isNotEmpty) {
         final raw = await _db
             .from('event_messages')
@@ -128,13 +131,33 @@ class EventChatProvider extends ChangeNotifier {
             final row = payload.newRecord;
             if (row.isEmpty) return;
             final id = row['id'] as String?;
-            if (id != null && _messages.any((m) => m.id == id)) return;
-            final msg = EventMessage.fromJson(Map<String, dynamic>.from(row));
-            _messages = [
-              ..._messages.where((m) => !m.id.startsWith('temp_')),
-              (await _enrichNames([msg])).first,
-            ];
-            notifyListeners();
+            if (id == null) return;
+            // Dedup: already present from pagination or a prior Realtime event.
+            if (_messages.any((m) => m.id == id)) return;
+
+            try {
+              final msg = EventMessage.fromJson(Map<String, dynamic>.from(row));
+              // Add the message immediately (no async wait) so concurrent
+              // Realtime events don't overwrite each other's state.
+              // Only remove the single temp whose content matches — not all temps.
+              _messages = [
+                ..._messages.where(
+                  (m) => !m.id.startsWith('temp_') || m.content != msg.content,
+                ),
+                msg,
+              ];
+              notifyListeners();
+
+              // Enrich sender name/avatar asynchronously and patch in place.
+              final enriched = await _enrichNames([msg]);
+              final idx = _messages.indexWhere((m) => m.id == id);
+              if (idx >= 0) {
+                _messages = List.of(_messages)..[idx] = enriched.first;
+                notifyListeners();
+              }
+            } catch (e, st) {
+              debugPrint('EventChatProvider Realtime INSERT error: $e\n$st');
+            }
           },
         )
         .onPostgresChanges(
@@ -179,7 +202,18 @@ class EventChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> sendMessage(String content) async {
+  // Regex that matches mention tokens inserted by the UI: @[userId:displayName]
+  static final _mentionRegex = RegExp(r'@\[([^:]+):([^\]]+)\]');
+
+  /// Extracts all mentioned user IDs from a message content string.
+  static List<String> parseMentionedIds(String content) =>
+      _mentionRegex.allMatches(content).map((m) => m.group(1)!).toList();
+
+  /// Strips mention tokens down to plain @Name for the notification preview.
+  static String plainPreview(String content) =>
+      content.replaceAllMapped(_mentionRegex, (m) => '@${m.group(2)}');
+
+  Future<void> sendMessage(String content, {String messageType = 'text'}) async {
     final trimmed = content.trim();
     if (trimmed.isEmpty) return;
 
@@ -189,6 +223,7 @@ class EventChatProvider extends ChangeNotifier {
       eventId: eventId,
       userId: userId,
       content: trimmed,
+      messageType: messageType,
       createdAt: DateTime.now().toUtc(),
     );
     _messages = [..._messages, optimistic];
@@ -199,13 +234,61 @@ class EventChatProvider extends ChangeNotifier {
         'event_id': eventId,
         'user_id': userId,
         'content': trimmed,
+        'message_type': messageType,
       });
+
+      // Fire mention notifications after the message is persisted.
+      if (messageType == 'text') {
+        final mentionedIds = parseMentionedIds(trimmed);
+        if (mentionedIds.isNotEmpty) {
+          _sendMentionNotifications(trimmed, mentionedIds);
+        }
+      }
     } catch (e, st) {
       debugPrint('EventChatProvider.sendMessage error: $e\n$st');
       _messages = _messages.where((m) => m.id != tempId).toList();
       notifyListeners();
       rethrow;
     }
+  }
+
+  Future<void> sendGif(String gifUrl) => sendMessage(gifUrl, messageType: 'gif');
+
+  /// Uploads [file] to the event-photos bucket and sends it as an image message.
+  Future<void> sendImage(XFile file) async {
+    final ext = file.name.split('.').last.toLowerCase();
+    final fileName = '${const Uuid().v4()}.$ext';
+    final storagePath = '$eventId/chat/$fileName';
+
+    final bytes = kIsWeb
+        ? await file.readAsBytes()
+        : await File(file.path).readAsBytes();
+
+    await _db.storage.from('event-photos').uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(contentType: 'image/$ext', upsert: false),
+        );
+
+    final publicUrl =
+        _db.storage.from('event-photos').getPublicUrl(storagePath);
+    await sendMessage(publicUrl, messageType: 'image');
+  }
+
+  void _sendMentionNotifications(String content, List<String> mentionedIds) {
+    _db.functions
+        .invoke(
+          'send-mention-notification',
+          body: {
+            'event_id': eventId,
+            'mentioned_user_ids': mentionedIds,
+            'message_preview': plainPreview(content),
+          },
+        )
+        .then((_) {})
+        .catchError((Object e) {
+          debugPrint('EventChatProvider._sendMentionNotifications error: $e');
+        });
   }
 
   Future<void> reactToMessage(String messageId, String emoji) async {
@@ -263,4 +346,29 @@ class EventChatProvider extends ChangeNotifier {
   }
 
   Future<void> loadMore() => _fetchPage();
+
+  // ── Test hooks ────────────────────────────────────────────────────────────
+
+  /// Seed the in-memory message list without touching Supabase.
+  @visibleForTesting
+  void setMessagesForTest(List<EventMessage> msgs) {
+    _messages = List.of(msgs);
+  }
+
+  /// Simulate the state-mutation portion of the Realtime INSERT callback —
+  /// dedup check + temp removal + append — without any Supabase calls.
+  /// Used to regression-test the two sync bugs fixed in June 2026:
+  ///   1. Concurrent events overwrote each other due to `await _enrichNames`.
+  ///   2. All temps were removed instead of only the matching one.
+  @visibleForTesting
+  void simulateIncomingForTest(EventMessage msg) {
+    if (_messages.any((m) => m.id == msg.id)) return;
+    _messages = [
+      ..._messages.where(
+        (m) => !m.id.startsWith('temp_') || m.content != msg.content,
+      ),
+      msg,
+    ];
+    notifyListeners();
+  }
 }

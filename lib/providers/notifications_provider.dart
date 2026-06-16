@@ -64,6 +64,7 @@ class AppNotification {
       case 'session_removed':       return '⚡';
       case 'friend_request':        return '💌';
       case 'friend_accepted':       return '🏅';
+      case 'chat_mention':          return '💬';
       default:                      return '📢';
     }
   }
@@ -94,6 +95,8 @@ class AppNotification {
         return Icons.person_add_alt_outlined;
       case 'friend_accepted':
         return Icons.people_outline_rounded;
+      case 'chat_mention':
+        return Icons.alternate_email_rounded;
       default:
         return Icons.notifications_outlined;
     }
@@ -117,6 +120,8 @@ class AppNotification {
         return const Color(0xFFDC2626);
       case 'session_demoted':
         return const Color(0xFFD97706);
+      case 'chat_mention':
+        return const Color(0xFF0EA5E9);
       default:
         return const Color(0xFF6B7280);
     }
@@ -124,6 +129,8 @@ class AppNotification {
 
   String get targetRoute {
     switch (type) {
+      case 'chat_mention':
+        return referenceId != null ? '/event/$referenceId' : '/events';
       case 'event_invite':
       case 'event_invite_accepted':
       case 'event_invite_declined':
@@ -219,6 +226,7 @@ class NotificationsProvider extends ChangeNotifier with WidgetsBindingObserver {
     'session_join_request', 'session_approved', 'session_rejected',
     'session_demoted', 'session_promoted', 'session_removed',
     'friend_request', 'friend_accepted',
+    'chat_mention',
     'system',
   ];
 

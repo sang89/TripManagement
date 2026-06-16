@@ -61,6 +61,9 @@ class Event {
   final bool waitlistEnabled;
   final int? signupLockHours;
 
+  // Chat customisation — nullable; null means default (no background).
+  final String? chatBackground;
+
   final List<EventGuest> guests;
   final List<EventStop> stops;
 
@@ -95,6 +98,7 @@ class Event {
     this.wishesRevealedAt,
     this.waitlistEnabled = true,
     this.signupLockHours,
+    this.chatBackground,
     required this.guests,
     this.stops = const [],
     this.organizerName,
@@ -156,6 +160,7 @@ class Event {
           : null,
       waitlistEnabled: json['waitlist_enabled'] as bool? ?? true,
       signupLockHours: json['signup_lock_hours'] as int?,
+      chatBackground: json['chat_background'] as String?,
       guests: (json['event_guests'] as List<dynamic>? ?? [])
           .map((g) => EventGuest.fromJson(g as Map<String, dynamic>))
           .toList(),
@@ -184,6 +189,7 @@ class Event {
         if (birthYear != null) 'birth_year': birthYear,
         if (isSignup) 'waitlist_enabled': waitlistEnabled,
         if (isSignup && signupLockHours != null) 'signup_lock_hours': signupLockHours,
+        if (chatBackground != null) 'chat_background': chatBackground,
       };
 
   Event copyWith({
@@ -224,6 +230,8 @@ class Event {
     bool? waitlistEnabled,
     int? signupLockHours,
     bool clearSignupLockHours = false,
+    String? chatBackground,
+    bool clearChatBackground = false,
     List<EventGuest>? guests,
     List<EventStop>? stops,
     String? organizerName,
@@ -256,6 +264,7 @@ class Event {
         wishesRevealedAt: clearWishesRevealedAt ? null : (wishesRevealedAt ?? this.wishesRevealedAt),
         waitlistEnabled: waitlistEnabled ?? this.waitlistEnabled,
         signupLockHours: clearSignupLockHours ? null : (signupLockHours ?? this.signupLockHours),
+        chatBackground: clearChatBackground ? null : (chatBackground ?? this.chatBackground),
         guests: guests ?? this.guests,
         stops: stops ?? this.stops,
         organizerName: organizerName ?? this.organizerName,

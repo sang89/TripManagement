@@ -285,6 +285,26 @@ Paid tier (Pro, $25/month): 8 GB DB, 250 GB bandwidth, 2M Edge Function invocati
 
 ---
 
+### Giphy API
+
+**Cost:** Free tier: 100 requests/day (production key). Development/beta key is unlimited.  
+**Storage cost:** None — GIF messages store the Giphy CDN URL in `event_messages.content`. No GIF binary data stored in Supabase.  
+**Bandwidth cost:** GIF bytes stream directly from Giphy's CDN to the user's device. No Supabase bandwidth consumed.
+
+**Usage estimate at 1K MAU (chat-active users):**
+- 30% of MAU open the GIF picker once/month = 300 picker opens.
+- Each open fires 1 trending request + ~2 search requests = ~900 calls/month (~30/day).
+- Free tier (100/day) covers low-to-moderate usage. At high volume, upgrade to Giphy's paid plan.
+
+**⚠️ Tenor was the original choice but is shut down June 30, 2026 — replaced with Giphy.**
+
+**@mention notifications (send-mention-notification Edge Function):**
+- Each message with ≥1 mention fires 1 Edge Function invocation.
+- Estimate: 10% of messages contain a mention, ~20 messages/active user/month.
+- At 1K MAU: ~2,000 mention function calls/month — negligible against the 500K free tier.
+
+---
+
 ### Cost-control checklist
 
 When adding any new feature that calls an external API:

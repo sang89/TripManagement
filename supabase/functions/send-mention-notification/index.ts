@@ -5,11 +5,13 @@
 //
 // Called by the Flutter client after a message containing @mentions is sent.
 // The client passes the list of mentioned user IDs; this function validates
-// they are accepted trip members, respects their opt-out setting, and sends
-// FCM push notifications.
+// they are active event members, respects their opt-out setting, sends
+// FCM push notifications, and writes in-app notifications to trip_notifications.
 //
 // Request body:
-//   { trip_id: string, mentioned_user_ids: string[], message_preview: string }
+//   { event_id: string, mentioned_user_ids: string[], message_preview: string }
+//
+// Backward-compat: also accepts trip_id in place of event_id.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -22,7 +24,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// ─── FCM OAuth2 helpers (same as send-invite-notification) ───────────────────
+// ─── FCM OAuth2 helpers ───────────────────────────────────────────────────────
 
 interface ServiceAccount {
   project_id: string;
@@ -97,6 +99,7 @@ async function getFcmAccessToken(sa: ServiceAccount): Promise<string> {
 
 interface FcmSendResult {
   token: string;
+  rowId: string;
   success: boolean;
   stale: boolean;
 }
@@ -104,6 +107,7 @@ interface FcmSendResult {
 async function sendFcmMessage(
   projectId: string,
   accessToken: string,
+  rowId: string,
   token: string,
   title: string,
   body: string,
@@ -129,7 +133,7 @@ async function sendFcmMessage(
       },
     }),
   });
-  if (resp.ok) return { token, success: true, stale: false };
+  if (resp.ok) return { token, rowId, success: true, stale: false };
   const errBody = await resp.json().catch(() => ({}));
   const errCode: string = errBody?.error?.details?.[0]?.errorCode ?? "";
   const stale =
@@ -137,7 +141,7 @@ async function sendFcmMessage(
     errCode === "UNREGISTERED" ||
     errCode === "INVALID_ARGUMENT";
   console.error(`FCM send failed for token ...${token.slice(-8)}:`, errBody);
-  return { token, success: false, stale };
+  return { token, rowId, success: false, stale };
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -166,56 +170,62 @@ serve(async (req) => {
       });
     }
 
-    // 2. Parse body.
-    const { trip_id, mentioned_user_ids, message_preview } = await req.json() as {
-      trip_id: string;
+    // 2. Parse body — accept event_id or legacy trip_id.
+    const body = await req.json() as {
+      event_id?: string;
+      trip_id?: string;
       mentioned_user_ids: string[];
       message_preview: string;
     };
+    const eventId = body.event_id ?? body.trip_id;
+    const { mentioned_user_ids, message_preview } = body;
 
-    if (!trip_id || !Array.isArray(mentioned_user_ids) || mentioned_user_ids.length === 0) {
+    if (!eventId || !Array.isArray(mentioned_user_ids) || mentioned_user_ids.length === 0) {
       return new Response(JSON.stringify({ sent: 0, reason: "no_mentions" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Admin client for privileged reads.
+    // 3. Admin client for privileged reads/writes.
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // 4. Verify sender is an accepted member of the trip.
+    // 4. Verify sender is an active member of the event.
     const { data: senderMember } = await admin
-      .from("trip_members")
+      .from("event_guests")
       .select("id")
-      .eq("trip_id", trip_id)
+      .eq("event_id", eventId)
       .eq("user_id", user.id)
-      .eq("status", "accepted")
+      .in("status", ["going", "maybe", "accepted", "pending"])
       .maybeSingle();
 
+    // Also allow the event creator (who may not have a guest row).
+    let senderIsOrganizer = false;
     if (!senderMember) {
+      const { data: evt } = await admin
+        .from("events")
+        .select("created_by")
+        .eq("id", eventId)
+        .maybeSingle();
+      senderIsOrganizer = evt?.created_by === user.id;
+    }
+
+    if (!senderMember && !senderIsOrganizer) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 5. Fetch sender's display name.
-    const { data: senderProfile } = await admin
-      .from("user_profiles")
-      .select("full_name")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const senderName: string = senderProfile?.full_name || "Someone";
+    // 5. Fetch sender's display name and event title in parallel.
+    const [senderProfileResult, eventResult] = await Promise.all([
+      admin.from("user_profiles").select("full_name").eq("user_id", user.id).maybeSingle(),
+      admin.from("events").select("title").eq("id", eventId).maybeSingle(),
+    ]);
+    const senderName: string = senderProfileResult.data?.full_name || "Someone";
+    const eventTitle: string = eventResult.data?.title || "an event";
 
-    // 6. Fetch trip title.
-    const { data: trip } = await admin
-      .from("trips")
-      .select("title")
-      .eq("id", trip_id)
-      .maybeSingle();
-    const tripTitle: string = trip?.title || "a trip";
-
-    // 7. Validate mentioned users: must be accepted trip members who have
-    //    opted in to mention notifications (and are not the sender).
+    // 6. Validate mentioned users: active event members who have opted in and
+    //    are not the sender.
     const mentionedWithoutSelf = mentioned_user_ids.filter((id) => id !== user.id);
     if (mentionedWithoutSelf.length === 0) {
       return new Response(JSON.stringify({ sent: 0, reason: "self_mention_only" }), {
@@ -223,15 +233,30 @@ serve(async (req) => {
       });
     }
 
-    const { data: validMembers } = await admin
-      .from("trip_members")
+    // Check event_guests for active membership.
+    const { data: validGuestRows } = await admin
+      .from("event_guests")
       .select("user_id")
-      .eq("trip_id", trip_id)
-      .eq("status", "accepted")
+      .eq("event_id", eventId)
+      .in("status", ["going", "maybe", "accepted", "pending"])
       .in("user_id", mentionedWithoutSelf);
 
-    const validMemberIds = (validMembers ?? []).map((m: { user_id: string }) => m.user_id);
-    if (validMemberIds.length === 0) {
+    // Also include the event creator if they are mentioned (they may lack a guest row).
+    const { data: evtCreator } = await admin
+      .from("events")
+      .select("created_by")
+      .eq("id", eventId)
+      .maybeSingle();
+    const creatorId: string | null = evtCreator?.created_by ?? null;
+
+    const validMemberIds = new Set<string>(
+      (validGuestRows ?? []).map((g: { user_id: string }) => g.user_id)
+    );
+    if (creatorId && mentionedWithoutSelf.includes(creatorId)) {
+      validMemberIds.add(creatorId);
+    }
+
+    if (validMemberIds.size === 0) {
       return new Response(JSON.stringify({ sent: 0, reason: "no_valid_members" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -241,7 +266,7 @@ serve(async (req) => {
     const { data: optedInProfiles } = await admin
       .from("user_profiles")
       .select("user_id")
-      .in("user_id", validMemberIds)
+      .in("user_id", Array.from(validMemberIds))
       .eq("mention_notifications_enabled", true);
 
     const optedInIds = (optedInProfiles ?? []).map((p: { user_id: string }) => p.user_id);
@@ -251,7 +276,30 @@ serve(async (req) => {
       });
     }
 
-    // 8. Fetch device tokens for opted-in users.
+    const preview = message_preview.length > 80
+      ? `${message_preview.substring(0, 80)}…`
+      : message_preview;
+    const title = `${senderName} mentioned you`;
+    const notifBody = `In ${eventTitle}: ${preview}`;
+
+    // 7. Write in-app notifications to trip_notifications for opted-in users.
+    //    The broadcast_trip_notification DB trigger fires on INSERT and delivers
+    //    via Realtime to each user's NotificationsProvider.
+    await Promise.all(
+      optedInIds.map((uid: string) =>
+        admin.from("trip_notifications").insert({
+          user_id: uid,
+          type: "chat_mention",
+          title,
+          body: notifBody,
+          reference_id: eventId,
+          is_read: false,
+          metadata: { sender_id: user.id, event_id: eventId },
+        })
+      )
+    );
+
+    // 8. Fetch device tokens and send FCM push.
     const { data: tokenRows, error: tokenErr } = await admin
       .from("device_tokens")
       .select("id, token, user_id")
@@ -270,30 +318,23 @@ serve(async (req) => {
     const serviceAccount: ServiceAccount = JSON.parse(fcmJsonRaw);
     const accessToken = await getFcmAccessToken(serviceAccount);
 
-    // 10. Send notifications.
-    const preview = message_preview.length > 80
-      ? `${message_preview.substring(0, 80)}…`
-      : message_preview;
-    const title = `${senderName} mentioned you in ${tripTitle}`;
-
+    // 10. Send FCM notifications.
     const results = await Promise.all(
       tokenRows.map((row: { id: string; token: string }) =>
         sendFcmMessage(
           serviceAccount.project_id,
           accessToken,
+          row.id,
           row.token,
           title,
-          preview,
-          { type: "chat_mention", trip_id },
-        ).then((r) => ({ ...r, rowId: row.id }))
+          notifBody,
+          { type: "chat_mention", event_id: eventId },
+        )
       ),
     );
 
     // 11. Remove stale tokens.
-    const staleIds = results
-      .filter((r) => r.stale)
-      .map((r) => (r as { rowId: string }).rowId);
-
+    const staleIds = results.filter((r) => r.stale).map((r) => r.rowId);
     if (staleIds.length > 0) {
       await admin.from("device_tokens").delete().in("id", staleIds);
     }
