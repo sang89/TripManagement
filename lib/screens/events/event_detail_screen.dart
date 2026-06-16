@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui show TextDirection;
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:math' show Random, min, cos, sin, pi;
 
@@ -3025,6 +3026,30 @@ class _FoodEmojiBubble extends StatelessWidget {
   }
 }
 
+// 20 fun quotes shown randomly in the Cravings tab header.
+const _cravingsQuotes = [
+  'Life is too short for bad meals 🍽️',
+  'Eat first. Explore later. 🌮',
+  'Good food is the foundation of genuine happiness 🍜',
+  'One bite can change everything ✨',
+  'Find your next food obsession here 🔥',
+  'Hangry? Not on our watch 😤',
+  'The best stories start around a table 🍕',
+  'You can\'t buy happiness, but you can buy tacos 🌮',
+  'Calories don\'t count on vacation 😉',
+  'Eat like no one is watching 🍣',
+  'Food is the ingredient that binds us together 🤝',
+  'Adventure begins with a good meal 🗺️',
+  'Treat yourself — you deserve it 🎉',
+  'No bad moods, just good bites 😄',
+  'Find the dish everyone will talk about for years 🌟',
+  'The secret ingredient is always sharing with friends 💛',
+  'Every city has a hidden gem restaurant. Go find it. 🏆',
+  'Forget the diet. This is a trip. 🎊',
+  'Collect flavors, not just miles 🍔',
+  'A great meal is the best souvenir 📸',
+];
+
 class _CravingsTab extends StatefulWidget {
   final Event event;
   final String? authUid;
@@ -3042,15 +3067,86 @@ class _CravingsTab extends StatefulWidget {
 
 class _CravingsTabState extends State<_CravingsTab> {
   final _keywordCtrl = TextEditingController();
+  final _locationCtrl = TextEditingController();
   List<RestaurantSuggestion> _results = [];
   bool _loading = false;
   String? _error;
   String? _restaurantPollId;
+  late String _quote;
+
+  // Active search location — null means no bias.
+  double? _searchLat;
+  double? _searchLng;
+  // Whether the location field is showing GPS / "Current Location".
+  bool _usingGps = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _quote = _cravingsQuotes[Random().nextInt(_cravingsQuotes.length)];
+    if (widget.event.locationLat != null && widget.event.locationLng != null) {
+      _searchLat = widget.event.locationLat;
+      _searchLng = widget.event.locationLng;
+      _locationCtrl.text = widget.event.location;
+    } else {
+      // Default to GPS immediately — resolve coords silently in background.
+      _usingGps = true;
+      _detectGps();
+    }
+  }
 
   @override
   void dispose() {
     _keywordCtrl.dispose();
+    _locationCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _detectGps() async {
+    if (!mounted) return;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) { return; }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+      );
+      final label = await _reverseGeocode(pos.latitude, pos.longitude);
+      if (mounted) {
+        setState(() {
+          _searchLat = pos.latitude;
+          _searchLng = pos.longitude;
+          _usingGps = true;
+          _locationCtrl.text = label;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<String> _reverseGeocode(double lat, double lng) async {
+    try {
+      final uri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'latlng': '$lat,$lng',
+        'result_type': 'locality|sublocality|neighborhood',
+        'key': kGooglePlacesApiKey,
+      });
+      final resp = await http.get(uri).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final results = data['results'] as List? ?? [];
+        if (results.isNotEmpty) {
+          return (results.first as Map)['formatted_address'] as String? ?? 'Current Location';
+        }
+      }
+    } catch (_) {}
+    return 'Current Location';
   }
 
   Future<void> _search() async {
@@ -3059,16 +3155,40 @@ class _CravingsTabState extends State<_CravingsTab> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() { _loading = true; _error = null; });
     try {
+      double? lat = _searchLat;
+      double? lng = _searchLng;
+      // If location field was manually edited (not GPS, not event), forward-geocode it.
+      final typedLoc = _locationCtrl.text.trim();
+      if (!_usingGps && widget.event.locationLat == null && typedLoc.isNotEmpty) {
+        final coords = await _forwardGeocode(typedLoc);
+        lat = coords?.$1;
+        lng = coords?.$2;
+      }
       final svc = TripPlacesService(kGooglePlacesApiKey);
-      final results = await svc.searchRestaurants(
-        q,
-        lat: widget.event.locationLat,
-        lng: widget.event.locationLng,
-      );
+      final results = await svc.searchRestaurants(q, lat: lat, lng: lng);
       setState(() { _results = results; _loading = false; });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
     }
+  }
+
+  Future<(double, double)?> _forwardGeocode(String address) async {
+    try {
+      final uri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+        'address': address,
+        'key': kGooglePlacesApiKey,
+      });
+      final resp = await http.get(uri).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final results = data['results'] as List? ?? [];
+        if (results.isNotEmpty) {
+          final loc = ((results.first as Map)['geometry'] as Map)['location'] as Map;
+          return ((loc['lat'] as num).toDouble(), (loc['lng'] as num).toDouble());
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _pitch(RestaurantSuggestion r, AppLocalizations l10n) async {
@@ -3154,37 +3274,97 @@ class _CravingsTabState extends State<_CravingsTab> {
               ),
               const SizedBox(height: 12),
               Text(
-                l10n.cravingsPrompt,
+                _quote,
                 style: const TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF5D4037)),
               ),
               const SizedBox(height: 4),
               Text(
-                l10n.cravingsPrivacyNote,
+                'Find a spot, pitch it to the group, let the hangry votes decide 🗳️',
                 style: TextStyle(fontSize: 12, color: Colors.brown[400]),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        // Keyword input.
-        TextField(
-          controller: _keywordCtrl,
-          decoration: InputDecoration(
-            hintText: l10n.cravingsHint,
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
+        // Yelp-style two-field search card.
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
           ),
-          textInputAction: TextInputAction.search,
-          onSubmitted: (_) => _search(),
+          child: Column(
+            children: [
+              // "What" row.
+              TextField(
+                controller: _keywordCtrl,
+                decoration: InputDecoration(
+                  hintText: l10n.cravingsHint,
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+                textInputAction: TextInputAction.next,
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              // "Near" row.
+              Row(
+                children: [
+                  const SizedBox(width: 14),
+                  Icon(Icons.location_on_rounded, size: 20,
+                      color: _usingGps ? AppTheme.primary : Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: TextField(
+                      controller: _locationCtrl,
+                      onChanged: (_) {
+                        // User manually typed → no longer GPS.
+                        if (_usingGps) setState(() => _usingGps = false);
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Current Location',
+                        hintStyle: TextStyle(
+                            color: _usingGps ? AppTheme.primary : Colors.grey[400],
+                            fontSize: 14),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      style: TextStyle(
+                        color: _usingGps ? AppTheme.primary : Colors.black87,
+                        fontSize: 14,
+                      ),
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _search(),
+                    ),
+                  ),
+                  // GPS reset button — only shown when there's a manual override.
+                  if (!_usingGps && widget.event.locationLat == null)
+                    IconButton(
+                      icon: const Icon(Icons.my_location_rounded, size: 18),
+                      color: Colors.grey,
+                      tooltip: 'Use current location',
+                      onPressed: () {
+                        _locationCtrl.clear();
+                        _detectGps();
+                      },
+                    ),
+                  const SizedBox(width: 4),
+                ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
-        // Full-width search button — avoids Row + ElevatedButton in unbounded-width context.
+        // Full-width search button.
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -3222,7 +3402,7 @@ class _CravingsTabState extends State<_CravingsTab> {
             isPitched: existingPitchedIds.contains(r.placeId),
             onPitch: () => _pitch(r, l10n),
             l10n: l10n,
-          ),
+          ), // _pitch is already async, lambda satisfies Future<void> Function()
       ],
     );
   }
@@ -3231,7 +3411,7 @@ class _CravingsTabState extends State<_CravingsTab> {
 class _CravingResultCard extends StatefulWidget {
   final RestaurantSuggestion restaurant;
   final bool isPitched;
-  final VoidCallback onPitch;
+  final Future<void> Function() onPitch;
   final AppLocalizations l10n;
 
   const _CravingResultCard({
@@ -3252,8 +3432,7 @@ class _CravingResultCardState extends State<_CravingResultCard> {
     if (_pitching || widget.isPitched) return;
     setState(() => _pitching = true);
     try {
-      widget.onPitch();
-      await Future.delayed(const Duration(milliseconds: 800));
+      await widget.onPitch();
     } finally {
       if (mounted) setState(() => _pitching = false);
     }
@@ -3281,7 +3460,7 @@ class _CravingResultCardState extends State<_CravingResultCard> {
         priceLevel: r.priceLevel,
         photoRefs: r.photoRefs,
         isPitched: widget.isPitched,
-        onPitch: widget.isPitched ? null : widget.onPitch,
+        onPitch: widget.isPitched ? null : widget.onPitch,  // Future<void> Function()?
       ),
       child: Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -3463,7 +3642,7 @@ void _showRestaurantDetail(
   required double? rating,
   required int? priceLevel,
   required List<String> photoRefs,
-  VoidCallback? onPitch,
+  Future<void> Function()? onPitch,
   bool isPitched = false,
 }) {
   showModalBottomSheet<void>(
@@ -3488,7 +3667,7 @@ class _RestaurantDetailSheet extends StatefulWidget {
   final double? rating;
   final int? priceLevel;
   final List<String> photoRefs;
-  final VoidCallback? onPitch;
+  final Future<void> Function()? onPitch;
   final bool isPitched;
 
   const _RestaurantDetailSheet({
@@ -3744,9 +3923,9 @@ class _RestaurantDetailSheetState extends State<_RestaurantDetailSheet> {
                       child: ElevatedButton.icon(
                         onPressed: widget.isPitched
                             ? null
-                            : () {
+                            : () async {
                                 Navigator.pop(context);
-                                widget.onPitch!();
+                                await widget.onPitch!();
                               },
                         icon: widget.isPitched
                             ? const Icon(Icons.check_circle, size: 16)
