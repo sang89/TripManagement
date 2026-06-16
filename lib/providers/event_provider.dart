@@ -721,6 +721,35 @@ class EventProvider extends ChangeNotifier {
           },
         )
 
+        // ── event_poll_options DELETE ───────────────────────────────────────
+        // REPLICA IDENTITY FULL ensures poll_id is present in the old record.
+        // Fires when a restaurant option is removed from the Cravings poll.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'event_poll_options',
+          callback: (payload) {
+            final row = payload.oldRecord;
+            final pollId = row['poll_id'] as String?;
+            final optionId = row['id'] as String?;
+            if (pollId == null || optionId == null) return;
+            // Evict the option from the in-memory cache immediately so
+            // the Cravings tab "Added to group vote!" badge clears right away.
+            for (final polls in _polls.values) {
+              final idx = polls.indexWhere((p) => p.id == pollId);
+              if (idx >= 0) {
+                final poll = polls[idx];
+                final newOptions = poll.options
+                    .where((o) => o.id != optionId)
+                    .toList();
+                polls[idx] = poll.copyWithOptions(newOptions);
+                notifyListeners();
+                break;
+              }
+            }
+          },
+        )
+
         // ── event_poll_votes INSERT ─────────────────────────────────────────
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,

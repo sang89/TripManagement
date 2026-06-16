@@ -157,6 +157,17 @@ class EventPoll {
         votes: newVotes,
       );
 
+  EventPoll copyWithOptions(List<EventPollOption> newOptions) => EventPoll(
+        id: id,
+        eventId: eventId,
+        question: question,
+        pollType: pollType,
+        createdBy: createdBy,
+        createdAt: createdAt,
+        options: newOptions,
+        votes: votes,
+      );
+
   EventPoll copyWithOptionReactions(
       String optionId, List<EventPollReaction> reactions) =>
       EventPoll(
