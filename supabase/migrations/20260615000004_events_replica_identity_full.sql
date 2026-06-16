@@ -1,0 +1,12 @@
+-- Fix chat_background Realtime sync for non-creator members.
+--
+-- events had REPLICA IDENTITY DEFAULT, which causes Supabase Realtime to
+-- re-read the row through RLS when delivering UPDATE events. The SELECT policy
+-- uses auth_user_is_event_member() (a SECURITY DEFINER function) which can
+-- fail silently in the Realtime evaluation context, causing members who are
+-- not the event creator to miss UPDATE payloads entirely.
+--
+-- REPLICA IDENTITY FULL embeds the full before/after row in the WAL record
+-- directly, bypassing the RLS re-read and ensuring all members receive
+-- every events UPDATE event correctly.
+ALTER TABLE events REPLICA IDENTITY FULL;

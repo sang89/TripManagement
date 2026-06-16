@@ -28,6 +28,7 @@ class EventMessage {
   final String eventId;
   final String userId;
   final String content;
+  final String messageType; // 'text' | 'gif'
   final DateTime createdAt;
 
   // Enriched in-memory.
@@ -40,11 +41,16 @@ class EventMessage {
     required this.eventId,
     required this.userId,
     required this.content,
+    this.messageType = 'text',
     required this.createdAt,
     this.senderName,
     this.senderAvatarUrl,
     this.reactions = const [],
   });
+
+  bool get isGif => messageType == 'gif';
+  bool get isImage => messageType == 'image';
+  bool get isMedia => isGif || isImage; // rendered as CachedNetworkImage
 
   // Aggregate counts: {'🔥': 2, '😂': 1}
   Map<String, int> get reactionCounts => reactions.fold(<String, int>{},
@@ -65,7 +71,8 @@ class EventMessage {
         id: json['id'] as String,
         eventId: json['event_id'] as String,
         userId: json['user_id'] as String,
-        content: json['content'] as String,
+        content: json['content'] as String? ?? '',
+        messageType: json['message_type'] as String? ?? 'text',
         createdAt: DateTime.parse(json['created_at'] as String),
         reactions: _parseReactions(json['event_message_reactions']),
       );
@@ -80,6 +87,7 @@ class EventMessage {
         eventId: eventId,
         userId: userId,
         content: content,
+        messageType: messageType,
         createdAt: createdAt,
         senderName: senderName ?? this.senderName,
         senderAvatarUrl: senderAvatarUrl ?? this.senderAvatarUrl,

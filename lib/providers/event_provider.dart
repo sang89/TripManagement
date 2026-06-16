@@ -40,6 +40,12 @@ class EventProvider extends ChangeNotifier {
   String? _userId;
   RealtimeChannel? _realtimeChannel;
 
+  // Debounce chat-background DB writes so rapid theme-picker taps don't spam
+  // the database. Keyed by eventId so concurrent events don't interfere.
+  final Map<String, Timer> _chatBgTimers = {};
+  // Tracks the last value written to DB so we skip no-op writes.
+  final Map<String, String?> _chatBgCommitted = {};
+
   // Emits sessionIds whenever the current user's roster entry is removed
   // (rejected, kicked, cancelled from another device). Widgets subscribe to
   // this stream and call setState directly so the rebuild is guaranteed — it
@@ -307,6 +313,11 @@ class EventProvider extends ChangeNotifier {
   void clear() {
     _realtimeChannel?.unsubscribe();
     _realtimeChannel = null;
+    for (final t in _chatBgTimers.values) {
+      t.cancel();
+    }
+    _chatBgTimers.clear();
+    _chatBgCommitted.clear();
     _events = [];
     _photos.clear();
     _expenses.clear();
@@ -509,6 +520,9 @@ class EventProvider extends ChangeNotifier {
               signupLockHours: row.containsKey('signup_lock_hours')
                   ? row['signup_lock_hours'] as int?
                   : existing.signupLockHours,
+              chatBackground: row.containsKey('chat_background')
+                  ? row['chat_background'] as String?
+                  : existing.chatBackground,
               guests: existing.guests,
               stops: existing.stops,
               organizerName: existing.organizerName,
@@ -1282,6 +1296,43 @@ class EventProvider extends ChangeNotifier {
       notifyListeners();
       unawaited(_saveCache());
     }
+  }
+
+  void updateChatBackground(String eventId, String? key) {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx < 0) return;
+
+    // Optimistic update — immediate, no DB call yet.
+    _events[idx] = _events[idx].copyWith(
+      chatBackground: key,
+      clearChatBackground: key == null,
+    );
+    notifyListeners();
+
+    // Debounce: cancel any pending write for this event and schedule a new
+    // one 600 ms later. Only fires if the value differs from last committed.
+    _chatBgTimers[eventId]?.cancel();
+    _chatBgTimers[eventId] = Timer(const Duration(milliseconds: 600), () async {
+      _chatBgTimers.remove(eventId);
+
+      // Skip write if value hasn't changed since last successful DB write.
+      if (_chatBgCommitted[eventId] == key) return;
+
+      try {
+        await _db
+            .from('events')
+            .update({
+              'chat_background': key,
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            })
+            .eq('id', eventId);
+        _chatBgCommitted[eventId] = key;
+        unawaited(_saveCache());
+      } catch (e, st) {
+        debugPrint('EventProvider.updateChatBackground error: $e\n$st');
+        unawaited(load());
+      }
+    });
   }
 
   Future<void> deleteEvent(String eventId) async {

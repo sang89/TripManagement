@@ -158,6 +158,7 @@ void main() {
       'session_removed',
       'friend_request',
       'friend_accepted',
+      'chat_mention',
       'system',
       // ── PropertyManagement ────────────────────────────────────────────────
       'lease_expiry',

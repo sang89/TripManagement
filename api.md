@@ -252,6 +252,34 @@ https://tiles.stadiamaps.com/tiles/{style}/{z}/{x}/{y}.png?api_key={key}
 
 ---
 
+---
+
+## Giphy API
+
+**Purpose:** Trending GIFs and GIF search for the event chat GIF picker.  
+**Config key:** `kGiphyApiKey` (`lib/config/api_keys.dart`)  
+**Obtaining a key:** [developers.giphy.com/dashboard](https://developers.giphy.com/dashboard) → Create an App → choose **API** (not SDK) → copy the API Key.  
+**Free tier:** 100 requests/day (production); development/beta key is unlimited. GIFs are served from Giphy's CDN — no storage cost to us.  
+**Note:** Tenor API was considered but is being shut down June 30, 2026 (new sign-ups closed January 13, 2026).
+
+### Endpoints
+
+| Endpoint | Usage |
+|----------|-------|
+| `GET https://api.giphy.com/v1/gifs/trending?api_key=KEY&limit=20&rating=pg` | Trending GIFs (shown on sheet open) |
+| `GET https://api.giphy.com/v1/gifs/search?api_key=KEY&q=QUERY&limit=20&rating=pg` | GIF search (debounced 400 ms) |
+
+**Response shape:** `data[].images.{original,fixed_width}.url`  
+- `fixed_width` URL → thumbnail in the picker grid  
+- `original` URL → full-quality URL stored in `event_messages.content` when `message_type = 'gif'`
+
+**Relevant files:**
+- `_GifPickerSheet` widget in `lib/screens/events/event_detail_screen.dart`
+- `EventChatProvider.sendGif()` in `lib/providers/event_chat_provider.dart`
+- `EventMessage.isGif` / `message_type` column in `lib/models/event_message.dart`
+
+---
+
 ## Adding a new external API
 
 1. Add the API key / base URL constant to `lib/config/api_keys.dart`.

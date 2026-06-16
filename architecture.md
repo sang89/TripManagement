@@ -59,6 +59,7 @@ This app should feel vibrant and joyful — not corporate, not minimal, not grey
 | AI chat (planned) | Google Gemini 2.5 Flash Lite | `http ^1.4.0` |
 | Date / number formatting | intl | `intl ^0.20.2` |
 | QR code rendering | qr_flutter (pure Dart/Canvas, works on iOS/Android/web) | `qr_flutter ^4.1.0` |
+| GIF image caching | cached_network_image (network image with disk cache) | `cached_network_image ^3.4.1` |
 | Swipe-to-delete | flutter_slidable | `flutter_slidable ^3.1.1` |
 | Web interop | package:web | `web ^1.1.1` |
 
@@ -104,7 +105,7 @@ lib/
 │   ├── events/
 │   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type tiles grid (Trip/Birthday/Wedding/Social/Quick Bites)
 │   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; quick-bites shows budget/vibe/cuisine/rsvp fields; birthday shows honoree name + birth year fields
-│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Organize inner tabs: Roster/Expenses/Polls/Invite (signup); Todo/Expenses/Polls/Explore (trip); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Trip Explore tab: _ExploreTab fetches Viator Affiliate API activities (sorted by cheapest/top-rated), shows _ActivityCard per result (image/rating/price/platform badge/"Book on Viator" button), plus _PlatformBrowseButton rows for GetYourGuide and Klook affiliate browse links. Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
+│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Chat tab enhanced: @mention overlay (_MentionSuggestionsBar) shows filtered member list when typing `@`, inserts `@[userId:displayName]` token; emoji-insert button (reuses _EmojiPickerSheet in insertMode); GIF button opens _GifPickerSheet (Giphy API trending + search, 2-col grid; `kGiphyApiKey`); message bubbles render GIFs via CachedNetworkImage and mention tokens as teal RichText spans; chat background customisable per-event via _ChatThemePickerSheet (8 gradient/solid presets); theme persisted in events.chat_background and propagated live via Realtime. Organize inner tabs: Roster/Expenses/Polls/Invite (signup); Todo/Expenses/Polls/Explore (trip); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Trip Explore tab: _ExploreTab fetches Viator Affiliate API activities (sorted by cheapest/top-rated), shows _ActivityCard per result (image/rating/price/platform badge/"Book on Viator" button), plus _PlatformBrowseButton rows for GetYourGuide and Klook affiliate browse links. Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
 │   │   ├── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   │   ├── session_invite_screen.dart # Public session signup — no auth required; fetches session by invite_code via get_session_by_invite_code; calls rsvp_session; route /session/invite/:code
 │   │   └── session_scan_screen.dart # In-app QR scanner (mobile_scanner) — scans a session QR, shows join sheet (session info + claim/waitlist button), calls rsvp_session; opened from the signup Invite tab "Scan a QR code" button
@@ -192,8 +193,8 @@ All routes are defined in `main.dart`. Auth state drives a redirect guard. The a
 | Provider | Owns | Key methods |
 |---|---|---|
 | `AuthProvider` | Auth session, current user | `init()`, `login()`, `register()`, `logout()`; `isLoggedIn`, `userId`, `userEmail`, `userName` |
-| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; **signup sessions:** `fetchUpcomingSessions(eventId)`, `fetchPastSessions(eventId)`, `loadMorePastSessions(eventId)`, `fetchSessionRoster(sessionId)`, `loadMoreRoster(sessionId)`, `refreshSessionRoster(sessionId)`, `addSession(eventId, startAt, endAt, {capacity, waitlistEnabled, signupLockHours, isPublic, requiresApproval})`, `cancelSessionSignup(rosterId, sessionId, eventId)`, `removeSessionRosterEntry()`, `promoteSessionRosterEntry()`, `demoteSessionRosterEntry()`, `reorderSessionRoster()`, `markSessionAttendance()`, `toggleSessionConfirmed()`, `approveSessionRosterEntry()`, `rejectSessionRosterEntry()`; session accessors: `upcomingSessionsFor(eventId)`, `pastSessionsFor(eventId)`, `rosterFor(sessionId)`, `myStatusFor(sessionId)`, `hasMoreUpcomingFor()`, `hasMorePastFor()`, `hasMoreRosterFor()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; static `applyOrder(events, order)`; Realtime via `event_sync_<userId>` channel |
-| `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; single Realtime channel; scoped to `/event/:id` route |
+| `EventProvider` | All events (organizer + guest) + nested stops/members | `load()`, `clear()`, `getById(id)`, `addEvent()`, `updateEvent()`, `deleteEvent()`, `updateChatBackground(eventId, key)`, `rsvp(eventId, status, {note})`, `addGuest(eventId, displayName, [email, phone, userId])`, `addMember(eventId, ...)` (trip-type invite flow with `ReinviteBlockedException`), `removeMember()`, `leaveEvent()`, `resendInvite(guestId)`, `addStop()`, `updateStop()`, `deleteStop()`, `reorderStops()`, `fetchPhotos(eventId)`, `addPhoto()`, `deletePhoto()`, `fetchExpenses(eventId)`, `addExpense()`, `settleSplit()`, `fetchBringList(eventId)`, `addBringItem()`, `deleteBringItem()`, `claimBringItem()`, `unclaimBringItem()`, `fetchPolls(eventId)`, `createPoll()`, `deletePoll()`, `vote()`, `changeVote()`, `reactToPollOption()`, `unreactToPollOption()`; **signup sessions:** `fetchUpcomingSessions(eventId)`, `fetchPastSessions(eventId)`, `loadMorePastSessions(eventId)`, `fetchSessionRoster(sessionId)`, `loadMoreRoster(sessionId)`, `refreshSessionRoster(sessionId)`, `addSession(eventId, startAt, endAt, {capacity, waitlistEnabled, signupLockHours, isPublic, requiresApproval})`, `cancelSessionSignup(rosterId, sessionId, eventId)`, `removeSessionRosterEntry()`, `promoteSessionRosterEntry()`, `demoteSessionRosterEntry()`, `reorderSessionRoster()`, `markSessionAttendance()`, `toggleSessionConfirmed()`, `approveSessionRosterEntry()`, `rejectSessionRosterEntry()`; session accessors: `upcomingSessionsFor(eventId)`, `pastSessionsFor(eventId)`, `rosterFor(sessionId)`, `myStatusFor(sessionId)`, `hasMoreUpcomingFor()`, `hasMorePastFor()`, `hasMoreRosterFor()`; computed `myEvents`, `invitedEvents`, `pendingInviteCount` (badge); getters `bringItemsFor(eventId)`, `pollsFor(eventId)`; static `applyOrder(events, order)`; Realtime via `event_sync_<userId>` channel |
+| `EventChatProvider` | Event-scoped chat | `init()`, `sendMessage(content, {messageType})`, `sendGif(gifUrl)`, `loadMore()`; paginated (50/page); optimistic append with temp ID; after-send mention hook calls `send-mention-notification` Edge Function; single Realtime channel; scoped to `/event/:id` route |
 | `InvitationsProvider` | Pending trip-event invitations for signed-in user | `init(userId)`, `clear()`, `accept()`, `decline(blockReinvite:)` |
 | `NotificationsProvider` | In-app notification center | `init(userId)`, `clear()`, `reload()`, `markRead(id)`, `markAllRead()`, `deleteNotification(id)`; `unreadCount` (bell badge); Realtime Broadcast subscription on channel `trip_notifications_<userId>`; reads/writes `trip_notifications` only — never the shared `notifications` table |
 | `FriendsProvider` | Friend list + pending requests | `init(userId)`, `clear()`, `sendRequest(addresseeId)`, `accept(id)`, `decline(id)`, `remove(id)`, `searchUsers(query)`; computed getters `accepted`, `incomingRequests`, `outgoingRequests`; two Realtime channels |
@@ -265,6 +266,7 @@ For signup events specifically, data is split across two scopes:
 | `wishes_revealed_at` | timestamptz nullable | birthday-only — when organizer blew out the candles |
 | `waitlist_enabled` | boolean default true | signup-only — whether to put overflow guests on a waitlist |
 | `signup_lock_hours` | integer nullable | signup-only — hours before session `start_at` when signups/cancellations lock |
+| `chat_background` | text nullable | preset key string for the chat background theme (e.g. `'gradient_rose'`, `'solid_dark'`); null = default |
 | `created_at / updated_at` | timestamptz | |
 
 #### `event_guests`
@@ -502,7 +504,8 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 | `id` | uuid PK | |
 | `event_id` | uuid FK→events | |
 | `user_id` | uuid FK→auth.users | sender |
-| `content` | text | |
+| `content` | text | Plain text or GIF URL (when `message_type = 'gif'`) |
+| `message_type` | text default `'text'` | `'text'` \| `'gif'` — controls rendering in `_MessageBubble` |
 | `created_at` | timestamptz | |
 
 **Index:** `(event_id, created_at DESC)` for paginated fetch  
@@ -510,6 +513,10 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 **Realtime:** `REPLICA IDENTITY FULL`; added to `supabase_realtime` publication.
 
 `EventChatProvider` subscribes to one channel per event (`chat_<eventId>`, filter `event_id = eventId`) for INSERT events. Messages are paginated (50 per page, newest-first from DB, reversed in-memory to oldest→newest). Optimistic appends use a `temp_<timestamp>` placeholder ID.
+
+**@mention token format:** Mentions are embedded inline as `@[userId:displayName]` tokens in the `content` field. `EventChatProvider.parseMentionedIds()` extracts user IDs; `EventChatProvider.plainPreview()` strips tokens to `@Name` for FCM previews. After the DB INSERT, `_sendMentionNotifications()` is called (fire-and-forget) to invoke the `send-mention-notification` Edge Function.
+
+**GIF messages:** `content` holds the full-quality Giphy CDN URL (`images.original.url`). The Flutter client renders `CachedNetworkImage` in the bubble instead of text. Thumbnails (`images.fixed_width.url`) are shown in the `_GifPickerSheet` picker grid. Key: `kGiphyApiKey`. (Tenor API was considered but is shut down June 30, 2026.)
 
 #### `event_photos`
 | Column | Type | Notes |
@@ -700,7 +707,7 @@ Called by the `on_waitlist_promoted` trigger. Sends FCM push when a roster entry
 Generic push notification function — called by `call_push_edge_function()` helper for all new notification types. Accepts `{ user_id, type, title, body, data }`, sends FCM to all device tokens for the user.
 
 #### `send-mention-notification`
-Client-initiated (called directly from Flutter). Sends FCM push when a user is @mentioned in event chat.
+Client-initiated (called directly from Flutter after a message with `@[userId:…]` tokens is sent). Validates mentioned users are active event members; respects `user_profiles.mention_notifications_enabled` opt-out; writes in-app `trip_notifications` rows (type `chat_mention`, `reference_id = event_id`); sends FCM push to each opted-in user's devices. Uses `event_guests` and `events` tables (updated from legacy `trip_members`/`trips` naming). Accepts `event_id` or legacy `trip_id` in the request body.
 
 **Secrets required (all functions):**
 ```
@@ -794,7 +801,7 @@ If the user had set `block_reinvite = true`:
 | Type | Navigates to |
 |---|---|
 | `trip_invite`, `event_invite` | `/events` |
-| `chat_mention` | `/event/:eventId` |
+| `chat_mention` | `/event/:eventId` (the event where the mention occurred; `reference_id` = eventId) |
 | `event_invite_accepted`, `event_invite_declined` | `/event/:eventId` |
 | `event_kicked` | `/events` (user no longer has access) |
 | `session_join_request`, `session_approved`, `session_rejected`, `session_demoted`, `session_promoted` | `/event/:eventId` |
