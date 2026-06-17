@@ -329,6 +329,8 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 
 **RLS:** Organizer full access; each entry's own user can SELECT their row.
 
+> Full reference: **`signup_queue.md`** — all queue logic: DB tables, RPCs, playing-status animations, free-pool computation, duplicate prevention, "Just Played! Back in Line" algorithm, drag-to-reorder, gesture model, spot-circle tap behaviour, Realtime coverage, and optimistic update pattern.
+
 #### `session_queue_activities` (signup events only — in-session Queue Up activities)
 | Column | Type | Notes |
 |---|---|---|
