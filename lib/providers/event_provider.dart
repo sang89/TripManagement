@@ -3462,6 +3462,26 @@ class EventProvider extends ChangeNotifier {
     await fetchSessionQueues(eventId, sessionId);
   }
 
+  /// Atomically adds multiple members to a queue in one transaction.
+  /// Raises 'queue_full' if there are not enough spots (race-condition safe).
+  Future<void> addMultipleMembersToQueue(
+    String activityId,
+    String eventId,
+    String sessionId,
+    List<EventGuest> members,
+  ) async {
+    final payload = members.map((g) => {
+      'user_id': g.userId,
+      'display_name': g.displayName,
+      'avatar_url': g.avatarUrl,
+    }).toList();
+    await _db.rpc('add_members_to_queue', params: {
+      'p_activity_id': activityId,
+      'p_members': payload,
+    });
+    await fetchSessionQueues(eventId, sessionId);
+  }
+
   Future<void> addMemberToQueue(
     String activityId,
     String eventId,
@@ -3496,6 +3516,31 @@ class EventProvider extends ChangeNotifier {
     await _db.rpc('set_queue_status', params: {
       'p_activity_id': activityId,
       'p_status': status,
+    });
+  }
+
+  /// Reorders a queue row from [oldIndex] to [newIndex] within the session.
+  /// Uses move_queue_to_position — O(range) DB updates, not O(N).
+  Future<void> moveQueueByIndex(
+      String sessionId, int oldIndex, int newIndex) async {
+    final queues = List<SessionQueueActivity>.from(
+        _sessionQueues[sessionId] ?? []);
+    if (oldIndex == newIndex ||
+        oldIndex >= queues.length ||
+        newIndex >= queues.length) {
+      return;
+    }
+
+    final targetSortOrder = queues[newIndex].sortOrder;
+    final moved = queues.removeAt(oldIndex);
+    queues.insert(newIndex, moved);
+    _sessionQueues[sessionId] = queues;
+    notifyListeners();
+
+    await _db.rpc('move_queue_to_position', params: {
+      'p_activity_id': moved.id,
+      'p_session_id': sessionId,
+      'p_new_position': targetSortOrder,
     });
   }
 
@@ -3539,10 +3584,10 @@ class EventProvider extends ChangeNotifier {
 
     // Optimistic update: remove from current position and reinsert just before
     // the first empty slot so intermediate queues visually shift up immediately.
+    // Also reset status to waiting locally so the playing animation stops instantly.
     final played = queues.removeAt(currentIdx);
-    // After removal, original firstEmptyIdx shifts left by 1 — insert there
-    // to place played right before the empty row.
-    queues.insert(firstEmptyIdx - 1, played);
+    final resetPlayed = played.copyWith(status: QueueStatus.waiting);
+    queues.insert(firstEmptyIdx - 1, resetPlayed);
     _sessionQueues[sessionId] = queues;
     notifyListeners();
 
@@ -3552,6 +3597,11 @@ class EventProvider extends ChangeNotifier {
       'p_activity_id': activityId,
       'p_session_id': sessionId,
       'p_new_position': targetSortOrder,
+    });
+    // Reset status to waiting — they're back in line, not playing anymore.
+    await _db.rpc('set_queue_status', params: {
+      'p_activity_id': activityId,
+      'p_status': 'waiting',
     });
   }
 

@@ -10787,19 +10787,51 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
                             _EmptyQueuesState(
                                 isOrganizer: widget.isOrganizer, l10n: l10n)
                           else
-                            ...queues.asMap().entries.map((e) => Padding(
+                            ReorderableListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              buildDefaultDragHandles: false,
+                              proxyDecorator: (child, _, animation) =>
+                                  AnimatedBuilder(
+                                animation: animation,
+                                builder: (_, child) => Material(
+                                  elevation: CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeInOut,
+                                  ).value * 8,
+                                  borderRadius: BorderRadius.circular(14),
+                                  color: Colors.transparent,
+                                  child: child,
+                                ),
+                                child: child,
+                              ),
+                              itemCount: queues.length,
+                              itemBuilder: (_, i) {
+                                final q = queues[i];
+                                return Padding(
+                                  key: ValueKey(q.id),
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _QueueSpotRow(
-                                    queue: e.value,
-                                    displayNumber: e.key + 1,
-                                    entries: provider.entriesFor(e.value.id),
+                                    queue: q,
+                                    displayNumber: i + 1,
+                                    dragIndex: i,
+                                    entries: provider.entriesFor(q.id),
                                     event: widget.event,
                                     session: selected,
                                     authUid: widget.authUid,
                                     isOrganizer: widget.isOrganizer,
                                     userAlreadyInSession: userInSession,
                                   ),
-                                )),
+                                );
+                              },
+                              onReorderItem: (oldIndex, newIndex) {
+                                context.read<EventProvider>().moveQueueByIndex(
+                                      selected.id,
+                                      oldIndex,
+                                      newIndex,
+                                    );
+                              },
+                            ),
                         ],
                       );
                     }),
@@ -11505,6 +11537,35 @@ class _FreePoolAvatarStack extends StatelessWidget {
 }
 
 // ── Shared avatar circle ──────────────────────────────────────────────────────
+// ── Add-friend button with local loading state ────────────────────────────────
+
+class _StatefulAddFriendButton extends StatefulWidget {
+  final String label;
+  final Future<void> Function() onPressed;
+  const _StatefulAddFriendButton(
+      {required this.label, required this.onPressed});
+  @override
+  State<_StatefulAddFriendButton> createState() =>
+      _StatefulAddFriendButtonState();
+}
+
+class _StatefulAddFriendButtonState extends State<_StatefulAddFriendButton> {
+  bool _loading = false;
+  @override
+  Widget build(BuildContext context) {
+    return AppButton(
+      label: _loading ? '…' : widget.label,
+      onPressed: _loading
+          ? null
+          : () async {
+              setState(() => _loading = true);
+              await widget.onPressed();
+              if (mounted) setState(() => _loading = false);
+            },
+    );
+  }
+}
+
 // Shows the profile photo when available; falls back to colored initials if the
 // image URL is absent or fails to load (400 / 404 from Storage).
 
@@ -11605,6 +11666,7 @@ class _PoolAvatar extends StatelessWidget {
 class _QueueSpotRow extends StatefulWidget {
   final SessionQueueActivity queue;
   final int displayNumber;
+  final int dragIndex;
   final List<SessionQueueEntry> entries;
   final Event event;
   final EventSession session;
@@ -11615,6 +11677,7 @@ class _QueueSpotRow extends StatefulWidget {
   const _QueueSpotRow({
     required this.queue,
     required this.displayNumber,
+    required this.dragIndex,
     required this.entries,
     required this.event,
     required this.session,
@@ -11771,11 +11834,11 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                label: l10n.addSomeoneElse,
-                subtitle: 'Pick someone from the roster',
+                label: 'Add Teammates',
+                subtitle: 'Pick one or more from the roster',
                 onTap: () {
                   Navigator.pop(ctx);
-                  _showMemberPicker();
+                  _showTeammatePicker();
                 },
               ),
             ],
@@ -11810,11 +11873,17 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     }
   }
 
-  void _showMemberPicker() {
-    final l10n = AppLocalizations.of(context);
+  void _showTeammatePicker() {
     final provider = context.read<EventProvider>();
+    final availableSlots =
+        widget.queue.playersPerRound - widget.entries.length;
 
-    // Always exclude anyone already in THIS queue's entries.
+    if (availableSlots <= 0) {
+      _showQueueFullDialog(racedOut: false);
+      return;
+    }
+
+    // Build exclusion sets same as single-pick (cross-queue when no dupes).
     final inThisQueue = widget.entries
         .where((e) => e.userId != null)
         .map((e) => e.userId!)
@@ -11823,8 +11892,6 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         .where((e) => e.userId == null)
         .map((e) => e.displayName.toLowerCase())
         .toSet();
-
-    // When duplicates are not allowed, also exclude anyone in any OTHER queue.
     final Set<String> inAnyQueue = {};
     final Set<String> inAnyQueueNames = {};
     if (!widget.queue.allowDuplicates) {
@@ -11838,18 +11905,15 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         }
       }
     }
-
     final excludedIds = inThisQueue.union(inAnyQueue);
     final excludedNames = inThisQueueNames.union(inAnyQueueNames);
 
     final candidates = widget.event.guests
         .where((g) => !const {'left', 'declined'}.contains(g.status))
+        .where((g) => g.userId != widget.authUid)
         .where((g) {
-          if (g.userId != null) {
-            return !excludedIds.contains(g.userId);
-          } else {
-            return !excludedNames.contains(g.displayName.toLowerCase());
-          }
+          if (g.userId != null) return !excludedIds.contains(g.userId);
+          return !excludedNames.contains(g.displayName.toLowerCase());
         })
         .toList();
 
@@ -11860,43 +11924,206 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => _MemberPickerSheet(
-        title: l10n.selectAMember,
-        searchHint: l10n.searchMembersHint,
+        title: 'Add Teammates 👥',
+        searchHint: 'Search members…',
         candidates: candidates,
-        onSelected: (guest) {
+        maxSelect: availableSlots,
+        onMultiSelected: (selected) {
           Navigator.pop(ctx);
-          _addGuest(guest);
+          _addTeammates(selected, availableSlots);
         },
       ),
     );
   }
 
-  Future<void> _addGuest(EventGuest guest) async {
+  Future<void> _addTeammates(
+      List<EventGuest> selected, int availableSlots) async {
     if (_loading) return;
+    // Client-side guard (slots may have been taken since picker opened).
+    final currentAvailable =
+        widget.queue.playersPerRound - widget.entries.length;
+    if (selected.length > currentAvailable) {
+      await _redirectOrShowFull(selected);
+      return;
+    }
     setState(() => _loading = true);
     try {
-      await context.read<EventProvider>().addMemberToQueue(
+      await context.read<EventProvider>().addMultipleMembersToQueue(
             widget.queue.id,
             widget.event.id,
             widget.session.id,
-            userId: guest.userId,
-            displayName: guest.displayName,
-            avatarUrl: guest.avatarUrl,
+            selected,
           );
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString();
-      final l10n = AppLocalizations.of(context);
-      final text = msg.contains('already_in_queue')
-          ? l10n.alreadyInQueue
-          : msg.contains('queue_full')
-              ? l10n.queueFull
-              : 'Could not add: $e';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(text)));
+      if (e.toString().contains('queue_full')) {
+        await _redirectOrShowFull(selected);
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not add: $e')));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// When this queue is full, find the first alternative queue with enough
+  /// empty spots and auto-add there. Shows a fun snackbar on success, or
+  /// the 🫠 dialog if every queue is also packed.
+  Future<void> _redirectOrShowFull(List<EventGuest> selected) async {
+    final provider = context.read<EventProvider>();
+    final queues = provider.queuesFor(widget.session.id);
+
+    SessionQueueActivity? target;
+    int targetNumber = 0;
+    for (var i = 0; i < queues.length; i++) {
+      final q = queues[i];
+      if (q.id == widget.queue.id) continue;
+      final available =
+          q.playersPerRound - provider.entriesFor(q.id).length;
+      if (available >= selected.length) {
+        target = q;
+        targetNumber = i + 1;
+        break;
+      }
+    }
+
+    if (target == null) {
+      _showQueueFullDialog(racedOut: true);
+      return;
+    }
+
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await provider.addMultipleMembersToQueue(
+          target.id, widget.event.id, widget.session.id, selected);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Text('🚀', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Queue was full — jumped to Queue #$targetNumber instead!',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF7C3AED),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (_) {
+      if (mounted) _showQueueFullDialog(racedOut: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _showQueueFullDialog({required bool racedOut}) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF97316), Color(0xFFEF4444)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFF97316).withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Text('🫠', style: TextStyle(fontSize: 38)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                racedOut ? 'Somebody Snatched the Spots!' : 'Queue\'s Full!',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                racedOut
+                    ? 'Someone jumped in just before you 😅 Try a different queue or wait for a spot to open up!'
+                    : 'No empty spots left in this queue. Try another one! 🏃',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              AppTappable(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFF97316), Color(0xFFEA580C)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFF97316).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Got It! 👍',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Leave-slot confirmation dialog ──────────────────────────────────────────
@@ -12161,6 +12388,124 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _showUserProfileSheet(SessionQueueEntry entry) {
+    final friends = context.read<FriendsProvider>();
+    final userId = entry.userId!;
+    final isFriend = friends.accepted.any(
+      (f) => f.requesterId == userId || f.addresseeId == userId,
+    );
+    final requestSent = friends.outgoingRequests.any(
+      (f) => f.addresseeId == userId,
+    );
+    final requestReceived = friends.incomingRequests.any(
+      (f) => f.requesterId == userId,
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _AvatarCircle(
+                avatarUrl: entry.avatarUrl,
+                displayName: entry.displayName,
+                size: 80,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                entry.displayName,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (isFriend)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('👋', style: TextStyle(fontSize: 20)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Already friends!',
+                        style: TextStyle(
+                          color: Colors.teal,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (requestSent)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('⏳', style: TextStyle(fontSize: 20)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Friend request sent',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (requestReceived)
+                _StatefulAddFriendButton(
+                  label: 'Accept Friend Request 🤝',
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await context.read<FriendsProvider>().sendRequest(userId);
+                  },
+                )
+              else
+                _StatefulAddFriendButton(
+                  label: 'Add Friend 🤝',
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await context.read<FriendsProvider>().sendRequest(userId);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _showQueueActionsSheet() async {
@@ -12483,38 +12828,49 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          // Queue number + optional PLAYING badge
-          SizedBox(
-            width: 44,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '#${widget.displayNumber}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isPlaying ? Colors.teal : colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (isPlaying) ...[
-                  const SizedBox(height: 2),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.teal,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      '▶',
-                      style: TextStyle(fontSize: 7, color: Colors.white),
+          // Queue number + drag handle (tap → actions, long-press → reorder)
+          GestureDetector(
+            onTap: _showQueueActionsSheet,
+            child: ReorderableDelayedDragStartListener(
+            index: widget.dragIndex,
+            child: SizedBox(
+              width: 44,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '#${widget.displayNumber}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isPlaying ? Colors.teal : colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (isPlaying) ...[
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.teal,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        '▶',
+                        style: TextStyle(fontSize: 7, color: Colors.white),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 2),
+                    Icon(Icons.drag_handle_rounded,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                  ],
                 ],
-              ],
-            ),
-          ),
+              ),       // Column
+            ),         // SizedBox
+            ),         // ReorderableDelayedDragStartListener
+          ),           // GestureDetector
           const SizedBox(width: 8),
           // Spot circles — single scrollable row, never wraps
           Expanded(
@@ -12540,6 +12896,12 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                               !_loading
                           ? () => _showKickDialog(entry)
                           : null,
+                      onViewProfile: entry != null &&
+                              entry.userId != null &&
+                              entry.userId != widget.authUid &&
+                              !widget.isOrganizer
+                          ? () => _showUserProfileSheet(entry)
+                          : null,
                     ),
                   );
                 }),
@@ -12562,28 +12924,30 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
           // ── Shimmer sweep (looping while playing) ──────────────────────
           if (isPlaying && _shimmerCtrl != null)
             Positioned.fill(
-              child: RepaintBoundary(
-                child: AnimatedBuilder(
-                  animation: _shimmerCtrl!,
-                  builder: (_, _) {
-                    final x = -3.5 + 7.0 * _shimmerCtrl!.value;
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment(x - 0.7, -0.4),
-                            end: Alignment(x + 0.7, 0.4),
-                            colors: [
-                              Colors.transparent,
-                              Colors.white.withValues(alpha: 0.18),
-                              Colors.transparent,
-                            ],
+              child: IgnorePointer(
+                child: RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _shimmerCtrl!,
+                    builder: (_, _) {
+                      final x = -3.5 + 7.0 * _shimmerCtrl!.value;
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment(x - 0.7, -0.4),
+                              end: Alignment(x + 0.7, 0.4),
+                              colors: [
+                                Colors.transparent,
+                                Colors.white.withValues(alpha: 0.18),
+                                Colors.transparent,
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -12591,14 +12955,16 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
           // ── Flash overlay (one-shot on toggle) ─────────────────────────
           if (_switchCtrl != null)
             Positioned.fill(
-              child: RepaintBoundary(
-                child: AnimatedBuilder(
-                  animation: _switchCtrl!,
-                  builder: (_, _) => ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: ColoredBox(
-                      color: Colors.teal
-                          .withValues(alpha: _switchFlash?.value ?? 0.0),
+              child: IgnorePointer(
+                child: RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _switchCtrl!,
+                    builder: (_, _) => ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: ColoredBox(
+                        color: Colors.teal
+                            .withValues(alpha: _switchFlash?.value ?? 0.0),
+                      ),
                     ),
                   ),
                 ),
@@ -12620,6 +12986,7 @@ class _SpotCircle extends StatelessWidget {
   final VoidCallback? onClaim;
   final VoidCallback? onLeave;
   final VoidCallback? onKick;
+  final VoidCallback? onViewProfile;
 
   const _SpotCircle({
     required this.entry,
@@ -12628,6 +12995,7 @@ class _SpotCircle extends StatelessWidget {
     required this.onClaim,
     required this.onLeave,
     this.onKick,
+    this.onViewProfile,
   });
 
   static const double _size = 44;
@@ -12666,13 +13034,18 @@ class _SpotCircle extends StatelessWidget {
         : isKickable
             ? 'Remove ${entry!.displayName} 👢'
             : entry!.displayName;
-    final effectiveTap = isSelf ? onLeave : (isKickable ? onKick : null);
+    final effectiveTap = isSelf
+        ? onLeave
+        : isKickable
+            ? onKick
+            : onViewProfile;
 
     return Tooltip(
       message: tooltipLabel,
       triggerMode: TooltipTriggerMode.longPress,
       preferBelow: false,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: effectiveTap,
         child: Stack(
           clipBehavior: Clip.none,
@@ -13248,14 +13621,24 @@ class _MemberPickerSheet extends StatefulWidget {
   final String title;
   final String searchHint;
   final List<EventGuest> candidates;
-  final void Function(EventGuest) onSelected;
+  /// Single-select mode callback (mutually exclusive with onMultiSelected).
+  final void Function(EventGuest)? onSelected;
+  /// Multi-select mode callback.
+  final void Function(List<EventGuest>)? onMultiSelected;
+  /// Max selections allowed in multi-select mode (= available slots).
+  final int maxSelect;
 
   const _MemberPickerSheet({
     required this.title,
     required this.searchHint,
     required this.candidates,
-    required this.onSelected,
-  });
+    this.onSelected,
+    this.onMultiSelected,
+    this.maxSelect = 1,
+  }) : assert(onSelected != null || onMultiSelected != null,
+            'Provide onSelected or onMultiSelected');
+
+  bool get isMulti => onMultiSelected != null;
 
   @override
   State<_MemberPickerSheet> createState() => _MemberPickerSheetState();
@@ -13263,6 +13646,7 @@ class _MemberPickerSheet extends StatefulWidget {
 
 class _MemberPickerSheetState extends State<_MemberPickerSheet> {
   String _query = '';
+  final Set<EventGuest> _selected = {};
 
   List<EventGuest> get _filtered => widget.candidates
       .where((g) =>
@@ -13270,9 +13654,20 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
           (g.email?.toLowerCase().contains(_query.toLowerCase()) ?? false))
       .toList();
 
+  void _toggle(EventGuest g) {
+    setState(() {
+      if (_selected.contains(g)) {
+        _selected.remove(g);
+      } else if (_selected.length < widget.maxSelect) {
+        _selected.add(g);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filtered;
+    final isMulti = widget.isMulti;
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -13291,10 +13686,27 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              widget.title,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (isMulti)
+                  Text(
+                    '${_selected.length} / ${widget.maxSelect}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _selected.isEmpty
+                          ? Colors.grey[400]
+                          : const Color(0xFFEA580C),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 10),
@@ -13327,41 +13739,180 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                     itemCount: filtered.length,
                     itemBuilder: (_, i) {
                       final g = filtered[i];
-                      return ListTile(
-                        leading: SupabaseAvatar(
-                          url: g.avatarUrl?.isNotEmpty == true
-                              ? g.avatarUrl
-                              : null,
-                          radius: 20,
-                          backgroundColor:
-                              AppTheme.primary.withValues(alpha: 0.12),
-                          fallback: Text(
-                            g.displayName.isNotEmpty
-                                ? g.displayName[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.primary),
+                      final isChecked = _selected.contains(g);
+                      final atMax = _selected.length >= widget.maxSelect;
+                      final dimmed = isMulti && atMax && !isChecked;
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: isMulti
+                            ? (dimmed ? null : () => _toggle(g))
+                            : () => widget.onSelected!(g),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeInOut,
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isChecked
+                                ? const Color(0xFF7C3AED).withValues(alpha: 0.09)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(14),
+                            border: isChecked
+                                ? Border.all(
+                                    color: const Color(0xFF7C3AED)
+                                        .withValues(alpha: 0.30),
+                                    width: 1.5,
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              // Avatar with selection ring + check badge
+                              Stack(
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: isChecked
+                                          ? Border.all(
+                                              color: const Color(0xFF7C3AED),
+                                              width: 2.5,
+                                            )
+                                          : null,
+                                    ),
+                                    child: SupabaseAvatar(
+                                      url: g.avatarUrl?.isNotEmpty == true
+                                          ? g.avatarUrl
+                                          : null,
+                                      radius: 20,
+                                      backgroundColor:
+                                          AppTheme.primary.withValues(alpha: 0.12),
+                                      fallback: Text(
+                                        g.displayName.isNotEmpty
+                                            ? g.displayName[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.primary),
+                                      ),
+                                    ),
+                                  ),
+                                  if (isChecked)
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF7C3AED),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_rounded,
+                                          size: 10,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              // Name + email
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      g.displayName,
+                                      style: TextStyle(
+                                        fontWeight: isChecked
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: dimmed ? Colors.grey[400] : null,
+                                      ),
+                                    ),
+                                    if (g.email != null)
+                                      Text(
+                                        g.email!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: dimmed
+                                              ? Colors.grey[300]
+                                              : Colors.grey[500],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              // No app account hint
+                              if (!isMulti && g.userId == null)
+                                Tooltip(
+                                  message: 'No app account',
+                                  child: Icon(Icons.person_off_outlined,
+                                      size: 16, color: Colors.grey[400]),
+                                ),
+                            ],
                           ),
                         ),
-                        title: Text(g.displayName),
-                        subtitle: g.email != null
-                            ? Text(g.email!,
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[500]))
-                            : null,
-                        trailing: g.userId == null
-                            ? Tooltip(
-                                message: 'No app account',
-                                child: Icon(Icons.person_off_outlined,
-                                    size: 16, color: Colors.grey[400]),
-                              )
-                            : null,
-                        onTap: () => widget.onSelected(g),
                       );
                     },
                   ),
           ),
+          // Multi-select confirm button
+          if (isMulti)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                  16, 8, 16, MediaQuery.of(context).padding.bottom + 12),
+              child: AppTappable(
+                onTap: _selected.isEmpty
+                    ? null
+                    : () => widget.onMultiSelected!(_selected.toList()),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: _selected.isEmpty
+                        ? LinearGradient(
+                            colors: [Colors.grey[300]!, Colors.grey[300]!])
+                        : const LinearGradient(
+                            colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: _selected.isEmpty
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: const Color(0xFFF97316)
+                                  .withValues(alpha: 0.40),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _selected.isEmpty
+                          ? 'Select teammates'
+                          : 'Add ${_selected.length} Teammate${_selected.length == 1 ? '' : 's'} 👥',
+                      style: TextStyle(
+                        color: _selected.isEmpty
+                            ? Colors.grey[500]
+                            : Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
