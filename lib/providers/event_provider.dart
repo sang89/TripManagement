@@ -1000,6 +1000,7 @@ class EventProvider extends ChangeNotifier {
                 'requires_approval': row.containsKey('requires_approval') ? row['requires_approval'] : s.requiresApproval,
                 'is_active': row.containsKey('is_active') ? row['is_active'] : s.isActive,
                 'is_active_override': row.containsKey('is_active_override') ? row['is_active_override'] : s.isActiveOverride,
+                'notes': row.containsKey('notes') ? row['notes'] : s.notes,
               }),
             );
             notifyListeners();
@@ -1622,7 +1623,7 @@ class EventProvider extends ChangeNotifier {
     final rows = await _db
         .from('event_sessions')
         .select(
-            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override')
+            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override,notes')
         .eq('event_id', eventId)
         .gte('start_at', now)
         .order('start_at', ascending: true)
@@ -1645,7 +1646,7 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override,notes')
           .eq('event_id', eventId)
           .lt('start_at', now)
           .order('start_at', ascending: false) // most recent first
@@ -1673,7 +1674,7 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override,notes')
           .eq('event_id', eventId)
           .lt('start_at', cursor) // next batch of older past sessions
           .order('start_at', ascending: false)
@@ -1834,6 +1835,7 @@ class EventProvider extends ChangeNotifier {
     int? signupLockHours,
     bool isPublic = true,
     bool requiresApproval = false,
+    String? notes,
   }) async {
     final rows = await _db.rpc('add_event_session', params: {
       'p_event_id': eventId,
@@ -1844,6 +1846,7 @@ class EventProvider extends ChangeNotifier {
       'p_signup_lock_hours': signupLockHours,
       'p_is_public': isPublic,
       'p_requires_approval': requiresApproval,
+      'p_notes': notes,
     }) as List<dynamic>;
     if (rows.isEmpty) throw Exception('Failed to create session');
     final session = EventSession.fromJson(rows.first as Map<String, dynamic>);
@@ -1859,6 +1862,14 @@ class EventProvider extends ChangeNotifier {
     }
     notifyListeners();
     return session;
+  }
+
+  Future<void> updateSessionNotes(
+      String sessionId, String eventId, String? notes) async {
+    final value = (notes?.trim().isEmpty ?? true) ? null : notes!.trim();
+    await _db.from('event_sessions').update({'notes': value}).eq('id', sessionId);
+    _patchSessionInCache(eventId, sessionId, (s) => s.copyWithNotes(value));
+    notifyListeners();
   }
 
   // ── Roster mutations ────────────────────────────────────────────────────
