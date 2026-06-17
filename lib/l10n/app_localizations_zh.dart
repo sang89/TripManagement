@@ -1749,7 +1749,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaveSlotConfirm => '退出';
 
   @override
-  String get kickFromSlotTitle => '踢出去？👢';
+  String get kickFromSlotTitle => '踢出去？';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1757,7 +1757,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => '踢出！🦵';
+  String get kickFromSlotConfirm => '踢出！';
 
   @override
   String get allowDuplicates => '允许加入多个队列';

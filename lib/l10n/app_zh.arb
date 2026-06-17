@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "退出",
-  "kickFromSlotTitle": "踢出去？👢",
+  "kickFromSlotTitle": "踢出去？",
   "kickFromSlotMessage": "从队列#{number}中移除{name}？",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "踢出！🦵",
+  "kickFromSlotConfirm": "踢出！",
   "allowDuplicates": "允许加入多个队列",
   "allowDuplicatesSubtitle": "成员可以同时在多个队列中",
   "customizeQueues": "自定义队列"

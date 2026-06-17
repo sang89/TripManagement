@@ -1765,7 +1765,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get leaveSlotConfirm => 'انسحاب';
 
   @override
-  String get kickFromSlotTitle => 'طرده؟ 👢';
+  String get kickFromSlotTitle => 'طرده؟';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1773,7 +1773,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => 'طرد! 🦵';
+  String get kickFromSlotConfirm => 'طرد!';
 
   @override
   String get allowDuplicates => 'السماح بالانضمام لعدة طوابير';

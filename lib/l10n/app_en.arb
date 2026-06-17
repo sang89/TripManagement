@@ -975,7 +975,7 @@
     }
   },
   "leaveSlotConfirm": "Withdraw",
-  "kickFromSlotTitle": "Boot 'em? 👢",
+  "kickFromSlotTitle": "Boot 'em?",
   "kickFromSlotMessage": "Remove {name} from queue #{number}?",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -987,7 +987,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "Boot out! 🦵",
+  "kickFromSlotConfirm": "Boot out!",
   "allowDuplicates": "Allow joining multiple queues",
   "allowDuplicatesSubtitle": "Members can be in more than one queue at a time",
   "customizeQueues": "Customize queues"

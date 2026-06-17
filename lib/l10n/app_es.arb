@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "Retirar",
-  "kickFromSlotTitle": "¿Echarlo? 👢",
+  "kickFromSlotTitle": "¿Echarlo?",
   "kickFromSlotMessage": "¿Quitar a {name} de la cola #{number}?",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "¡Fuera! 🦵",
+  "kickFromSlotConfirm": "¡Fuera!",
   "allowDuplicates": "Permitir varias colas",
   "allowDuplicatesSubtitle": "Los miembros pueden estar en más de una cola a la vez",
   "customizeQueues": "Personalizar colas"

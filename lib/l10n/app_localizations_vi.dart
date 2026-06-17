@@ -1773,7 +1773,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get leaveSlotConfirm => 'Rút';
 
   @override
-  String get kickFromSlotTitle => 'Đuổi không? 👢';
+  String get kickFromSlotTitle => 'Đuổi không?';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1781,7 +1781,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => 'Đuổi! 🦵';
+  String get kickFromSlotConfirm => 'Đuổi!';
 
   @override
   String get allowDuplicates => 'Cho phép tham gia nhiều hàng đợi';

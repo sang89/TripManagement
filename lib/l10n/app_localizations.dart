@@ -3327,7 +3327,7 @@ abstract class AppLocalizations {
   /// No description provided for @kickFromSlotTitle.
   ///
   /// In en, this message translates to:
-  /// **'Boot \'em? 👢'**
+  /// **'Boot \'em?'**
   String get kickFromSlotTitle;
 
   /// No description provided for @kickFromSlotMessage.
@@ -3339,7 +3339,7 @@ abstract class AppLocalizations {
   /// No description provided for @kickFromSlotConfirm.
   ///
   /// In en, this message translates to:
-  /// **'Boot out! 🦵'**
+  /// **'Boot out!'**
   String get kickFromSlotConfirm;
 
   /// No description provided for @allowDuplicates.

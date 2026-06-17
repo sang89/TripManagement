@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "Se retirer",
-  "kickFromSlotTitle": "L'expulser ? 👢",
+  "kickFromSlotTitle": "L'expulser ?",
   "kickFromSlotMessage": "Retirer {name} de la file #{number} ?",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "Expulser ! 🦵",
+  "kickFromSlotConfirm": "Expulser !",
   "allowDuplicates": "Autoriser plusieurs files",
   "allowDuplicatesSubtitle": "Les membres peuvent être dans plusieurs files simultanément",
   "customizeQueues": "Personnaliser les files"

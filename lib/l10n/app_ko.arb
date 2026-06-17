@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "철수",
-  "kickFromSlotTitle": "내보낼까요? 👢",
+  "kickFromSlotTitle": "내보낼까요?",
   "kickFromSlotMessage": "대기열 #{number}에서 {name}을(를) 제거할까요?",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "내보내기! 🦵",
+  "kickFromSlotConfirm": "내보내기!",
   "allowDuplicates": "여러 대기열 참가 허용",
   "allowDuplicatesSubtitle": "멤버가 동시에 여러 대기열에 있을 수 있습니다",
   "customizeQueues": "대기열 커스터마이즈"

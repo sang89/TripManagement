@@ -1752,7 +1752,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get leaveSlotConfirm => '撤退';
 
   @override
-  String get kickFromSlotTitle => '追い出す？👢';
+  String get kickFromSlotTitle => '追い出す？';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1760,7 +1760,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => '追い出す！🦵';
+  String get kickFromSlotConfirm => '追い出す！';
 
   @override
   String get allowDuplicates => '複数のキューへの参加を許可';

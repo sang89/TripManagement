@@ -11328,6 +11328,7 @@ class _CustomizeQueuesCardState extends State<_CustomizeQueuesCard>
             ),
           ],
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -11626,8 +11627,80 @@ class _QueueSpotRow extends StatefulWidget {
   State<_QueueSpotRow> createState() => _QueueSpotRowState();
 }
 
-class _QueueSpotRowState extends State<_QueueSpotRow> {
+class _QueueSpotRowState extends State<_QueueSpotRow>
+    with TickerProviderStateMixin {
   bool _loading = false;
+
+  // Shimmer that sweeps left→right while in playing state.
+  AnimationController? _shimmerCtrl;
+  // One-shot bounce + flash when toggling playing on/off.
+  AnimationController? _switchCtrl;
+  Animation<double>? _switchScale;
+  Animation<double>? _switchFlash;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAnimations();
+  }
+
+  void _initAnimations() {
+    _shimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    );
+    _switchCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+    _switchScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 75,
+      ),
+    ]).animate(_switchCtrl!);
+    _switchFlash = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 0.38)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.38, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 75,
+      ),
+    ]).animate(_switchCtrl!);
+    if (widget.queue.isActive) _shimmerCtrl!.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_QueueSpotRow old) {
+    super.didUpdateWidget(old);
+    if (_shimmerCtrl == null) _initAnimations();
+    if (widget.queue.isActive != old.queue.isActive) {
+      _switchCtrl!.forward(from: 0.0);
+      if (widget.queue.isActive) {
+        _shimmerCtrl!.repeat();
+      } else {
+        _shimmerCtrl!.stop();
+        _shimmerCtrl!.value = 0;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmerCtrl?.dispose();
+    _switchCtrl?.dispose();
+    super.dispose();
+  }
 
   SessionQueueEntry? get _myEntry =>
       widget.entries.where((e) => e.userId == widget.authUid).firstOrNull;
@@ -11739,25 +11812,43 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
 
   void _showMemberPicker() {
     final l10n = AppLocalizations.of(context);
-    // App users already in this slot — keyed by userId.
-    final alreadyInSlot = widget.entries
+    final provider = context.read<EventProvider>();
+
+    // Always exclude anyone already in THIS queue's entries.
+    final inThisQueue = widget.entries
         .where((e) => e.userId != null)
         .map((e) => e.userId!)
         .toSet();
-    // Anonymous guests already in this slot — keyed by lowercase display name.
-    final alreadyInSlotNames = widget.entries
+    final inThisQueueNames = widget.entries
         .where((e) => e.userId == null)
         .map((e) => e.displayName.toLowerCase())
         .toSet();
+
+    // When duplicates are not allowed, also exclude anyone in any OTHER queue.
+    final Set<String> inAnyQueue = {};
+    final Set<String> inAnyQueueNames = {};
+    if (!widget.queue.allowDuplicates) {
+      for (final q in provider.queuesFor(widget.session.id)) {
+        for (final e in provider.entriesFor(q.id)) {
+          if (e.userId != null) {
+            inAnyQueue.add(e.userId!);
+          } else {
+            inAnyQueueNames.add(e.displayName.toLowerCase());
+          }
+        }
+      }
+    }
+
+    final excludedIds = inThisQueue.union(inAnyQueue);
+    final excludedNames = inThisQueueNames.union(inAnyQueueNames);
 
     final candidates = widget.event.guests
         .where((g) => !const {'left', 'declined'}.contains(g.status))
         .where((g) {
           if (g.userId != null) {
-            return !alreadyInSlot.contains(g.userId);
+            return !excludedIds.contains(g.userId);
           } else {
-            // Anonymous guest: exclude if same name already occupies a slot.
-            return !alreadyInSlotNames.contains(g.displayName.toLowerCase());
+            return !excludedNames.contains(g.displayName.toLowerCase());
           }
         })
         .toList();
@@ -11815,23 +11906,116 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
   Future<void> _showKickDialog(SessionQueueEntry entry) async {
     if (_loading) return;
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.kickFromSlotTitle),
-        content: Text(
-            l10n.kickFromSlotMessage(entry.displayName, widget.displayNumber)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Person's avatar — makes it personal
+              _AvatarCircle(
+                avatarUrl: entry.avatarUrl,
+                displayName: entry.displayName,
+                size: 80,
+              ),
+              const SizedBox(height: 12),
+              // Bold name in the message
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  children: [
+                    const TextSpan(text: 'Remove '),
+                    TextSpan(
+                      text: entry.displayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    TextSpan(text: ' from queue #${widget.displayNumber}?'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Pill-style action button
+              AppTappable(
+                onTap: () => Navigator.pop(ctx, true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 28, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.40),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('💨', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.kickFromSlotTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Cancel
+              AppTappable(
+                onTap: () => Navigator.pop(ctx, false),
+                child: Container(
+                  width: double.infinity,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Text(
+                      l10n.cancel,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.kickFromSlotConfirm,
-                style: const TextStyle(color: AppTheme.danger)),
-          ),
-        ],
+        ),
       ),
     );
     if (confirmed != true || !mounted) return;
@@ -11856,22 +12040,101 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
   Future<void> _showLeaveDialog() async {
     if (_loading) return;
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.leaveSlotTitle),
-        content: Text(l10n.leaveSlotMessage(widget.displayNumber)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: 64, height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text('🚪', style: TextStyle(fontSize: 32)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l10n.leaveSlotTitle,
+                style: const TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.leaveSlotMessage(widget.displayNumber),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              AppTappable(
+                onTap: () => Navigator.pop(ctx, true),
+                child: Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.orange[700],
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withValues(alpha: 0.30),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      l10n.leaveSlotConfirm,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              AppTappable(
+                onTap: () => Navigator.pop(ctx, false),
+                child: Container(
+                  width: double.infinity,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Text(
+                      l10n.cancel,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.leaveSlotConfirm,
-                style: const TextStyle(color: AppTheme.danger)),
-          ),
-        ],
+        ),
       ),
     );
     if (confirmed != true || !mounted) return;
@@ -11894,6 +12157,275 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Could not leave: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _showQueueActionsSheet() async {
+    if (_loading) return;
+    final provider = context.read<EventProvider>();
+    final canMove = widget.entries.isNotEmpty &&
+        provider.canMoveQueuePastEmpty(widget.queue.id, widget.session.id);
+    final isPlaying = widget.queue.isActive;
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 42, height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text('🎮', style: TextStyle(fontSize: 20)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Queue #${widget.displayNumber}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        '${widget.entries.length} player${widget.entries.length == 1 ? '' : 's'}',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // ── (1) Playing Now toggle ───────────────────────────────────
+              AppTappable(
+                onTap: () => Navigator.pop(ctx, 'toggle'),
+                child: Container(
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isPlaying
+                          ? [const Color(0xFF6B7280), const Color(0xFF4B5563)]
+                          : [const Color(0xFF0D9488), const Color(0xFF0F766E)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isPlaying ? Colors.grey : Colors.teal)
+                            .withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(isPlaying ? '😴' : '🔥',
+                            style: const TextStyle(fontSize: 20)),
+                        const SizedBox(width: 8),
+                        Text(
+                          isPlaying ? 'Back to Waiting' : 'Game On!',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── (2) Just Played → Back in Line ──────────────────────────
+              if (canMove) ...[
+                const SizedBox(height: 10),
+                AppTappable(
+                  onTap: () => Navigator.pop(ctx, 'move'),
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('🔄', style: TextStyle(fontSize: 20)),
+                          SizedBox(width: 8),
+                          Text(
+                            'Just Played! Back in Line',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              // ── (3) Evict All ────────────────────────────────────────────
+              if (widget.entries.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                AppTappable(
+                  onTap: () => Navigator.pop(ctx, 'evict'),
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF6B6B), Color(0xFFDC2626)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('💨', style: TextStyle(fontSize: 20)),
+                          SizedBox(width: 8),
+                          Text(
+                            'Evict All',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              // ── Cancel ──────────────────────────────────────────────────
+              const SizedBox(height: 10),
+              AppTappable(
+                onTap: () => Navigator.pop(ctx, null),
+                child: Container(
+                  width: double.infinity,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Never mind',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (action == 'toggle') {
+      await _toggleInProgress();
+    } else if (action == 'move') {
+      await _moveToEnd();
+    } else if (action == 'evict') {
+      await _clearQueue();
+    }
+  }
+
+  Future<void> _toggleInProgress() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final newStatus = widget.queue.isActive ? 'waiting' : 'active';
+      await context.read<EventProvider>().setQueueStatus(
+            widget.queue.id, widget.session.id, newStatus);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not update status: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _moveToEnd() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().moveQueuePastFirstEmpty(
+            widget.queue.id,
+            widget.session.id,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not move queue: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -11924,25 +12456,63 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
     final spots = widget.queue.playersPerRound;
     final entries = widget.entries;
     final colorScheme = Theme.of(context).colorScheme;
+    final isPlaying = widget.queue.isActive;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    return GestureDetector(
+      onTap: _showQueueActionsSheet,
+      child: ScaleTransition(
+      scale: _switchScale ?? const AlwaysStoppedAnimation(1.0),
+      child: Stack(
+        children: [
+          // ── Base card (static, no per-frame rebuild) ────────────────────
+          AnimatedContainer(
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isPlaying
+                ? Colors.teal.withValues(alpha: 0.10)
+                : colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(14),
+            border: isPlaying
+                ? Border.all(
+                    color: Colors.teal.withValues(alpha: 0.55),
+                    width: 1.5,
+                  )
+                : null,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          // Queue number
+          // Queue number + optional PLAYING badge
           SizedBox(
-            width: 28,
-            child: Text(
-              '#${widget.displayNumber}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onSurfaceVariant,
-              ),
+            width: 44,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '#${widget.displayNumber}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isPlaying ? Colors.teal : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (isPlaying) ...[
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.teal,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      '▶',
+                      style: TextStyle(fontSize: 7, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -11950,6 +12520,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 4),
               child: Row(
                 children: List.generate(spots, (i) {
                   final entry = i < entries.length ? entries[i] : null;
@@ -11975,31 +12546,68 @@ class _QueueSpotRowState extends State<_QueueSpotRow> {
               ),
             ),
           ),
-          // Clear button (organizer only)
-          if (widget.isOrganizer) ...[
-            const SizedBox(width: 8),
-            if (_loading)
-              const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
-              Tooltip(
-                message: AppLocalizations.of(context).clearQueue,
-                child: IconButton(
-                  icon: const Icon(Icons.playlist_remove_rounded),
-                  iconSize: 22,
-                  color: Colors.red.shade300,
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
-                  onPressed: entries.isNotEmpty ? _clearQueue : null,
-                ),
-              ),
+          // Loading indicator
+          if (_loading) ...[
+            const SizedBox(width: 12),
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           ],
         ],
       ),
-    );
+          ), // AnimatedContainer (base card)
+
+          // ── Shimmer sweep (looping while playing) ──────────────────────
+          if (isPlaying && _shimmerCtrl != null)
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _shimmerCtrl!,
+                  builder: (_, _) {
+                    final x = -3.5 + 7.0 * _shimmerCtrl!.value;
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment(x - 0.7, -0.4),
+                            end: Alignment(x + 0.7, 0.4),
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withValues(alpha: 0.18),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+          // ── Flash overlay (one-shot on toggle) ─────────────────────────
+          if (_switchCtrl != null)
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _switchCtrl!,
+                  builder: (_, _) => ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: ColoredBox(
+                      color: Colors.teal
+                          .withValues(alpha: _switchFlash?.value ?? 0.0),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ), // Stack
+      ), // ScaleTransition
+    ); // GestureDetector
   }
 }
 
@@ -12100,23 +12708,6 @@ class _SpotCircle extends StatelessWidget {
                 labelOverride: isSelf ? 'You' : null,
               ),
             ),
-            // Kick badge — small red × in the top-right corner for organizers
-            if (isKickable)
-              Positioned(
-                top: -2,
-                right: -2,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: AppTheme.danger,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: const Icon(Icons.close_rounded,
-                      size: 10, color: Colors.white),
-                ),
-              ),
           ],
         ),
       ),

@@ -1769,7 +1769,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaveSlotConfirm => 'Withdraw';
 
   @override
-  String get kickFromSlotTitle => 'Boot \'em? 👢';
+  String get kickFromSlotTitle => 'Boot \'em?';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1777,7 +1777,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => 'Boot out! 🦵';
+  String get kickFromSlotConfirm => 'Boot out!';
 
   @override
   String get allowDuplicates => 'Allow joining multiple queues';

@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "Rút",
-  "kickFromSlotTitle": "Đuổi không? 👢",
+  "kickFromSlotTitle": "Đuổi không?",
   "kickFromSlotMessage": "Xóa {name} khỏi hàng đợi #{number}?",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "Đuổi! 🦵",
+  "kickFromSlotConfirm": "Đuổi!",
   "allowDuplicates": "Cho phép tham gia nhiều hàng đợi",
   "allowDuplicatesSubtitle": "Thành viên có thể ở nhiều hàng đợi cùng lúc",
   "customizeQueues": "Tùy chỉnh hàng đợi"

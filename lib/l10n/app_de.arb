@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "Aufgeben",
-  "kickFromSlotTitle": "Rausschmeißen? 👢",
+  "kickFromSlotTitle": "Rausschmeißen?",
   "kickFromSlotMessage": "{name} aus Warteschlange #{number} entfernen?",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "Raus damit! 🦵",
+  "kickFromSlotConfirm": "Raus damit!",
   "allowDuplicates": "Mehrere Warteschlangen erlauben",
   "allowDuplicatesSubtitle": "Mitglieder können in mehreren Warteschlangen gleichzeitig sein",
   "customizeQueues": "Warteschlangen anpassen"
