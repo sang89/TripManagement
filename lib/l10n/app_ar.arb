@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "الرجاء اختيار نوع الحدث",
   "notifications": "الإشعارات",
   "notificationsEmpty": "لقد اطلعت على كل شيء!",
-  "notificationsMarkAllRead": "تحديد الكل كمقروء"
+  "notificationsMarkAllRead": "تحديد الكل كمقروء",
+  "sessionActivityTab": "النشاط",
+  "queueUp": "طابور",
+  "createQueue": "إنشاء طابور",
+  "playersPerRound": "لاعبون لكل جولة",
+  "maxRounds": "الحد الأقصى للجولات",
+  "noLimit": "بلا حد",
+  "checkIn": "تسجيل الحضور",
+  "checkOut": "المغادرة",
+  "joinQueue": "الانضمام للطابور",
+  "leaveQueue": "مغادرة الطابور",
+  "startQueue": "بدء",
+  "nextRound": "الجولة التالية",
+  "roundN": "الجولة {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "الجميع يعود للطابور",
+  "releaseToFreePool": "الإفراج إلى المجموعة",
+  "freePool": "المجموعة الحرة",
+  "nowPlaying": "يلعب الآن",
+  "waitingQueue": "في الانتظار",
+  "queueEnded": "انتهى الطابور",
+  "noQueuesYet": "لا أنشطة بعد",
+  "createFirstQueue": "أنشئ الطابور الأول للبدء",
+  "queueRoundComplete": "اكتملت الجولة {n}!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "إعداد الطوابير",
+  "numberOfQueues": "عدد الطوابير",
+  "spotsPerQueue": "أماكن لكل طابور",
+  "clearQueue": "مسح",
+  "queueFull": "الطابور ممتلئ",
+  "alreadyInQueue": "أنت بالفعل في طابور",
+  "addToSlot": "احجز مكانك!",
+  "addMyselfToQueue": "أنا مشارك!",
+  "addSomeoneElse": "أضف زميلاً",
+  "selectAMember": "اختر عضوًا",
+  "searchMembersHint": "ابحث عن أعضاء…",
+  "leaveSlotTitle": "مغادرة المكان؟",
+  "leaveSlotMessage": "الانسحاب من مكانك في الطابور #{number}؟",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "انسحاب",
+  "kickFromSlotTitle": "طرده؟ 👢",
+  "kickFromSlotMessage": "إزالة {name} من الطابور #{number}؟",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "طرد! 🦵",
+  "allowDuplicates": "السماح بالانضمام لعدة طوابير",
+  "allowDuplicatesSubtitle": "يمكن للأعضاء التواجد في أكثر من طابور في نفس الوقت",
+  "customizeQueues": "تخصيص الطوابير"
 }

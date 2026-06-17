@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/event_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../widgets/supabase_image.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
@@ -656,17 +657,15 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final url = avatarUrl.isNotEmpty ? avatarUrl : null;
-    return CircleAvatar(
+    return SupabaseAvatar(
+      url: url,
       radius: 24,
       backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-      foregroundImage: url != null ? NetworkImage(url) : null,
-      child: url == null
-          ? Text(
-              initials,
-              style: TextStyle(
-                  fontWeight: FontWeight.w600, color: AppTheme.primary),
-            )
-          : null,
+      fallback: Text(
+        initials,
+        style: const TextStyle(
+            fontWeight: FontWeight.w600, color: AppTheme.primary),
+      ),
     );
   }
 }

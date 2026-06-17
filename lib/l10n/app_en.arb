@@ -571,14 +571,20 @@
   "signupSpotsFilled": "{filled} / {total} spots filled",
   "@signupSpotsFilled": {
     "placeholders": {
-      "filled": {"type": "int"},
-      "total": {"type": "int"}
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "signupWaitlistCount": "{count} on the waitlist",
   "@signupWaitlistCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "signupEventFull": "Event full",
@@ -587,13 +593,17 @@
   "signupConfirmedPosition": "You're #{pos} on the list!",
   "@signupConfirmedPosition": {
     "placeholders": {
-      "pos": {"type": "int"}
+      "pos": {
+        "type": "int"
+      }
     }
   },
   "signupWaitlistPosition": "You're #{pos} on the waitlist",
   "@signupWaitlistPosition": {
     "placeholders": {
-      "pos": {"type": "int"}
+      "pos": {
+        "type": "int"
+      }
     }
   },
   "signupWaitlistEnabled": "Enable waitlist",
@@ -622,7 +632,9 @@
   "signupPartOfSeries": "Part of a {interval} series",
   "@signupPartOfSeries": {
     "placeholders": {
-      "interval": {"type": "String"}
+      "interval": {
+        "type": "String"
+      }
     }
   },
   "chooseEventType": "What are you planning?",
@@ -905,5 +917,78 @@
   "pleaseSelectEventType": "Please select an event type",
   "notifications": "Notifications",
   "notificationsEmpty": "You're all caught up!",
-  "notificationsMarkAllRead": "Mark all read"
+  "notificationsMarkAllRead": "Mark all read",
+  "sessionActivityTab": "Activity",
+  "queueUp": "Queue Up",
+  "createQueue": "Create Queue",
+  "playersPerRound": "Players per round",
+  "maxRounds": "Max rounds",
+  "noLimit": "No limit",
+  "checkIn": "Check In",
+  "checkOut": "Check Out",
+  "joinQueue": "Join Queue",
+  "leaveQueue": "Leave Queue",
+  "startQueue": "Start",
+  "nextRound": "Next Round",
+  "roundN": "Round {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "All Rejoin Queue",
+  "releaseToFreePool": "Release to Free Pool",
+  "freePool": "Free Pool",
+  "nowPlaying": "Now Playing",
+  "waitingQueue": "Waiting",
+  "queueEnded": "Queue Ended",
+  "noQueuesYet": "No activities yet",
+  "createFirstQueue": "Create the first queue to get started",
+  "queueRoundComplete": "Round {n} complete!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "Set Up Queues",
+  "numberOfQueues": "Number of queues",
+  "spotsPerQueue": "Spots per queue",
+  "clearQueue": "Clear",
+  "queueFull": "Queue is full",
+  "alreadyInQueue": "You're already in a queue",
+  "addToSlot": "Grab a spot!",
+  "addMyselfToQueue": "I'm in!",
+  "addSomeoneElse": "Add a teammate",
+  "selectAMember": "Select a member",
+  "searchMembersHint": "Search members…",
+  "leaveSlotTitle": "Leave slot?",
+  "leaveSlotMessage": "Withdraw from your spot in queue #{number}?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "Withdraw",
+  "kickFromSlotTitle": "Boot 'em? 👢",
+  "kickFromSlotMessage": "Remove {name} from queue #{number}?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "Boot out! 🦵",
+  "allowDuplicates": "Allow joining multiple queues",
+  "allowDuplicatesSubtitle": "Members can be in more than one queue at a time",
+  "customizeQueues": "Customize queues"
 }

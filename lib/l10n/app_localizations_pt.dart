@@ -1662,4 +1662,139 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Marcar tudo como lido';
+
+  @override
+  String get sessionActivityTab => 'Atividade';
+
+  @override
+  String get queueUp => 'Fila';
+
+  @override
+  String get createQueue => 'Criar fila';
+
+  @override
+  String get playersPerRound => 'Jogadores por rodada';
+
+  @override
+  String get maxRounds => 'Máximo de rodadas';
+
+  @override
+  String get noLimit => 'Sem limite';
+
+  @override
+  String get checkIn => 'Fazer check-in';
+
+  @override
+  String get checkOut => 'Fazer check-out';
+
+  @override
+  String get joinQueue => 'Entrar na fila';
+
+  @override
+  String get leaveQueue => 'Sair da fila';
+
+  @override
+  String get startQueue => 'Iniciar';
+
+  @override
+  String get nextRound => 'Próxima rodada';
+
+  @override
+  String roundN(int n) {
+    return 'Rodada $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'Todos voltam para a fila';
+
+  @override
+  String get releaseToFreePool => 'Liberar para o pool';
+
+  @override
+  String get freePool => 'Pool livre';
+
+  @override
+  String get nowPlaying => 'Jogando agora';
+
+  @override
+  String get waitingQueue => 'Aguardando';
+
+  @override
+  String get queueEnded => 'Fila encerrada';
+
+  @override
+  String get noQueuesYet => 'Nenhuma atividade ainda';
+
+  @override
+  String get createFirstQueue => 'Crie a primeira fila para começar';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'Rodada $n concluída!';
+  }
+
+  @override
+  String get setupQueues => 'Configurar filas';
+
+  @override
+  String get numberOfQueues => 'Número de filas';
+
+  @override
+  String get spotsPerQueue => 'Lugares por fila';
+
+  @override
+  String get clearQueue => 'Limpar';
+
+  @override
+  String get queueFull => 'Fila cheia';
+
+  @override
+  String get alreadyInQueue => 'Você já está em uma fila';
+
+  @override
+  String get addToSlot => 'Garanta um lugar!';
+
+  @override
+  String get addMyselfToQueue => 'Estou dentro!';
+
+  @override
+  String get addSomeoneElse => 'Adicionar parceiro';
+
+  @override
+  String get selectAMember => 'Selecionar um membro';
+
+  @override
+  String get searchMembersHint => 'Pesquisar membros…';
+
+  @override
+  String get leaveSlotTitle => 'Sair do lugar?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'Retirar-se do lugar na fila #$number?';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'Retirar';
+
+  @override
+  String get kickFromSlotTitle => 'Expulsar? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return 'Remover $name da fila #$number?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => 'Expulsar! 🦵';
+
+  @override
+  String get allowDuplicates => 'Permitir múltiplas filas';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'Membros podem estar em mais de uma fila ao mesmo tempo';
+
+  @override
+  String get customizeQueues => 'Personalizar filas';
 }

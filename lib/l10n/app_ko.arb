@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "이벤트 유형을 선택해 주세요",
   "notifications": "알림",
   "notificationsEmpty": "모두 확인했습니다!",
-  "notificationsMarkAllRead": "모두 읽음으로 표시"
+  "notificationsMarkAllRead": "모두 읽음으로 표시",
+  "sessionActivityTab": "활동",
+  "queueUp": "대기열",
+  "createQueue": "대기열 만들기",
+  "playersPerRound": "라운드당 플레이어",
+  "maxRounds": "최대 라운드",
+  "noLimit": "제한 없음",
+  "checkIn": "체크인",
+  "checkOut": "체크아웃",
+  "joinQueue": "대기열 참가",
+  "leaveQueue": "대기열 나가기",
+  "startQueue": "시작",
+  "nextRound": "다음 라운드",
+  "roundN": "라운드 {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "모두 대기열로 복귀",
+  "releaseToFreePool": "자유 풀로 해제",
+  "freePool": "자유 풀",
+  "nowPlaying": "현재 플레이 중",
+  "waitingQueue": "대기 중",
+  "queueEnded": "대기열 종료",
+  "noQueuesYet": "아직 활동이 없습니다",
+  "createFirstQueue": "첫 번째 대기열을 만들어 시작하세요",
+  "queueRoundComplete": "라운드 {n} 완료!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "대기열 설정",
+  "numberOfQueues": "대기열 수",
+  "spotsPerQueue": "대기열당 자리 수",
+  "clearQueue": "지우기",
+  "queueFull": "대기열이 꽉 찼습니다",
+  "alreadyInQueue": "이미 대기열에 있습니다",
+  "addToSlot": "자리 잡아요!",
+  "addMyselfToQueue": "나 참가!",
+  "addSomeoneElse": "",
+  "selectAMember": "멤버 선택",
+  "searchMembersHint": "멤버 검색…",
+  "leaveSlotTitle": "슬롯 나가기?",
+  "leaveSlotMessage": "대기열 #{number}의 자리에서 철수하시겠습니까?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "철수",
+  "kickFromSlotTitle": "내보낼까요? 👢",
+  "kickFromSlotMessage": "대기열 #{number}에서 {name}을(를) 제거할까요?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "내보내기! 🦵",
+  "allowDuplicates": "여러 대기열 참가 허용",
+  "allowDuplicatesSubtitle": "멤버가 동시에 여러 대기열에 있을 수 있습니다",
+  "customizeQueues": "대기열 커스터마이즈"
 }

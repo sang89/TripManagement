@@ -1633,4 +1633,138 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => '全部标为已读';
+
+  @override
+  String get sessionActivityTab => '活动';
+
+  @override
+  String get queueUp => '排队';
+
+  @override
+  String get createQueue => '创建队列';
+
+  @override
+  String get playersPerRound => '每轮人数';
+
+  @override
+  String get maxRounds => '最大轮次';
+
+  @override
+  String get noLimit => '不限';
+
+  @override
+  String get checkIn => '签到';
+
+  @override
+  String get checkOut => '退出';
+
+  @override
+  String get joinQueue => '加入队列';
+
+  @override
+  String get leaveQueue => '离开队列';
+
+  @override
+  String get startQueue => '开始';
+
+  @override
+  String get nextRound => '下一轮';
+
+  @override
+  String roundN(int n) {
+    return '第 $n 轮';
+  }
+
+  @override
+  String get allRejoinQueue => '全部重新排队';
+
+  @override
+  String get releaseToFreePool => '释放到自由池';
+
+  @override
+  String get freePool => '自由池';
+
+  @override
+  String get nowPlaying => '正在进行';
+
+  @override
+  String get waitingQueue => '等待中';
+
+  @override
+  String get queueEnded => '队列已结束';
+
+  @override
+  String get noQueuesYet => '暂无活动';
+
+  @override
+  String get createFirstQueue => '创建第一个队列开始吧';
+
+  @override
+  String queueRoundComplete(int n) {
+    return '第 $n 轮完成！';
+  }
+
+  @override
+  String get setupQueues => '设置队列';
+
+  @override
+  String get numberOfQueues => '队列数量';
+
+  @override
+  String get spotsPerQueue => '每队名额';
+
+  @override
+  String get clearQueue => '清除';
+
+  @override
+  String get queueFull => '队列已满';
+
+  @override
+  String get alreadyInQueue => '您已在队列中';
+
+  @override
+  String get addToSlot => '抢个位置！';
+
+  @override
+  String get addMyselfToQueue => '';
+
+  @override
+  String get addSomeoneElse => '';
+
+  @override
+  String get selectAMember => '选择成员';
+
+  @override
+  String get searchMembersHint => '搜索成员…';
+
+  @override
+  String get leaveSlotTitle => '离开位置？';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return '从队列#$number的位置退出？';
+  }
+
+  @override
+  String get leaveSlotConfirm => '退出';
+
+  @override
+  String get kickFromSlotTitle => '踢出去？👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return '从队列#$number中移除$name？';
+  }
+
+  @override
+  String get kickFromSlotConfirm => '踢出！🦵';
+
+  @override
+  String get allowDuplicates => '允许加入多个队列';
+
+  @override
+  String get allowDuplicatesSubtitle => '成员可以同时在多个队列中';
+
+  @override
+  String get customizeQueues => '自定义队列';
 }

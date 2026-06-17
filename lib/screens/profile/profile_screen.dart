@@ -14,6 +14,7 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../utils/avatar_utils.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/supabase_image.dart';
 import '../notifications/notifications_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _editing = false;
   bool _saving = false;
   bool _uploading = false;
+  int _avatarVersion = 0;
 
   late final TextEditingController _nameCtrl;
   String _phone = '';
@@ -87,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _pickImage(ImageSource.camera);
                 },
               ),
-            if (profile.avatarUrl.isNotEmpty)
+            if (profile.displayAvatarUrl?.isNotEmpty == true)
               ListTile(
                 leading:
                     const Icon(Icons.delete_outline, color: AppTheme.danger),
@@ -118,7 +120,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final error =
         await context.read<UserProfileProvider>().uploadAvatar(image);
     if (!mounted) return;
-    setState(() => _uploading = false);
+    setState(() {
+      _uploading = false;
+      if (error == null) _avatarVersion++;
+    });
 
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +145,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _uploading = true);
     final error = await context.read<UserProfileProvider>().removeAvatar();
     if (!mounted) return;
-    setState(() => _uploading = false);
+    setState(() {
+      _uploading = false;
+      if (error == null) _avatarVersion++;
+    });
 
     if (error != null) {
       final l10n = AppLocalizations.of(context);
@@ -348,8 +356,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _ProfileHeader(
                     displayName: displayName,
                     email: auth.userEmail,
-                    avatarUrl: profile.avatarUrl,
-                    updatedAt: profile.updatedAt,
+                    avatarUrl: profile.displayAvatarUrl,
+                    avatarVersion: _avatarVersion,
                     uploading: _uploading,
                     isPro: sub.isPro,
                     isInTrial: sub.isInTrial,
@@ -465,8 +473,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _ProfileHeader extends StatelessWidget {
   final String displayName;
   final String email;
-  final String avatarUrl;
-  final DateTime updatedAt;
+  final String? avatarUrl;
+  final int avatarVersion;
   final bool uploading;
   final bool isPro;
   final bool isInTrial;
@@ -477,7 +485,7 @@ class _ProfileHeader extends StatelessWidget {
     required this.displayName,
     required this.email,
     required this.avatarUrl,
-    required this.updatedAt,
+    required this.avatarVersion,
     required this.uploading,
     required this.isPro,
     required this.isInTrial,
@@ -489,9 +497,10 @@ class _ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = avatarColors(displayName);
     final initials = avatarInitials(displayName);
-    final cacheUrl = avatarUrl.isNotEmpty
-        ? '$avatarUrl?cb=${updatedAt.millisecondsSinceEpoch}'
-        : '';
+    // Append ?v=N so SupabaseImage re-fetches a signed URL after each upload.
+    final versionedUrl = (avatarUrl?.isNotEmpty == true)
+        ? '$avatarUrl?v=$avatarVersion'
+        : null;
 
     return Container(
       decoration: const BoxDecoration(
@@ -536,9 +545,11 @@ class _ProfileHeader extends StatelessWidget {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : cacheUrl.isNotEmpty
-                          ? Image.network(
-                              cacheUrl,
+                      : versionedUrl != null
+                          ? SupabaseImage(
+                              versionedUrl,
+                              width: 88,
+                              height: 88,
                               fit: BoxFit.cover,
                               errorBuilder: (ctx, e, st) => Center(
                                 child: Text(

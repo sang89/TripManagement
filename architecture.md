@@ -91,7 +91,7 @@ lib/
 │   └── blocked_user.dart   # BlockedUser — userId, fullName, avatarUrl, blockedAt
 ├── providers/              # ChangeNotifiers — hold state, talk to Supabase
 │   ├── auth_provider.dart          # Auth session; login/register/logout
-│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); signup session CRUD (fetchUpcomingSessions, fetchPastSessions, loadMorePastSessions, addSession, cancelSessionSignup, removeSessionRosterEntry, promoteSessionRosterEntry, demoteSessionRosterEntry, reorderSessionRoster, markSessionAttendance, toggleSessionConfirmed, approveSessionRosterEntry, rejectSessionRosterEntry); session caches: _upcomingSessions / _pastSessions (paginated, 20/page) + _sessionRosters (100/page) + _mySessionStatuses; full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param; static applyOrder()
+│   ├── event_provider.dart         # All events (organizer + guest); stops/members/photos/expenses; birthday CRUD (wishlist, gift pool, predictions, wishes, toasts, reveal mechanics); signup session CRUD (fetchUpcomingSessions, fetchPastSessions, loadMorePastSessions, addSession, cancelSessionSignup, removeSessionRosterEntry, promoteSessionRosterEntry, demoteSessionRosterEntry, reorderSessionRoster, markSessionAttendance, toggleSessionConfirmed, approveSessionRosterEntry, rejectSessionRosterEntry); session caches: _upcomingSessions / _pastSessions (paginated, 20/page) + _sessionRosters (100/page) + _mySessionStatuses; queue activity CRUD (fetchSessionQueues, createQueueActivity, deleteQueueActivity, joinQueue, leaveQueue, startQueue, advanceRound, joinFreePool, leaveFreePool); queue caches: _sessionQueues / _queueEntries / _freePool; full CRUD + Realtime; pendingInviteCount for badge; addPollOption(); createPoll() accepts pollType param; static applyOrder()
 │   ├── event_chat_provider.dart    # Event-scoped chat; paginated load + Realtime INSERT; scoped to /event/:id route
 │   ├── invitations_provider.dart   # Pending trip-event invitations for the current user; Realtime
 │   ├── friends_provider.dart       # Friend list + requests; two Realtime channels; searchUsers RPC
@@ -105,7 +105,7 @@ lib/
 │   ├── events/
 │   │   ├── events_screen.dart       # Events tab (shell tab 0): My events + Invited sections; type tiles grid (Trip/Birthday/Wedding/Social/Quick Bites)
 │   │   ├── event_form_screen.dart   # Create / edit event; EventType picker; trip-type shows start location + destination fields; quick-bites shows budget/vibe/cuisine/rsvp fields; birthday shows honoree name + birth year fields
-│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Chat tab enhanced: @mention overlay (_MentionSuggestionsBar) shows filtered member list when typing `@`, inserts `@[userId:displayName]` token; emoji-insert button (reuses _EmojiPickerSheet in insertMode); GIF button opens _GifPickerSheet (Giphy API trending + search, 2-col grid; `kGiphyApiKey`); message bubbles render GIFs via CachedNetworkImage and mention tokens as teal RichText spans; chat background customisable per-event via _ChatThemePickerSheet (8 gradient/solid presets); theme persisted in events.chat_background and propagated live via Realtime. Organize inner tabs: Roster/Expenses/Polls/Invite (signup); Todo/Expenses/Polls/Explore (trip); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Trip Explore tab: _ExploreTab fetches Viator Affiliate API activities (sorted by cheapest/top-rated), shows _ActivityCard per result (image/rating/price/platform badge/"Book on Viator" button), plus _PlatformBrowseButton rows for GetYourGuide and Klook affiliate browse links. Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
+│   │   ├── event_detail_screen.dart # Dynamic tabs: trips = Info/Route/Map/Chat/Photos/Organize; non-trip = Info/Chat/Photos/Organize; birthday = Info/Chat/Photos/Organize/Memories. Chat tab enhanced: @mention overlay (_MentionSuggestionsBar) shows filtered member list when typing `@`, inserts `@[userId:displayName]` token; emoji-insert button (reuses _EmojiPickerSheet in insertMode); GIF button opens _GifPickerSheet (Giphy API trending + search, 2-col grid; `kGiphyApiKey`); message bubbles render GIFs via CachedNetworkImage and mention tokens as teal RichText spans; chat background customisable per-event via _ChatThemePickerSheet (8 gradient/solid presets); theme persisted in events.chat_background and propagated live via Realtime. Organize inner tabs: Roster/Activity/Polls/Invite (signup — "Activity" tab replaces Expenses); Todo/Expenses/Polls/Explore (trip); Todo/Expenses/Polls (+Cravings for quickBites; +Celebrate/Gifts for birthday). Trip Explore tab: _ExploreTab fetches Viator Affiliate API activities (sorted by cheapest/top-rated), shows _ActivityCard per result (image/rating/price/platform badge/"Book on Viator" button), plus _PlatformBrowseButton rows for GetYourGuide and Klook affiliate browse links. Signup extras: _SignupRosterTab (sessions list + "Add session" → _SessionCard per session; _SessionRosterRow cards with confirmation/attendance toggles, ReorderableListView, swipe-to-promote/demote/remove via _SlideAction; _SignupInviteTab shows per-session QR + session picker + add-manually). Birthday extras: _BirthdayHeroCard, _CelebrateTab, _GiftsTab, _MemoriesTabGroup
 │   │   ├── event_invite_screen.dart # Public RSVP screen — no auth required; fetches event by invite_code
 │   │   ├── session_invite_screen.dart # Public session signup — no auth required; fetches session by invite_code via get_session_by_invite_code; calls rsvp_session; route /session/invite/:code
 │   │   └── session_scan_screen.dart # In-app QR scanner (mobile_scanner) — scans a session QR, shows join sheet (session info + claim/waitlist button), calls rsvp_session; opened from the signup Invite tab "Scan a QR code" button
@@ -329,6 +329,55 @@ Unlinked guests (user_id IS NULL) and non-trip events: inserted directly as `goi
 
 **RLS:** Organizer full access; each entry's own user can SELECT their row.
 
+#### `session_queue_activities` (signup events only — in-session Queue Up activities)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `name` | text | e.g. "Court 1" |
+| `players_per_round` | integer | How many players per active slot |
+| `max_rounds` | integer nullable | null = no limit; queue auto-ends when `current_round > max_rounds` |
+| `current_round` | integer default 0 | 0 = not started; 1+ = active |
+| `status` | text | `waiting` \| `active` \| `ended` |
+| `waiting_count` | integer | Denormalized; maintained by `trg_queue_entry_counts` trigger |
+| `playing_count` | integer | Denormalized; maintained by `trg_queue_entry_counts` trigger |
+| `created_by` | uuid FK→auth.users nullable | |
+| `created_at` | timestamptz | |
+
+**RLS:** Organizer full access; event members can SELECT.  
+**REPLICA IDENTITY:** FULL; added to `supabase_realtime`.
+
+#### `session_queue_entries` (players inside a specific queue)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `activity_id` | uuid FK→session_queue_activities | CASCADE delete |
+| `user_id` | uuid FK→auth.users nullable | |
+| `display_name` | text | |
+| `avatar_url` | text nullable | |
+| `status` | text | `playing` \| `waiting` |
+| `queue_position` | integer | 1-based; lower = earlier in waiting list |
+| `rounds_played` | integer default 0 | |
+| `joined_at` | timestamptz | |
+
+**Constraint:** UNIQUE(activity_id, user_id).  
+**RLS:** Organizer full access; event members can SELECT; members join/leave via RPCs.  
+**REPLICA IDENTITY:** FULL; added to `supabase_realtime`.
+
+#### `session_free_pool` (members checked in but not in any queue)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `event_id` | uuid FK→events | CASCADE delete |
+| `user_id` | uuid FK→auth.users | NOT NULL |
+| `display_name` | text | |
+| `avatar_url` | text nullable | |
+| `checked_in_at` | timestamptz | |
+
+**Constraint:** UNIQUE(event_id, user_id).  
+**RLS:** Organizer full access; event members can SELECT; own user manages own row.  
+**REPLICA IDENTITY:** FULL; added to `supabase_realtime`.
+
 #### `event_stops`
 | Column | Type | Notes |
 |---|---|---|
@@ -462,10 +511,17 @@ Auto-created on user sign-up (trigger). Stores `full_name`, `avatar_url`, `job_t
 | `id` | uuid PK | |
 | `user_id` | uuid unique FK→auth.users | one profile per user |
 | `full_name` | text default '' | set from `raw_user_meta_data->>'name'` on sign-up |
-| `avatar_url` | text nullable | |
+| `avatar_url` | text nullable | Shared / PropertyManagement avatar — do **not** write from TripManagement |
+| `trip_avatar_url` | text nullable | TripManagement-specific avatar URL (includes `?v={ts}` cache-buster) |
 | `job_title` | text nullable | |
 
-**RLS:** users can only SELECT/UPDATE their own profile row (`user_id = auth.uid()`). Cross-user reads require the `get_profile_names` SECURITY DEFINER function.
+**RLS:** users can only SELECT/UPDATE their own profile row (`user_id = auth.uid()`). Cross-user reads require the `get_trip_profile_names` SECURITY DEFINER function (TripManagement) or `get_profile_names` (PropertyManagement).
+
+**Avatar separation rule:** Both apps share the same Supabase project and `avatars` storage bucket, so avatar paths are namespaced per app:
+- PropertyManagement writes to `{userId}/avatar` → stored in `avatar_url`
+- TripManagement writes to `trip/{userId}/avatar` → stored in `trip_avatar_url`
+
+In TripManagement UI, always read `UserProfile.displayAvatarUrl` (returns `trip_avatar_url ?? avatar_url`), never `avatarUrl` directly. A `?v={timestamp}` query param is appended to bust Flutter's `NetworkImage` cache on re-upload.
 
 #### `device_tokens`
 | Column | Type | Notes |
@@ -566,7 +622,8 @@ Upserted on login / token refresh. Stale tokens (FCM 404/UNREGISTERED) are delet
 - `toggle_session_confirmed(p_roster_id, p_confirmed)` — toggles signup_confirmed on a session roster entry; organizer or the entry's own user.
 - `get_session_by_invite_code(p_invite_code)` — public read (anon + authenticated); returns session + parent event info + going/waitlist counts + organizer name + capacity settings.
 - `resend_event_invite(p_guest_id uuid)` — resets `status = 'pending'` for a guest row; triggers `on_invite_inserted` for re-notification.
-- `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone, avatar_url)` for a list of user IDs, bypassing `user_profiles` RLS. Called by `EventProvider._enrichGuestNames()`, `FriendsProvider._enrichNames()`, and `BlockedUsersProvider.load()`.
+- `get_profile_names(p_user_ids uuid[])` — returns `(user_id, full_name, email, phone, avatar_url)` for a list of user IDs, bypassing `user_profiles` RLS. Used by PropertyManagement. **Do not call from TripManagement** — use `get_trip_profile_names` instead.
+- `get_trip_profile_names(p_user_ids uuid[])` — TripManagement variant of `get_profile_names`. Returns `COALESCE(trip_avatar_url, avatar_url) as avatar_url`, so callers automatically get the app-specific photo with fallback to the shared photo. Called by `EventProvider._enrichGuestNames()`, `FriendsProvider._enrichNames()`, `BlockedUsersProvider.load()`, and `EventChatProvider`.
 - `search_users(p_query text)` — returns `(user_id, full_name, email)` for users matching the query by name, email, or phone, excluding the caller and existing friends. Limit 20.
 - `find_users_by_contacts(p_phones text[], p_emails text[])` — batch-lookup used by `ContactsScreen`. Excludes caller, blocked users (either direction), and existing friends.
 
@@ -784,6 +841,10 @@ If the user had set `block_reinvite = true`:
 | `event_session_roster` | INSERT | `refreshSessionRoster(sessionId)` — only if session already in cache | New signup (QR scan or invite code entry) |
 | `event_session_roster` | UPDATE | `_patchRosterEntry` with new `status` / `signup_order` / `attended` / `signup_confirmed` | Covers promote, demote, attendance, confirmation |
 | `event_session_roster` | DELETE | In-memory remove by id | Cancel or organizer removal; requires `REPLICA IDENTITY FULL` (migration `20260610000001`) |
+| `session_queue_activities` | UPDATE | In-memory patch `_sessionQueues[eventId]` | Denormalized count change after entry INSERT/DELETE |
+| `session_queue_activities` | DELETE | Remove from cache + clear `_queueEntries[id]` | Organizer deletes queue |
+| `session_queue_entries` | INSERT / UPDATE / DELETE | In-memory patch `_queueEntries[activityId]`, sorted by `queue_position` | Live queue position updates for all members |
+| `session_free_pool` | INSERT / DELETE | In-memory patch `_freePool[eventId]` | Check-in / check-out updates |
 
 `InvitationsProvider` subscribes separately (INSERT + UPDATE on `event_guests` filtered by `user_id = currentUser` and `status = 'pending'`) to keep the invite badge current for the invited user's own device.
 

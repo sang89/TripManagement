@@ -1638,4 +1638,138 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => '모두 읽음으로 표시';
+
+  @override
+  String get sessionActivityTab => '활동';
+
+  @override
+  String get queueUp => '대기열';
+
+  @override
+  String get createQueue => '대기열 만들기';
+
+  @override
+  String get playersPerRound => '라운드당 플레이어';
+
+  @override
+  String get maxRounds => '최대 라운드';
+
+  @override
+  String get noLimit => '제한 없음';
+
+  @override
+  String get checkIn => '체크인';
+
+  @override
+  String get checkOut => '체크아웃';
+
+  @override
+  String get joinQueue => '대기열 참가';
+
+  @override
+  String get leaveQueue => '대기열 나가기';
+
+  @override
+  String get startQueue => '시작';
+
+  @override
+  String get nextRound => '다음 라운드';
+
+  @override
+  String roundN(int n) {
+    return '라운드 $n';
+  }
+
+  @override
+  String get allRejoinQueue => '모두 대기열로 복귀';
+
+  @override
+  String get releaseToFreePool => '자유 풀로 해제';
+
+  @override
+  String get freePool => '자유 풀';
+
+  @override
+  String get nowPlaying => '현재 플레이 중';
+
+  @override
+  String get waitingQueue => '대기 중';
+
+  @override
+  String get queueEnded => '대기열 종료';
+
+  @override
+  String get noQueuesYet => '아직 활동이 없습니다';
+
+  @override
+  String get createFirstQueue => '첫 번째 대기열을 만들어 시작하세요';
+
+  @override
+  String queueRoundComplete(int n) {
+    return '라운드 $n 완료!';
+  }
+
+  @override
+  String get setupQueues => '대기열 설정';
+
+  @override
+  String get numberOfQueues => '대기열 수';
+
+  @override
+  String get spotsPerQueue => '대기열당 자리 수';
+
+  @override
+  String get clearQueue => '지우기';
+
+  @override
+  String get queueFull => '대기열이 꽉 찼습니다';
+
+  @override
+  String get alreadyInQueue => '이미 대기열에 있습니다';
+
+  @override
+  String get addToSlot => '자리 잡아요!';
+
+  @override
+  String get addMyselfToQueue => '나 참가!';
+
+  @override
+  String get addSomeoneElse => '';
+
+  @override
+  String get selectAMember => '멤버 선택';
+
+  @override
+  String get searchMembersHint => '멤버 검색…';
+
+  @override
+  String get leaveSlotTitle => '슬롯 나가기?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return '대기열 #$number의 자리에서 철수하시겠습니까?';
+  }
+
+  @override
+  String get leaveSlotConfirm => '철수';
+
+  @override
+  String get kickFromSlotTitle => '내보낼까요? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return '대기열 #$number에서 $name을(를) 제거할까요?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => '내보내기! 🦵';
+
+  @override
+  String get allowDuplicates => '여러 대기열 참가 허용';
+
+  @override
+  String get allowDuplicatesSubtitle => '멤버가 동시에 여러 대기열에 있을 수 있습니다';
+
+  @override
+  String get customizeQueues => '대기열 커스터마이즈';
 }

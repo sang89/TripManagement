@@ -16,6 +16,8 @@ class EventSession {
   final int? signupLockHours;
   final bool isPublic;
   final bool requiresApproval;
+  final bool isActive;
+  final bool isActiveOverride;
 
   const EventSession({
     required this.id,
@@ -33,6 +35,8 @@ class EventSession {
     this.signupLockHours,
     this.isPublic = true,
     this.requiresApproval = false,
+    this.isActive = false,
+    this.isActiveOverride = false,
   });
 
   factory EventSession.fromJson(Map<String, dynamic> json) => EventSession(
@@ -53,6 +57,8 @@ class EventSession {
         signupLockHours: json['signup_lock_hours'] as int?,
         isPublic: (json['is_public'] as bool?) ?? true,
         requiresApproval: (json['requires_approval'] as bool?) ?? false,
+        isActive: (json['is_active'] as bool?) ?? false,
+        isActiveOverride: (json['is_active_override'] as bool?) ?? false,
       );
 
   bool get isFull =>
@@ -87,6 +93,8 @@ class EventSession {
         signupLockHours: signupLockHours,
         isPublic: isPublic,
         requiresApproval: requiresApproval,
+        isActive: isActive,
+        isActiveOverride: isActiveOverride,
       );
 }
 

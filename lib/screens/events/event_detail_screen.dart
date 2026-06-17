@@ -36,6 +36,7 @@ import '../../models/event_poll.dart';
 import '../../models/event_guest.dart';
 import '../../models/event_session.dart';
 import '../../models/event_message.dart';
+import '../../models/session_queue.dart';
 import '../../models/event_photo.dart';
 import '../../models/event_prediction.dart';
 import '../../models/event_stop.dart';
@@ -61,6 +62,7 @@ import '../../widgets/add_member_sheet.dart';
 import '../../widgets/ai_itinerary_sheet.dart';
 import '../../widgets/event_map_widget.dart';
 import '../../widgets/event_stop_form_sheet.dart';
+import '../../widgets/supabase_image.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -785,7 +787,10 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                 Tab(icon: const Icon(Icons.format_list_numbered_outlined, size: 18), text: l10n.signupRosterTab)
               else
                 Tab(icon: const Icon(Icons.checklist_outlined, size: 18), text: l10n.todoTab),
-              Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
+              if (widget.event.isSignup)
+                Tab(icon: const Icon(Icons.sports_tennis_rounded, size: 18), text: l10n.sessionActivityTab)
+              else
+                Tab(icon: const Icon(Icons.receipt_outlined, size: 18), text: l10n.expensesTab),
               Tab(icon: const Icon(Icons.how_to_vote_outlined, size: 18), text: l10n.pollsTab),
               if (widget.event.isSignup)
                 Tab(icon: const Icon(Icons.qr_code_outlined, size: 18), text: l10n.signupInviteTab),
@@ -817,12 +822,19 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                   items: widget.items,
                   isOrganizer: widget.isOrganizer,
                 ),
-              _ExpensesTab(
-                event: widget.event,
-                expenses: widget.expenses,
-                authUid: widget.authUid,
-                isOrganizer: widget.isOrganizer,
-              ),
+              if (widget.event.isSignup)
+                _SessionActivityTab(
+                  event: widget.event,
+                  authUid: widget.authUid,
+                  isOrganizer: widget.isOrganizer,
+                )
+              else
+                _ExpensesTab(
+                  event: widget.event,
+                  expenses: widget.expenses,
+                  authUid: widget.authUid,
+                  isOrganizer: widget.isOrganizer,
+                ),
               _PollsTab(
                 event: widget.event,
                 authUid: widget.authUid,
@@ -4310,23 +4322,21 @@ class _GuestsTabState extends State<_GuestsTab> {
 
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
+                    leading: SupabaseAvatar(
+                      url: hasAvatar ? g.avatarUrl : null,
+                      radius: 20,
                       backgroundColor: g.role == 'organizer'
                           ? AppTheme.primary
                           : Colors.grey[200],
-                      backgroundImage:
-                          hasAvatar ? NetworkImage(g.avatarUrl!) : null,
-                      child: hasAvatar
-                          ? null
-                          : Text(
-                              g.displayName.isNotEmpty
-                                  ? g.displayName[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                  color: g.role == 'organizer'
-                                      ? Colors.white
-                                      : AppTheme.primary),
-                            ),
+                      fallback: Text(
+                        g.displayName.isNotEmpty
+                            ? g.displayName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                            color: g.role == 'organizer'
+                                ? Colors.white
+                                : AppTheme.primary),
+                      ),
                     ),
                     title: Text(isMe ? l10n.you : g.displayName),
                     subtitle: Column(
@@ -4464,24 +4474,21 @@ class _GuestsTabState extends State<_GuestsTab> {
 
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
+                    leading: SupabaseAvatar(
+                      url: hasAvatar ? g.avatarUrl : null,
+                      radius: 20,
                       backgroundColor: g.role == 'organizer'
                           ? AppTheme.primary
                           : Colors.grey[200],
-                      backgroundImage: hasAvatar
-                          ? NetworkImage(g.avatarUrl!)
-                          : null,
-                      child: hasAvatar
-                          ? null
-                          : Text(
-                              g.displayName.isNotEmpty
-                                  ? g.displayName[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                  color: g.role == 'organizer'
-                                      ? Colors.white
-                                      : AppTheme.primary),
-                            ),
+                      fallback: Text(
+                        g.displayName.isNotEmpty
+                            ? g.displayName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                            color: g.role == 'organizer'
+                                ? Colors.white
+                                : AppTheme.primary),
+                      ),
                     ),
                     title: Text(isMe ? l10n.you : g.displayName),
                     subtitle: Column(
@@ -5285,20 +5292,16 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-            CircleAvatar(
+            SupabaseAvatar(
+              url: hasAvatar ? msg.senderAvatarUrl : null,
               radius: 16,
               backgroundColor: Colors.grey[200],
-              backgroundImage:
-                  hasAvatar ? NetworkImage(msg.senderAvatarUrl!) : null,
-              child: hasAvatar
-                  ? null
-                  : Text(
-                      (msg.senderName?.isNotEmpty == true)
-                          ? msg.senderName![0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                          fontSize: 11, color: AppTheme.primary),
-                    ),
+              fallback: Text(
+                (msg.senderName?.isNotEmpty == true)
+                    ? msg.senderName![0].toUpperCase()
+                    : '?',
+                style: const TextStyle(fontSize: 11, color: AppTheme.primary),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -7034,30 +7037,24 @@ class _GuestSelectRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              CircleAvatar(
+              SupabaseAvatar(
+                url: guest.avatarUrl?.isNotEmpty == true
+                    ? guest.avatarUrl
+                    : null,
                 radius: 16,
                 backgroundColor: selected
                     ? AppTheme.primary
                     : Colors.grey[200],
-                backgroundImage: guest.avatarUrl != null &&
-                        guest.avatarUrl!.isNotEmpty
-                    ? NetworkImage(guest.avatarUrl!)
-                    : null,
-                child: (guest.avatarUrl == null ||
-                        guest.avatarUrl!.isEmpty)
-                    ? Text(
-                        guest.displayName.isNotEmpty
-                            ? guest.displayName[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: selected
-                              ? Colors.white
-                              : AppTheme.primary,
-                        ),
-                      )
-                    : null,
+                fallback: Text(
+                  guest.displayName.isNotEmpty
+                      ? guest.displayName[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: selected ? Colors.white : AppTheme.primary,
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -8222,25 +8219,20 @@ class _BalanceRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          SupabaseAvatar(
+            url: balance.avatarUrl?.isNotEmpty == true
+                ? balance.avatarUrl
+                : null,
             radius: 20,
             backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-            backgroundImage: balance.avatarUrl != null &&
-                    balance.avatarUrl!.isNotEmpty
-                ? NetworkImage(balance.avatarUrl!)
-                : null,
-            child: (balance.avatarUrl == null || balance.avatarUrl!.isEmpty)
-                ? Text(
-                    balance.name.isNotEmpty
-                        ? balance.name[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
-                    ),
-                  )
-                : null,
+            fallback: Text(
+              balance.name.isNotEmpty ? balance.name[0].toUpperCase() : '?',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primary,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -8294,21 +8286,18 @@ class _SettlementRow extends StatelessWidget {
   const _SettlementRow({required this.settlement, required this.fmt});
 
   Widget _avatar(String name, String? url) {
-    return CircleAvatar(
+    return SupabaseAvatar(
+      url: url?.isNotEmpty == true ? url : null,
       radius: 18,
       backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-      backgroundImage:
-          url != null && url.isNotEmpty ? NetworkImage(url) : null,
-      child: (url == null || url.isEmpty)
-          ? Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primary,
-              ),
-            )
-          : null,
+      fallback: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.primary,
+        ),
+      ),
     );
   }
 
@@ -10574,6 +10563,2261 @@ class _AddToastSheetState extends State<_AddToastSheet> {
   }
 }
 
+// ── Session Activity tab ──────────────────────────────────────────────────────
+
+class _SessionActivityTab extends StatefulWidget {
+  final Event event;
+  final String? authUid;
+  final bool isOrganizer;
+
+  const _SessionActivityTab({
+    required this.event,
+    required this.authUid,
+    required this.isOrganizer,
+  });
+
+  @override
+  State<_SessionActivityTab> createState() => _SessionActivityTabState();
+}
+
+class _SessionActivityTabState extends State<_SessionActivityTab> {
+  EventSession? _selectedSession;
+  bool _loadingSessions = true;
+  Timer? _autoActivateTimer;
+  Timer? _queuePollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSessions());
+  }
+
+  @override
+  void dispose() {
+    _autoActivateTimer?.cancel();
+    _queuePollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startQueuePolling(EventSession session) {
+    _queuePollTimer?.cancel();
+    _queuePollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && _selectedSession?.id == session.id) {
+        context.read<EventProvider>()
+            .fetchSessionQueues(widget.event.id, session.id);
+      }
+    });
+  }
+
+  Future<void> _loadSessions() async {
+    if (!mounted) return;
+    final provider = context.read<EventProvider>();
+    await Future.wait([
+      provider.fetchUpcomingSessions(widget.event.id),
+      provider.fetchPastSessions(widget.event.id),
+    ]);
+    if (!mounted) return;
+
+    final sessions = _activeSessions(provider);
+    setState(() {
+      _loadingSessions = false;
+      if (sessions.length == 1) {
+        _selectedSession = sessions.first;
+        _fetchQueuesForSession(sessions.first);
+        _startQueuePolling(sessions.first);
+      }
+    });
+
+    // Auto-activate/deactivate based on time. Only the organizer can call the
+    // RPC; Realtime propagates the change to all other clients.
+    // Delay the first check so the fresh DB state (including is_active_override)
+    // is fully loaded before we evaluate anything.
+    if (widget.isOrganizer) {
+      _autoActivateTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) { if (mounted) _runAutoActivate(context.read<EventProvider>()); },
+      );
+    }
+  }
+
+  void _runAutoActivate(EventProvider provider) {
+    final now = DateTime.now();
+    final eventId = widget.event.id;
+    final all = [
+      ...provider.upcomingSessionsFor(eventId),
+      ...provider.pastSessionsFor(eventId),
+    ];
+    for (final s in all) {
+      // Hard skip: organizer has manual control — never auto-override.
+      if (s.isActiveOverride) continue;
+
+      final shouldBeActive =
+          s.startAt.isBefore(now) && (s.endAt == null || s.endAt!.isAfter(now));
+      if (shouldBeActive == s.isActive) continue;
+
+      // autoSessionActive also checks isActiveOverride server-side,
+      // so even if there's a race between the cache read and here, it's safe.
+      unawaited(provider.autoSessionActive(s.id, eventId, active: shouldBeActive));
+    }
+  }
+
+  /// All sessions that should appear in the picker: active ones + upcoming ones.
+  /// Only sessions that are currently active (organizer-controlled flag).
+  List<EventSession> _activeSessions(EventProvider provider) {
+    final all = [
+      ...provider.upcomingSessionsFor(widget.event.id),
+      ...provider.pastSessionsFor(widget.event.id),
+    ];
+    return all.where((s) => s.isActive).toList();
+  }
+
+  void _selectSession(EventSession session) {
+    setState(() => _selectedSession = session);
+    _fetchQueuesForSession(session);
+    _startQueuePolling(session);
+  }
+
+  void _fetchQueuesForSession(EventSession session) {
+    // Always fetch fresh — Realtime handles incremental updates but a full
+    // refresh on session-select ensures we're in sync after any missed events.
+    context.read<EventProvider>()
+        .fetchSessionQueues(widget.event.id, session.id);
+  }
+
+  void _showSetupQueuesSheet(EventSession session) {
+    final provider = context.read<EventProvider>();
+    final queues = provider.queuesFor(session.id);
+    final entries = {
+      for (final q in queues) q.id: provider.entriesFor(q.id),
+    };
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SetupQueuesSheet(
+        event: widget.event,
+        session: session,
+        currentQueues: queues,
+        currentEntries: entries,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<EventProvider>();
+    final l10n = AppLocalizations.of(context);
+    final sessions = _activeSessions(provider);
+    final selected = _selectedSession;
+
+    if (_loadingSessions) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (sessions.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.event_available_outlined, size: 56, color: Colors.grey[300]),
+              const SizedBox(height: 12),
+              Text('No active sessions',
+                  style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text(
+                'The organizer will mark a session as Active to open it here.',
+                style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // ── Session picker ───────────────────────────────────────────────────
+        _SessionPicker(
+          sessions: sessions,
+          selected: selected,
+          onSelect: _selectSession,
+          event: widget.event,
+          isOrganizer: widget.isOrganizer,
+        ),
+
+        // ── Activity body ────────────────────────────────────────────────────
+        Expanded(
+          child: selected == null
+              ? Center(
+                  child: Text(
+                    'Select a session above to get started.',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  ),
+                )
+              : Stack(
+                  children: [
+                    Builder(builder: (context) {
+                      final queues = provider.queuesFor(selected.id);
+                      // Is the current user in any queue in this session?
+                      final userInSession = widget.authUid != null &&
+                          queues.any((q) => provider
+                              .entriesFor(q.id)
+                              .any((e) => e.userId == widget.authUid));
+                      return ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                        children: [
+                          _FreePoolSection(
+                            event: widget.event,
+                            session: selected,
+                            authUid: widget.authUid,
+                            freePool: provider.freePoolFor(selected.id),
+                            isOrganizer: widget.isOrganizer,
+                            onCustomizeQueues: widget.isOrganizer
+                                ? () => _showSetupQueuesSheet(selected)
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          if (queues.isEmpty)
+                            _EmptyQueuesState(
+                                isOrganizer: widget.isOrganizer, l10n: l10n)
+                          else
+                            ...queues.asMap().entries.map((e) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _QueueSpotRow(
+                                    queue: e.value,
+                                    displayNumber: e.key + 1,
+                                    entries: provider.entriesFor(e.value.id),
+                                    event: widget.event,
+                                    session: selected,
+                                    authUid: widget.authUid,
+                                    isOrganizer: widget.isOrganizer,
+                                    userAlreadyInSession: userInSession,
+                                  ),
+                                )),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Session Picker ────────────────────────────────────────────────────────────
+
+class _SessionPicker extends StatelessWidget {
+  final List<EventSession> sessions;
+  final EventSession? selected;
+  final ValueChanged<EventSession> onSelect;
+  final Event event;
+  final bool isOrganizer;
+
+  const _SessionPicker({
+    required this.sessions,
+    required this.selected,
+    required this.onSelect,
+    required this.event,
+    required this.isOrganizer,
+  });
+
+  void _openInfo(BuildContext context, EventSession s) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _SessionActivityInfoSheet(
+        session: s,
+        event: event,
+        isOrganizer: isOrganizer,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      color: colorScheme.surfaceContainerLow,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: SizedBox(
+        height: 56,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: sessions.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final s = sessions[i];
+            final isSelected = s.id == selected?.id;
+            return GestureDetector(
+              onTap: () => onSelect(s),
+              onLongPress: () => _openInfo(context, s),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          colors: [AppTheme.primary, AppTheme.primaryLight])
+                      : null,
+                  color: isSelected ? null : colorScheme.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: isSelected
+                      ? null
+                      : Border.all(
+                          color: s.isActive
+                              ? Colors.green.shade300
+                              : colorScheme.outlineVariant,
+                          width: s.isActive ? 1.5 : 1,
+                        ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Active indicator dot
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: s.isActive
+                              ? (isSelected ? Colors.white : Colors.green)
+                              : (isSelected
+                                  ? Colors.white.withValues(alpha: 0.4)
+                                  : Colors.grey.shade300),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Session ${s.sessionNumber}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: isSelected
+                            ? Colors.white
+                            : colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      DateFormat('h:mm a').format(s.startAt.toLocal()),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isSelected
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ── Session Info Sheet ────────────────────────────────────────────────────────
+
+class _SessionActivityInfoSheet extends StatefulWidget {
+  final EventSession session;
+  final Event event;
+  final bool isOrganizer;
+
+  const _SessionActivityInfoSheet({
+    required this.session,
+    required this.event,
+    required this.isOrganizer,
+  });
+
+  @override
+  State<_SessionActivityInfoSheet> createState() => _SessionActivityInfoSheetState();
+}
+
+class _SessionActivityInfoSheetState extends State<_SessionActivityInfoSheet> {
+  bool _toggling = false;
+
+  Future<void> _toggleActive() async {
+    if (_toggling) return;
+    setState(() => _toggling = true);
+    try {
+      await context.read<EventProvider>().toggleSessionActive(
+            widget.session.id,
+            widget.event.id,
+            active: !widget.session.isActive,
+          );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _toggling = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Use latest session from cache in case Realtime updated it.
+    final provider = context.watch<EventProvider>();
+    final session = provider.upcomingSessionsFor(widget.event.id)
+            .where((s) => s.id == widget.session.id)
+            .firstOrNull ??
+        provider.pastSessionsFor(widget.event.id)
+            .where((s) => s.id == widget.session.id)
+            .firstOrNull ??
+        widget.session;
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final open = session.capacity != null
+        ? (session.capacity! - session.goingCount).clamp(0, session.capacity!)
+        : null;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+
+          // Session header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Session ${session.sessionNumber}',
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        DateFormat('EEE, MMM d • h:mm a')
+                            .format(session.startAt.toLocal()),
+                        style: TextStyle(
+                            fontSize: 13, color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                // Active badge
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: session.isActive
+                        ? Colors.green.shade50
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: session.isActive
+                          ? Colors.green.shade300
+                          : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: session.isActive ? Colors.green : Colors.grey,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        session.isActive ? 'Active' : 'Inactive',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: session.isActive
+                              ? Colors.green.shade700
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Stats row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                _StatChip(
+                    label: 'Going',
+                    value: session.goingCount,
+                    color: Colors.green),
+                const SizedBox(width: 10),
+                _StatChip(
+                    label: 'Waitlist',
+                    value: session.waitlistCount,
+                    color: Colors.amber),
+                const SizedBox(width: 10),
+                if (open != null)
+                  _StatChip(
+                      label: 'Open', value: open, color: Colors.blue),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Badges row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                _InfoBadge(
+                    icon: Icons.public,
+                    label: session.isPublic ? 'Public' : 'Private'),
+                _InfoBadge(
+                    icon: Icons.list_alt_rounded,
+                    label: session.waitlistEnabled
+                        ? 'Waitlist on'
+                        : 'Waitlist off'),
+                if (session.requiresApproval)
+                  const _InfoBadge(
+                      icon: Icons.approval_rounded, label: 'Approval required'),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Organizer toggle button
+          if (widget.isOrganizer)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: SizedBox(
+                width: double.infinity,
+                child: session.isActive
+                    ? OutlinedButton.icon(
+                        onPressed: _toggling ? null : _toggleActive,
+                        icon: const Icon(Icons.pause_circle_outline_rounded),
+                        label: const Text('Mark as Inactive'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(color: Colors.grey.shade400),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                      )
+                    : DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [Color(0xFF1B5E20), Color(0xFF43A047)]),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withValues(alpha: 0.40),
+                              blurRadius: 14,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: _toggling ? null : _toggleActive,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.play_circle_outline_rounded,
+                                      color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text('Mark as Active',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15)),
+                                  if (_toggling) ...[
+                                    const SizedBox(width: 12),
+                                    const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            )
+          else
+            const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+
+  const _StatChip(
+      {required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.20)),
+        ),
+        child: Column(
+          children: [
+            Text('$value',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: color.withValues(alpha: 0.85))),
+            Text(label,
+                style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, color: colorScheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Customize Queues Card ─────────────────────────────────────────────────────
+
+class _CustomizeQueuesCard extends StatefulWidget {
+  final VoidCallback onTap;
+  const _CustomizeQueuesCard({required this.onTap});
+
+  @override
+  State<_CustomizeQueuesCard> createState() => _CustomizeQueuesCardState();
+}
+
+class _CustomizeQueuesCardState extends State<_CustomizeQueuesCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _rotate;
+
+  @override
+  void initState() {
+    super.initState();
+    // Wiggle: left → right → center, looping
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+    _rotate = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: -0.10, end: 0.10), weight: 1),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppTappable(
+      onTap: widget.onTap,
+      child: Container(
+        width: 145,
+        decoration: BoxDecoration(
+          // Bright amber→orange: very visible, high contrast with dark text
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFBBF24), Color(0xFFF97316)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF97316).withValues(alpha: 0.45),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            RotationTransition(
+              turns: _rotate,
+              child: const Text('🎮', style: TextStyle(fontSize: 32)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.customizeQueues,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF431407),
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Free Pool section ─────────────────────────────────────────────────────────
+
+class _FreePoolSection extends StatefulWidget {
+  final Event event;
+  final EventSession session;
+  final String? authUid;
+  final List<SessionFreePoolEntry> freePool;
+  final bool isOrganizer;
+  final VoidCallback? onCustomizeQueues;
+
+  const _FreePoolSection({
+    required this.event,
+    required this.session,
+    required this.authUid,
+    required this.freePool,
+    this.isOrganizer = false,
+    this.onCustomizeQueues,
+  });
+
+  @override
+  State<_FreePoolSection> createState() => _FreePoolSectionState();
+}
+
+class _FreePoolSectionState extends State<_FreePoolSection> {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final showButton =
+        widget.isOrganizer && widget.onCustomizeQueues != null;
+
+    return IntrinsicHeight(
+      child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Left: label + avatars
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.people_rounded,
+                      size: 18, color: Colors.teal),
+                  const SizedBox(width: 6),
+                  Text(
+                    l10n.freePool,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Colors.teal),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${widget.freePool.length}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.teal),
+                    ),
+                  ),
+                ],
+              ),
+              if (widget.freePool.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _FreePoolAvatarStack(
+                  pool: widget.freePool,
+                  authUid: widget.authUid,
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Right: customize button (organizer only)
+        if (showButton) ...[
+          const SizedBox(width: 12),
+          _CustomizeQueuesCard(onTap: widget.onCustomizeQueues!),
+        ],
+      ],
+    ),
+    );
+  }
+}
+
+// ── Free Pool Avatar Stack ────────────────────────────────────────────────────
+
+class _FreePoolAvatarStack extends StatelessWidget {
+  final List<SessionFreePoolEntry> pool;
+  final String? authUid;
+
+  const _FreePoolAvatarStack({required this.pool, required this.authUid});
+
+  static const int _maxVisible = 5;
+  static const double _size = 36;
+  static const double _step = 24; // horizontal step per avatar (size - overlap)
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = pool.take(_maxVisible).toList();
+    final overflow = pool.length - _maxVisible;
+    final stackWidth = _step * (visible.length - 1) + _size +
+        (overflow > 0 ? _step + 34 : 0);
+
+    return SizedBox(
+      height: _size,
+      width: stackWidth,
+      child: Stack(
+        children: [
+          for (int i = 0; i < visible.length; i++)
+            Positioned(
+              left: i * _step,
+              child: _PoolAvatar(
+                entry: visible[i],
+                isSelf: visible[i].userId == authUid,
+              ),
+            ),
+          if (overflow > 0)
+            Positioned(
+              left: visible.length * _step,
+              child: Container(
+                width: _size,
+                height: _size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.teal.withValues(alpha: 0.12),
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+$overflow',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.teal,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Shared avatar circle ──────────────────────────────────────────────────────
+// Shows the profile photo when available; falls back to colored initials if the
+// image URL is absent or fails to load (400 / 404 from Storage).
+
+class _AvatarCircle extends StatelessWidget {
+  final String? avatarUrl;
+  final String displayName;
+  final double size;
+  final Color? backgroundColor;
+  final double fontSize;
+  /// When set, shown verbatim instead of computed initials (e.g. "You").
+  final String? labelOverride;
+
+  const _AvatarCircle({
+    required this.avatarUrl,
+    required this.displayName,
+    required this.size,
+    this.backgroundColor,
+    this.fontSize = 13,
+    this.labelOverride,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = avatarColors(displayName);
+    final initials = avatarInitials(displayName);
+    final bg = backgroundColor ?? colors[0];
+    final label = labelOverride ?? initials;
+    final isEmpty = label.isEmpty;
+
+    Widget fallbackWidget = Container(
+      width: size,
+      height: size,
+      color: bg,
+      alignment: Alignment.center,
+      child: isEmpty
+          ? Icon(Icons.person_rounded, color: Colors.white, size: size * 0.55)
+          : Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+    );
+
+    if (avatarUrl == null || avatarUrl!.isEmpty) return ClipOval(child: fallbackWidget);
+
+    return ClipOval(
+      child: SupabaseImage(
+        avatarUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, err, stack) => fallbackWidget,
+      ),
+    );
+  }
+}
+
+class _PoolAvatar extends StatelessWidget {
+  final SessionFreePoolEntry entry;
+  final bool isSelf;
+
+  const _PoolAvatar({required this.entry, required this.isSelf});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _FreePoolAvatarStack._size;
+    final label = isSelf ? 'You (${entry.displayName})' : entry.displayName;
+    return Tooltip(
+      message: label,
+      triggerMode: TooltipTriggerMode.tap,
+      preferBelow: false,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelf ? Colors.teal : Colors.white,
+            width: isSelf ? 2.5 : 2,
+          ),
+        ),
+        child: _AvatarCircle(
+          avatarUrl: entry.avatarUrl,
+          displayName: entry.displayName,
+          size: size,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Queue Spot Row ────────────────────────────────────────────────────────────
+
+class _QueueSpotRow extends StatefulWidget {
+  final SessionQueueActivity queue;
+  final int displayNumber;
+  final List<SessionQueueEntry> entries;
+  final Event event;
+  final EventSession session;
+  final String? authUid;
+  final bool isOrganizer;
+  final bool userAlreadyInSession;
+
+  const _QueueSpotRow({
+    required this.queue,
+    required this.displayNumber,
+    required this.entries,
+    required this.event,
+    required this.session,
+    required this.authUid,
+    required this.isOrganizer,
+    this.userAlreadyInSession = false,
+  });
+
+  @override
+  State<_QueueSpotRow> createState() => _QueueSpotRowState();
+}
+
+class _QueueSpotRowState extends State<_QueueSpotRow> {
+  bool _loading = false;
+
+  SessionQueueEntry? get _myEntry =>
+      widget.entries.where((e) => e.userId == widget.authUid).firstOrNull;
+
+  // True only when the current user already holds a spot in THIS queue row.
+  bool get _userInThisQueue => _myEntry != null;
+
+  // ── Add-to-slot dialog ───────────────────────────────────────────────────────
+
+  void _showAddSlotDialog() {
+    if (_loading) return;
+    final l10n = AppLocalizations.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                l10n.addToSlot,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Option cards
+              // Hide "Add myself" when the user already holds a spot in this
+            // row, or when duplicates are off and they're in any queue.
+            if (!_userInThisQueue &&
+                (widget.queue.allowDuplicates ||
+                    !widget.userAlreadyInSession))
+              _SlotOptionCard(
+                emoji: '🙋',
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0D9488), Color(0xFF14B8A6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                label: l10n.addMyselfToQueue,
+                subtitle: 'Claim this spot for yourself',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _joinSelf();
+                },
+              ),
+              const SizedBox(height: 10),
+              _SlotOptionCard(
+                emoji: '🤝',
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                label: l10n.addSomeoneElse,
+                subtitle: 'Pick someone from the roster',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showMemberPicker();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _joinSelf() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().joinQueue(
+            widget.queue.id,
+            widget.event.id,
+            widget.session.id,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      final l10n = AppLocalizations.of(context);
+      final text = msg.contains('already_in_queue')
+          ? l10n.alreadyInQueue
+          : msg.contains('queue_full')
+              ? l10n.queueFull
+              : 'Could not join: $e';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(text)));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _showMemberPicker() {
+    final l10n = AppLocalizations.of(context);
+    // App users already in this slot — keyed by userId.
+    final alreadyInSlot = widget.entries
+        .where((e) => e.userId != null)
+        .map((e) => e.userId!)
+        .toSet();
+    // Anonymous guests already in this slot — keyed by lowercase display name.
+    final alreadyInSlotNames = widget.entries
+        .where((e) => e.userId == null)
+        .map((e) => e.displayName.toLowerCase())
+        .toSet();
+
+    final candidates = widget.event.guests
+        .where((g) => !const {'left', 'declined'}.contains(g.status))
+        .where((g) {
+          if (g.userId != null) {
+            return !alreadyInSlot.contains(g.userId);
+          } else {
+            // Anonymous guest: exclude if same name already occupies a slot.
+            return !alreadyInSlotNames.contains(g.displayName.toLowerCase());
+          }
+        })
+        .toList();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _MemberPickerSheet(
+        title: l10n.selectAMember,
+        searchHint: l10n.searchMembersHint,
+        candidates: candidates,
+        onSelected: (guest) {
+          Navigator.pop(ctx);
+          _addGuest(guest);
+        },
+      ),
+    );
+  }
+
+  Future<void> _addGuest(EventGuest guest) async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().addMemberToQueue(
+            widget.queue.id,
+            widget.event.id,
+            widget.session.id,
+            userId: guest.userId,
+            displayName: guest.displayName,
+            avatarUrl: guest.avatarUrl,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      final l10n = AppLocalizations.of(context);
+      final text = msg.contains('already_in_queue')
+          ? l10n.alreadyInQueue
+          : msg.contains('queue_full')
+              ? l10n.queueFull
+              : 'Could not add: $e';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(text)));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // ── Leave-slot confirmation dialog ──────────────────────────────────────────
+
+  // ── Kick confirmation dialog (organizer only) ────────────────────────────────
+
+  Future<void> _showKickDialog(SessionQueueEntry entry) async {
+    if (_loading) return;
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.kickFromSlotTitle),
+        content: Text(
+            l10n.kickFromSlotMessage(entry.displayName, widget.displayNumber)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.kickFromSlotConfirm,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().leaveQueue(
+            entry.id,
+            widget.queue.id,
+            widget.event.id,
+            widget.session.id,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not remove: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _showLeaveDialog() async {
+    if (_loading) return;
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.leaveSlotTitle),
+        content: Text(l10n.leaveSlotMessage(widget.displayNumber)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.leaveSlotConfirm,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _leaveSpot();
+  }
+
+  Future<void> _leaveSpot() async {
+    if (_loading) return;
+    final entry = _myEntry;
+    if (entry == null) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().leaveQueue(
+            entry.id,
+            widget.queue.id,
+            widget.event.id,
+            widget.session.id,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not leave: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _clearQueue() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().clearQueue(
+            widget.queue.id,
+            widget.event.id,
+            widget.session.id,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not clear: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final spots = widget.queue.playersPerRound;
+    final entries = widget.entries;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          // Queue number
+          SizedBox(
+            width: 28,
+            child: Text(
+              '#${widget.displayNumber}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Spot circles — single scrollable row, never wraps
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(spots, (i) {
+                  final entry = i < entries.length ? entries[i] : null;
+                  return Padding(
+                    padding: EdgeInsets.only(right: i < spots - 1 ? 8 : 0),
+                    child: _SpotCircle(
+                      entry: entry,
+                      isSelf: entry?.userId == widget.authUid,
+                      canClaim: entry == null && !_loading,
+                      onClaim: _showAddSlotDialog,
+                      onLeave: entry?.userId == widget.authUid
+                          ? _showLeaveDialog
+                          : null,
+                      onKick: entry != null &&
+                              entry.userId != widget.authUid &&
+                              widget.isOrganizer &&
+                              !_loading
+                          ? () => _showKickDialog(entry)
+                          : null,
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+          // Clear button (organizer only)
+          if (widget.isOrganizer) ...[
+            const SizedBox(width: 8),
+            if (_loading)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Tooltip(
+                message: AppLocalizations.of(context).clearQueue,
+                child: IconButton(
+                  icon: const Icon(Icons.playlist_remove_rounded),
+                  iconSize: 22,
+                  color: Colors.red.shade300,
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                  onPressed: entries.isNotEmpty ? _clearQueue : null,
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Spot Circle ───────────────────────────────────────────────────────────────
+
+class _SpotCircle extends StatelessWidget {
+  final SessionQueueEntry? entry;
+  final bool isSelf;
+  final bool canClaim;
+  final VoidCallback? onClaim;
+  final VoidCallback? onLeave;
+  final VoidCallback? onKick;
+
+  const _SpotCircle({
+    required this.entry,
+    required this.isSelf,
+    required this.canClaim,
+    required this.onClaim,
+    required this.onLeave,
+    this.onKick,
+  });
+
+  static const double _size = 44;
+
+  @override
+  Widget build(BuildContext context) {
+    if (entry == null) {
+      // Empty spot
+      return GestureDetector(
+        onTap: canClaim ? onClaim : null,
+        child: Container(
+          width: _size,
+          height: _size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: canClaim ? Colors.teal : Colors.grey.shade300,
+              width: 1.5,
+            ),
+            color: canClaim
+                ? Colors.teal.withValues(alpha: 0.05)
+                : Colors.transparent,
+          ),
+          child: canClaim
+              ? Icon(Icons.add_rounded,
+                  size: 20, color: Colors.teal.withValues(alpha: 0.6))
+              : null,
+        ),
+      );
+    }
+
+    // Filled spot
+    final isKickable = onKick != null;
+    final tooltipLabel = isSelf
+        ? 'You — tap to leave'
+        : isKickable
+            ? 'Remove ${entry!.displayName} 👢'
+            : entry!.displayName;
+    final effectiveTap = isSelf ? onLeave : (isKickable ? onKick : null);
+
+    return Tooltip(
+      message: tooltipLabel,
+      triggerMode: TooltipTriggerMode.longPress,
+      preferBelow: false,
+      child: GestureDetector(
+        onTap: effectiveTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: _size,
+              height: _size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: isSelf
+                    ? Border.all(color: Colors.teal, width: 2.5)
+                    : isKickable
+                        ? Border.all(
+                            color: AppTheme.danger.withValues(alpha: 0.5),
+                            width: 1.5)
+                        : null,
+                boxShadow: isSelf
+                    ? [
+                        BoxShadow(
+                          color: Colors.teal.withValues(alpha: 0.30),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: _AvatarCircle(
+                avatarUrl: entry!.avatarUrl,
+                displayName: entry!.displayName,
+                size: _size,
+                backgroundColor: isSelf ? Colors.teal : null,
+                fontSize: isSelf ? 9 : 13,
+                labelOverride: isSelf ? 'You' : null,
+              ),
+            ),
+            // Kick badge — small red × in the top-right corner for organizers
+            if (isKickable)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      size: 10, color: Colors.white),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Setup Queues Sheet ────────────────────────────────────────────────────────
+
+class _SetupQueuesSheet extends StatefulWidget {
+  final Event event;
+  final EventSession session;
+  final List<SessionQueueActivity> currentQueues;
+  final Map<String, List<SessionQueueEntry>> currentEntries;
+
+  const _SetupQueuesSheet({
+    required this.event,
+    required this.session,
+    this.currentQueues = const [],
+    this.currentEntries = const {},
+  });
+
+  @override
+  State<_SetupQueuesSheet> createState() => _SetupQueuesSheetState();
+}
+
+class _SetupQueuesSheetState extends State<_SetupQueuesSheet> {
+  late int _queueCount;
+  late int _spotsPerQueue;
+  late bool _allowDuplicates;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final q = widget.currentQueues;
+    _queueCount     = q.isNotEmpty ? q.length : 3;
+    _spotsPerQueue  = q.isNotEmpty ? q.first.playersPerRound : 4;
+    _allowDuplicates = q.isNotEmpty ? q.first.allowDuplicates : false;
+  }
+
+  /// Number of users who will lose their spot with the current form values.
+  int get _kickedCount {
+    final queues = [...widget.currentQueues]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    if (queues.isEmpty) return 0;
+    int count = 0;
+    for (int i = 0; i < queues.length; i++) {
+      final entries = widget.currentEntries[queues[i].id] ?? [];
+      if (i >= _queueCount) {
+        // Entire queue row will be removed → everyone in it is kicked.
+        count += entries.length;
+      } else {
+        // Row stays but spots may shrink → kick anyone beyond the new limit.
+        count += entries.where((e) => e.queuePosition > _spotsPerQueue).length;
+      }
+    }
+    return count;
+  }
+
+  Future<void> _create() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<EventProvider>().setupQueues(
+            widget.event.id,
+            widget.session.id,
+            _queueCount,
+            _spotsPerQueue,
+            allowDuplicates: _allowDuplicates,
+          );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Header
+          Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFBBF24), Color(0xFFF97316)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(
+                  child: Text('🎮', style: TextStyle(fontSize: 26)),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.setupQueues,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                  Text(
+                    'Configure courts & spots',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Stepper cards
+          _FunStepperCard(
+            emoji: '🏟️',
+            label: l10n.numberOfQueues,
+            value: _queueCount,
+            min: 1,
+            max: 20,
+            onChanged: (v) => setState(() => _queueCount = v),
+          ),
+          const SizedBox(height: 10),
+          _FunStepperCard(
+            emoji: '👥',
+            label: l10n.spotsPerQueue,
+            value: _spotsPerQueue,
+            min: 1,
+            max: 20,
+            onChanged: (v) => setState(() => _spotsPerQueue = v),
+          ),
+          const SizedBox(height: 10),
+
+          // ── Kick warning ───────────────────────────────────────────────────
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: _kickedCount > 0
+                ? Container(
+                    key: const ValueKey('kick-warn'),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: const Color(0xFFFB923C), width: 1.5),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('⚠️', style: TextStyle(fontSize: 20)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$_kickedCount ${_kickedCount == 1 ? 'person' : 'people'} will lose their spot!',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF9A3412),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Shrinking rows or spots removes anyone beyond the new limits.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange[800],
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('no-warn')),
+          ),
+
+          // Allow-duplicates toggle
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: colorScheme.outlineVariant, width: 0.5),
+            ),
+            child: SwitchListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+              secondary: const Text('🔀', style: TextStyle(fontSize: 22)),
+              title: Text(
+                l10n.allowDuplicates,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                l10n.allowDuplicatesSubtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+              ),
+              value: _allowDuplicates,
+              onChanged: (v) => setState(() => _allowDuplicates = v),
+              activeThumbColor: AppTheme.accent,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Mini queue preview — shows N rows of M circles
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Preview',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[500],
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...List.generate(_queueCount.clamp(1, 5), (qi) {
+                  final spotsVisible = _spotsPerQueue.clamp(1, 6);
+                  final overflow = _spotsPerQueue - spotsVisible;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Text(
+                          '#${qi + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ...List.generate(spotsVisible, (_) => Padding(
+                          padding: const EdgeInsets.only(right: 5),
+                          child: Container(
+                            width: 22, height: 22,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.teal, width: 1.5),
+                              color: Colors.teal.withValues(alpha: 0.08),
+                            ),
+                          ),
+                        )),
+                        if (overflow > 0)
+                          Text('+$overflow',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.teal,
+                                  fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  );
+                }),
+                if (_queueCount > 5)
+                  Text(
+                    '+ ${_queueCount - 5} more queues',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[400],
+                        fontStyle: FontStyle.italic),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // CTA button
+          AppTappable(
+            onTap: _loading ? null : _create,
+            child: Container(
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFBBF24), Color(0xFFF97316)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFF97316).withValues(alpha: 0.40),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: _loading
+                    ? const SizedBox(
+                        width: 22, height: 22,
+                        child: CircularProgressIndicator(
+                            color: Color(0xFF431407), strokeWidth: 2.5))
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🚀', style: TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.setupQueues,
+                            style: const TextStyle(
+                              color: Color(0xFF431407),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FunStepperCard extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final ValueChanged<int> onChanged;
+
+  const _FunStepperCard({
+    required this.emoji,
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
+
+  Widget _stepBtn({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return AppTappable(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: enabled ? color : Colors.grey[200],
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon,
+            size: 18,
+            color: enabled ? Colors.white : Colors.grey[400]),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colorScheme.outlineVariant, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+          _stepBtn(
+            icon: Icons.remove_rounded,
+            enabled: value > min,
+            onTap: () => onChanged(value - 1),
+            color: Colors.grey[600]!,
+          ),
+          SizedBox(
+            width: 44,
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w900),
+            ),
+          ),
+          _stepBtn(
+            icon: Icons.add_rounded,
+            enabled: value < max,
+            onTap: () => onChanged(value + 1),
+            color: Colors.teal,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Empty Queues State ────────────────────────────────────────────────────────
+
+// ── Slot option card ──────────────────────────────────────────────────────────
+
+class _SlotOptionCard extends StatelessWidget {
+  final String emoji;
+  final LinearGradient gradient;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SlotOptionCard({
+    required this.emoji,
+    required this.gradient,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTappable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradient.colors.last.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 22)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                color: Colors.grey[400], size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Member Picker Sheet ───────────────────────────────────────────────────────
+
+class _MemberPickerSheet extends StatefulWidget {
+  final String title;
+  final String searchHint;
+  final List<EventGuest> candidates;
+  final void Function(EventGuest) onSelected;
+
+  const _MemberPickerSheet({
+    required this.title,
+    required this.searchHint,
+    required this.candidates,
+    required this.onSelected,
+  });
+
+  @override
+  State<_MemberPickerSheet> createState() => _MemberPickerSheetState();
+}
+
+class _MemberPickerSheetState extends State<_MemberPickerSheet> {
+  String _query = '';
+
+  List<EventGuest> get _filtered => widget.candidates
+      .where((g) =>
+          g.displayName.toLowerCase().contains(_query.toLowerCase()) ||
+          (g.email?.toLowerCase().contains(_query.toLowerCase()) ?? false))
+      .toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filtered;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, controller) => Column(
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              widget.title,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              autofocus: true,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: widget.searchHint,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Text(
+                      'No members found',
+                      style: TextStyle(color: Colors.grey[500]),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: controller,
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final g = filtered[i];
+                      return ListTile(
+                        leading: SupabaseAvatar(
+                          url: g.avatarUrl?.isNotEmpty == true
+                              ? g.avatarUrl
+                              : null,
+                          radius: 20,
+                          backgroundColor:
+                              AppTheme.primary.withValues(alpha: 0.12),
+                          fallback: Text(
+                            g.displayName.isNotEmpty
+                                ? g.displayName[0].toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primary),
+                          ),
+                        ),
+                        title: Text(g.displayName),
+                        subtitle: g.email != null
+                            ? Text(g.email!,
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey[500]))
+                            : null,
+                        trailing: g.userId == null
+                            ? Tooltip(
+                                message: 'No app account',
+                                child: Icon(Icons.person_off_outlined,
+                                    size: 16, color: Colors.grey[400]),
+                              )
+                            : null,
+                        onTap: () => widget.onSelected(g),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Empty queues placeholder ──────────────────────────────────────────────────
+
+class _EmptyQueuesState extends StatelessWidget {
+  final bool isOrganizer;
+  final AppLocalizations l10n;
+
+  const _EmptyQueuesState({
+    required this.isOrganizer,
+    required this.l10n,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.grid_view_rounded, size: 56, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          Text(
+            l10n.noQueuesYet,
+            style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isOrganizer
+                ? l10n.createFirstQueue
+                : 'Check back when the organizer sets up the queues.',
+            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Signup Roster tab ─────────────────────────────────────────────────────────
 
 class _SignupRosterTab extends StatefulWidget {
@@ -10597,6 +12841,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
   String? _error;
   // Track by session ID (stable across list refreshes).
   String? _expandedSessionId;
+  // Saved reference so we can call watchEvent(null) safely in dispose()
+  // without accessing context after the widget tree is deactivated.
+  EventProvider? _savedProvider;
 
   @override
   void initState() {
@@ -10604,14 +12851,16 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     // B9: tell the provider which event is active so Realtime callbacks
     // can skip notifyListeners() for unrelated events.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<EventProvider>().watchEvent(widget.event.id);
+      if (!mounted) return;
+      _savedProvider = context.read<EventProvider>();
+      _savedProvider!.watchEvent(widget.event.id);
     });
     _fetchUpcoming();
   }
 
   @override
   void dispose() {
-    context.read<EventProvider>().watchEvent(null);
+    _savedProvider?.watchEvent(null);
     super.dispose();
   }
 
@@ -11694,6 +13943,8 @@ class _SessionCardState extends State<_SessionCard>
       backgroundColor: Colors.transparent,
       builder: (_) => _SessionInfoSheet(
         session: widget.session,
+        event: widget.event,
+        isOrganizer: widget.isOrganizer,
         position: widget.position,
       ),
     );
@@ -11865,17 +14116,63 @@ class _SessionCardState extends State<_SessionCard>
 
 // ── Session info sheet ────────────────────────────────────────────────────────
 
-class _SessionInfoSheet extends StatelessWidget {
+class _SessionInfoSheet extends StatefulWidget {
   final EventSession session;
+  final Event event;
+  final bool isOrganizer;
   // B6: ordinal position in the sorted session list — stable display label
   // that doesn't have gaps after deletions the way session_number can.
   final int position;
 
-  const _SessionInfoSheet({required this.session, this.position = 1});
+  const _SessionInfoSheet({
+    required this.session,
+    required this.event,
+    required this.isOrganizer,
+    this.position = 1,
+  });
+
+  @override
+  State<_SessionInfoSheet> createState() => _SessionInfoSheetState();
+}
+
+class _SessionInfoSheetState extends State<_SessionInfoSheet> {
+  bool _toggling = false;
+
+  Future<void> _toggleActive(EventSession session) async {
+    if (_toggling) return;
+    setState(() => _toggling = true);
+    try {
+      await context.read<EventProvider>().toggleSessionActive(
+            session.id,
+            widget.event.id,
+            active: !session.isActive,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _toggling = false);
+    }
+  }
+
+  // Always use the latest cached version so Realtime updates reflect instantly.
+  EventSession get session {
+    final provider = context.read<EventProvider>();
+    return provider.upcomingSessionsFor(widget.event.id)
+            .where((s) => s.id == widget.session.id)
+            .firstOrNull ??
+        provider.pastSessionsFor(widget.event.id)
+            .where((s) => s.id == widget.session.id)
+            .firstOrNull ??
+        widget.session;
+  }
 
   // Picks one string from [options] deterministically based on session id.
   String _pick(List<String> options) {
-    final i = session.id.hashCode.abs() % options.length;
+    final i = widget.session.id.hashCode.abs() % options.length;
     return options[i];
   }
 
@@ -12007,11 +14304,14 @@ class _SessionInfoSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Watch provider so the sheet rebuilds when is_active changes via Realtime.
+    context.watch<EventProvider>();
+    final s = session; // resolved from cache via getter above
     final fmt = DateFormat('EEEE, MMM d · h:mm a');
-    final grad = _SessionEmojiBadge.gradientFor(session);
-    final cap = session.capacity;
-    final going = session.goingCount;
-    final waiting = session.waitlistCount;
+    final grad = _SessionEmojiBadge.gradientFor(s);
+    final cap = s.capacity;
+    final going = s.goingCount;
+    final waiting = s.waitlistCount;
     final fillFraction =
         cap != null && cap > 0 ? (going / cap).clamp(0.0, 1.0) : null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -12057,7 +14357,7 @@ class _SessionInfoSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Session #$position',
+                        'Session #${widget.position}',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
@@ -12066,16 +14366,16 @@ class _SessionInfoSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        fmt.format(session.startAt.toLocal()),
+                        fmt.format(s.startAt.toLocal()),
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold),
                       ),
-                      if (session.endAt != null) ...[
+                      if (s.endAt != null) ...[
                         const SizedBox(height: 2),
                         Text(
-                          'Ends ${DateFormat('h:mm a').format(session.endAt!.toLocal())}',
+                          'Ends ${DateFormat('h:mm a').format(s.endAt!.toLocal())}',
                           style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.80),
                               fontSize: 12),
@@ -12180,40 +14480,48 @@ class _SessionInfoSheet extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                // ── Active/Inactive status chip (display only — use button below to toggle) ──
                 _InfoChip(
-                  icon: session.isPublic
+                  icon: s.isActive
+                      ? Icons.play_circle_outline_rounded
+                      : Icons.pause_circle_outline_rounded,
+                  label: s.isActive ? 'Active' : 'Inactive',
+                  color: s.isActive ? Colors.green : Colors.grey,
+                ),
+                _InfoChip(
+                  icon: s.isPublic
                       ? Icons.public_rounded
                       : Icons.lock_outline_rounded,
-                  label: session.isPublic ? 'Public' : 'Private',
-                  color: session.isPublic
+                  label: s.isPublic ? 'Public' : 'Private',
+                  color: s.isPublic
                       ? const Color(0xFF1565C0)
                       : Colors.blueGrey,
                 ),
-                if (session.waitlistEnabled)
+                if (s.waitlistEnabled)
                   const _InfoChip(
                     icon: Icons.list_alt_rounded,
                     label: 'Waitlist on',
                     color: Colors.orange,
                   ),
-                if (session.requiresApproval)
+                if (s.requiresApproval)
                   const _InfoChip(
                     icon: Icons.how_to_reg_rounded,
                     label: 'Approval required',
                     color: Color(0xFF6A1B9A),
                   ),
-                if (session.isLocked)
+                if (s.isLocked)
                   const _InfoChip(
                     icon: Icons.lock_rounded,
                     label: 'Signups locked',
                     color: Colors.red,
                   )
-                else if (session.signupLockHours != null)
+                else if (s.signupLockHours != null)
                   _InfoChip(
                     icon: Icons.timer_outlined,
-                    label: 'Locks ${session.signupLockHours}h before',
+                    label: 'Locks ${s.signupLockHours}h before',
                     color: Colors.teal,
                   ),
-                if (session.hasEnded)
+                if (s.hasEnded)
                   const _InfoChip(
                     icon: Icons.flag_rounded,
                     label: 'Ended',
@@ -12222,6 +14530,84 @@ class _SessionInfoSheet extends StatelessWidget {
               ],
             ),
           ),
+
+          if (widget.isOrganizer) ...[
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: s.isActive
+                    ? OutlinedButton.icon(
+                        onPressed: _toggling ? null : () => _toggleActive(s),
+                        icon: _toggling
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2))
+                            : const Icon(Icons.pause_circle_outline_rounded),
+                        label: const Text('Mark as Inactive'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(color: Colors.grey.shade400),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                      )
+                    : DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [Color(0xFF1B5E20), Color(0xFF43A047)]),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withValues(alpha: 0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: _toggling ? null : () => _toggleActive(s),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (_toggling)
+                                    const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white))
+                                  else
+                                    const Icon(
+                                        Icons.play_circle_outline_rounded,
+                                        color: Colors.white,
+                                        size: 18),
+                                  const SizedBox(width: 8),
+                                  const Text('Mark as Active',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
 
           const SizedBox(height: 28),
         ],

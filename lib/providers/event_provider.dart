@@ -7,6 +7,7 @@ import '../models/event.dart';
 import '../models/event_bring_item.dart';
 import '../models/event_session.dart';
 import '../models/event_expense.dart';
+import '../models/session_queue.dart';
 import '../models/event_gift_pool.dart';
 import '../models/event_poll.dart';
 import '../models/event_guest.dart';
@@ -60,6 +61,15 @@ class EventProvider extends ChangeNotifier {
   final Map<String, List<EventBringItem>> _bringItems = {};
   final Map<String, List<EventPoll>> _polls = {};
 
+  // Session activity caches (fetched on demand for signup events only).
+  final Map<String, List<SessionQueueActivity>> _sessionQueues = {};
+  final Map<String, List<SessionQueueEntry>>    _queueEntries  = {}; // keyed by activityId
+  final Map<String, List<SessionFreePoolEntry>> _freePool      = {}; // keyed by sessionId
+  // O(1) index: activityId → (sessionId, eventId). Kept in sync with _sessionQueues
+  // so entry-level Realtime handlers can always recompute the free pool even when
+  // the activity was added via Realtime rather than fetchSessionQueues.
+  final Map<String, ({String sessionId, String eventId})> _activityMeta = {};
+
   // Birthday-specific caches (fetched on demand for birthday events only).
   final Map<String, List<EventWishlistItem>> _wishlistItems = {};
   final Map<String, EventGiftPool?> _giftPools = {};
@@ -107,6 +117,11 @@ class EventProvider extends ChangeNotifier {
   List<EventBringItem> bringItemsFor(String eventId) =>
       _bringItems[eventId] ?? [];
   List<EventPoll> pollsFor(String eventId) => _polls[eventId] ?? [];
+
+  // Keyed by sessionId for both queues and free pool.
+  List<SessionQueueActivity> queuesFor(String sessionId)   => _sessionQueues[sessionId] ?? [];
+  List<SessionQueueEntry>    entriesFor(String activityId) => _queueEntries[activityId] ?? [];
+  List<SessionFreePoolEntry> freePoolFor(String sessionId) => _freePool[sessionId] ?? [];
 
   List<EventWishlistItem> wishlistFor(String eventId) =>
       _wishlistItems[eventId] ?? [];
@@ -323,6 +338,10 @@ class EventProvider extends ChangeNotifier {
     _expenses.clear();
     _bringItems.clear();
     _polls.clear();
+    _sessionQueues.clear();
+    _queueEntries.clear();
+    _freePool.clear();
+    _activityMeta.clear();
     _loaded = false;
     _loadError = null;
     if (_userId != null) {
@@ -352,7 +371,7 @@ class EventProvider extends ChangeNotifier {
 
     try {
       final profiles = await _db.rpc(
-        'get_profile_names',
+        'get_trip_profile_names',
         params: {'p_user_ids': userIds.toList()},
       ) as List<dynamic>;
 
@@ -979,6 +998,8 @@ class EventProvider extends ChangeNotifier {
                 'signup_lock_hours': row.containsKey('signup_lock_hours') ? row['signup_lock_hours'] : s.signupLockHours,
                 'is_public': row.containsKey('is_public') ? row['is_public'] : s.isPublic,
                 'requires_approval': row.containsKey('requires_approval') ? row['requires_approval'] : s.requiresApproval,
+                'is_active': row.containsKey('is_active') ? row['is_active'] : s.isActive,
+                'is_active_override': row.containsKey('is_active_override') ? row['is_active_override'] : s.isActiveOverride,
               }),
             );
             notifyListeners();
@@ -1189,6 +1210,46 @@ class EventProvider extends ChangeNotifier {
             notifyListeners();
             unawaited(refreshSessionRoster(sessionId));
           },
+        )
+
+        // ── session_queue_activities ────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'session_queue_activities',
+          callback: (p) => handleQueueActivityInsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'session_queue_activities',
+          callback: (p) => handleQueueActivityUpdate(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'session_queue_activities',
+          callback: (p) => handleQueueActivityDelete(p.oldRecord),
+        )
+
+        // ── session_queue_entries ───────────────────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'session_queue_entries',
+          callback: (p) => handleQueueEntryInsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'session_queue_entries',
+          callback: (p) => handleQueueEntryUpdate(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'session_queue_entries',
+          callback: (p) => handleQueueEntryDelete(p.oldRecord),
         )
 
         .subscribe();
@@ -1561,7 +1622,7 @@ class EventProvider extends ChangeNotifier {
     final rows = await _db
         .from('event_sessions')
         .select(
-            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval')
+            'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override')
         .eq('event_id', eventId)
         .gte('start_at', now)
         .order('start_at', ascending: true)
@@ -1584,7 +1645,7 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override')
           .eq('event_id', eventId)
           .lt('start_at', now)
           .order('start_at', ascending: false) // most recent first
@@ -1612,7 +1673,7 @@ class EventProvider extends ChangeNotifier {
       final rows = await _db
           .from('event_sessions')
           .select(
-              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval')
+              'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override')
           .eq('event_id', eventId)
           .lt('start_at', cursor) // next batch of older past sessions
           .order('start_at', ascending: false)
@@ -3164,4 +3225,312 @@ class EventProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Session Queue Activities (scoped per event_session) ──────────────────
+
+  // ── Realtime handler methods (extracted for testability) ─────────────────
+
+  @visibleForTesting
+  void handleQueueActivityInsert(Map<String, dynamic> row) {
+    final sessionId = row['session_id'] as String?;
+    final id = row['id'] as String?;
+    if (sessionId == null || id == null) return;
+    try {
+      final activity = SessionQueueActivity.fromJson(row);
+      final list = List<SessionQueueActivity>.from(_sessionQueues[sessionId] ?? []);
+      if (!list.any((a) => a.id == id)) {
+        list.add(activity);
+        list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        _sessionQueues[sessionId] = list;
+        _activityMeta[id] = (sessionId: sessionId, eventId: activity.eventId);
+        _queueEntries.putIfAbsent(id, () => []);
+        _recomputeFreePool(activity.eventId, sessionId);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  @visibleForTesting
+  void handleQueueActivityUpdate(Map<String, dynamic> row) {
+    final sessionId = row['session_id'] as String?;
+    final id = row['id'] as String?;
+    if (sessionId == null || id == null) return;
+    final list = _sessionQueues[sessionId];
+    if (list != null) {
+      final idx = list.indexWhere((a) => a.id == id);
+      if (idx >= 0) {
+        final updated = SessionQueueActivity.fromJson(row);
+        list[idx] = updated;
+        list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        _activityMeta[id] = (sessionId: sessionId, eventId: updated.eventId);
+      }
+    }
+    // The DB trigger fires this UPDATE on every entry INSERT/DELETE
+    // (playing_count changes). Use it as a secondary signal to recompute
+    // the free pool even when the entry-level event arrives out of order.
+    _recomputeFreePoolForActivity(id);
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void handleQueueActivityDelete(Map<String, dynamic> row) {
+    final sessionId = row['session_id'] as String?;
+    final id = row['id'] as String?;
+    if (sessionId == null || id == null) return;
+    final eventId = _activityMeta[id]?.eventId
+        ?? _sessionQueues[sessionId]?.firstOrNull?.eventId;
+    _sessionQueues[sessionId]?.removeWhere((a) => a.id == id);
+    _queueEntries.remove(id);
+    _activityMeta.remove(id);
+    if (eventId != null) _recomputeFreePool(eventId, sessionId);
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void handleQueueEntryInsert(Map<String, dynamic> row) {
+    final activityId = row['activity_id'] as String?;
+    if (activityId == null) return;
+    try {
+      final entry = SessionQueueEntry.fromJson(row);
+      final list = List<SessionQueueEntry>.from(_queueEntries[activityId] ?? []);
+      if (!list.any((e) => e.id == entry.id)) {
+        list.add(entry);
+        list.sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
+        _queueEntries[activityId] = list;
+      }
+      _recomputeFreePoolForActivity(activityId);
+      notifyListeners();
+    } catch (_) {
+      final meta = _activityMeta[activityId];
+      if (meta != null) unawaited(fetchSessionQueues(meta.eventId, meta.sessionId));
+    }
+  }
+
+  @visibleForTesting
+  void handleQueueEntryUpdate(Map<String, dynamic> row) {
+    final activityId = row['activity_id'] as String?;
+    final id = row['id'] as String?;
+    if (activityId == null || id == null) return;
+    final list = _queueEntries[activityId];
+    if (list == null) return;
+    final idx = list.indexWhere((e) => e.id == id);
+    if (idx >= 0) {
+      list[idx] = SessionQueueEntry.fromJson(row);
+      list.sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
+      notifyListeners();
+    }
+  }
+
+  @visibleForTesting
+  void handleQueueEntryDelete(Map<String, dynamic> row) {
+    final activityId = row['activity_id'] as String?;
+    final id = row['id'] as String?;
+    if (activityId == null || id == null) return;
+    _queueEntries[activityId]?.removeWhere((e) => e.id == id);
+    _recomputeFreePoolForActivity(activityId);
+    notifyListeners();
+  }
+
+  /// Seeds events into the in-memory cache for unit tests.
+  @visibleForTesting
+  void seedEventsForTest(List<Event> events) {
+    _events = [...events];
+  }
+
+  // Register all activities for a session in the O(1) index.
+  void _indexActivities(String sessionId, List<SessionQueueActivity> activities) {
+    for (final a in activities) {
+      _activityMeta[a.id] = (sessionId: sessionId, eventId: a.eventId);
+    }
+  }
+
+  // Recompute free pool for the session that owns [activityId].
+  // Uses the O(1) _activityMeta index first; falls back to a linear scan of
+  // _sessionQueues so a race condition (Realtime fires before _indexActivities)
+  // never silently skips the recompute.
+  void _recomputeFreePoolForActivity(String activityId) {
+    final meta = _activityMeta[activityId];
+    if (meta != null) {
+      _recomputeFreePool(meta.eventId, meta.sessionId);
+      return;
+    }
+    // Fallback: search _sessionQueues
+    for (final entry in _sessionQueues.entries) {
+      final act = entry.value.where((a) => a.id == activityId).firstOrNull;
+      if (act != null) {
+        _recomputeFreePool(act.eventId, entry.key);
+        return;
+      }
+    }
+  }
+
+  void _recomputeFreePool(String eventId, String sessionId) {
+    final activities = _sessionQueues[sessionId] ?? [];
+    // Only authenticated users can join queues, so only check auth IDs.
+    final inQueue = activities
+        .expand((a) => _queueEntries[a.id] ?? [])
+        .where((e) => e.userId != null)
+        .map((e) => e.userId!)
+        .toSet();
+    final event = _events.where((e) => e.id == eventId).firstOrNull;
+    final guests = event?.guests ?? [];
+    _freePool[sessionId] = guests
+        .where((g) => !const {'left', 'declined'}.contains(g.status))
+        .where((g) => g.userId == null || !inQueue.contains(g.userId))
+        .map((g) => SessionFreePoolEntry(
+              id: g.id,
+              eventId: eventId,
+              sessionId: sessionId,
+              // Anonymous guests (no account) use guest.id as placeholder;
+              // they won't match any authUid so isSelf stays false.
+              userId: g.userId ?? g.id,
+              displayName: g.displayName,
+              avatarUrl: g.avatarUrl,
+              checkedInAt: g.rsvpAt,
+            ))
+        .toList();
+  }
+
+  /// Fetches all queue activities + entries + free pool for a specific session.
+  /// Cache keyed by sessionId.
+  Future<void> fetchSessionQueues(String eventId, String sessionId) async {
+    try {
+      final actRows = await _db
+          .from('session_queue_activities')
+          .select()
+          .eq('session_id', sessionId)
+          .order('sort_order', ascending: true)
+          .order('created_at', ascending: true) as List<dynamic>;
+      final activities = actRows
+          .map((r) => SessionQueueActivity.fromJson(r as Map<String, dynamic>))
+          .toList();
+      _sessionQueues[sessionId] = activities;
+      _indexActivities(sessionId, activities);
+
+      for (final a in activities) {
+        final entRows = await _db
+            .from('session_queue_entries')
+            .select()
+            .eq('activity_id', a.id)
+            .order('queue_position', ascending: true) as List<dynamic>;
+        _queueEntries[a.id] = entRows
+            .map((r) => SessionQueueEntry.fromJson(r as Map<String, dynamic>))
+            .toList();
+      }
+
+      // Free pool = event members not currently in any queue (computed client-side).
+      _recomputeFreePool(eventId, sessionId);
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('EventProvider.fetchSessionQueues error: $e');
+    }
+  }
+
+  /// Organizer bulk-creates [count] queues with [spots] spots each for the session.
+  /// Deletes any existing queues first.
+  Future<void> setupQueues(
+    String eventId,
+    String sessionId,
+    int count,
+    int spots, {
+    bool allowDuplicates = false,
+  }) async {
+    await _db.rpc('setup_session_queues', params: {
+      'p_session_id': sessionId,
+      'p_count': count,
+      'p_spots': spots,
+      'p_allow_duplicates': allowDuplicates,
+    });
+    unawaited(fetchSessionQueues(eventId, sessionId));
+  }
+
+  Future<void> joinQueue(String activityId, String eventId, String sessionId) async {
+    await _db.rpc('join_queue', params: {'p_activity_id': activityId});
+    // Await the refresh so notifyListeners() fires (alreadyInQueue becomes true
+    // across all rows) before the caller's finally-block clears _loading.
+    await fetchSessionQueues(eventId, sessionId);
+  }
+
+  Future<void> leaveQueue(String entryId, String activityId, String eventId, String sessionId) async {
+    await _db.rpc('leave_queue', params: {'p_entry_id': entryId});
+    await fetchSessionQueues(eventId, sessionId);
+  }
+
+  Future<void> addMemberToQueue(
+    String activityId,
+    String eventId,
+    String sessionId, {
+    String? userId,
+    required String displayName,
+    String? avatarUrl,
+  }) async {
+    await _db.rpc('add_member_to_queue', params: {
+      'p_activity_id': activityId,
+      'p_user_id': userId,
+      'p_display_name': displayName,
+      'p_avatar_url': avatarUrl,
+    });
+    await fetchSessionQueues(eventId, sessionId);
+  }
+
+  /// Organizer clears all spots from a queue row (game has started).
+  /// The cleared queue rotates to the bottom of the visual list.
+  Future<void> clearQueue(String activityId, String eventId, String sessionId) async {
+    await _db.rpc('clear_queue', params: {'p_activity_id': activityId});
+    unawaited(fetchSessionQueues(eventId, sessionId));
+  }
+
+  // Free pool is now auto-computed from the session roster; no explicit join/leave needed.
+
+  /// Organizer manually activates or deactivates a session.
+  /// Sets is_active AND is_active_override = true so the auto-timer won't revert.
+  Future<void> toggleSessionActive(String sessionId, String eventId, {required bool active}) async {
+    await _db.rpc('toggle_session_active', params: {
+      'p_session_id': sessionId,
+      'p_active': active,
+    });
+    _patchSessionInCache(eventId, sessionId, (s) => EventSession(
+      id: s.id, eventId: s.eventId, sessionNumber: s.sessionNumber,
+      startAt: s.startAt, endAt: s.endAt, inviteCode: s.inviteCode,
+      createdAt: s.createdAt, goingCount: s.goingCount,
+      waitlistCount: s.waitlistCount, pendingCount: s.pendingCount,
+      capacity: s.capacity, waitlistEnabled: s.waitlistEnabled,
+      signupLockHours: s.signupLockHours, isPublic: s.isPublic,
+      requiresApproval: s.requiresApproval, isActive: active,
+      isActiveOverride: true,
+    ));
+    notifyListeners();
+  }
+
+  /// Called by the client-side auto-timer only.
+  /// The DB-level RPC also enforces is_active_override as a safety net.
+  Future<void> autoSessionActive(String sessionId, String eventId, {required bool active}) async {
+    // Find session in either cache without throwing.
+    final allSessions = [
+      ...(_upcomingSessions[eventId] ?? []),
+      ...(_pastSessions[eventId] ?? []),
+    ];
+    final session = allSessions.where((s) => s.id == sessionId).firstOrNull;
+
+    // Skip if organizer has manual control or session not in cache yet.
+    if (session == null || session.isActiveOverride) return;
+
+    await _db.rpc('auto_session_active', params: {
+      'p_session_id': sessionId,
+      'p_active': active,
+    });
+    _patchSessionInCache(eventId, sessionId, (s) => EventSession(
+      id: s.id, eventId: s.eventId, sessionNumber: s.sessionNumber,
+      startAt: s.startAt, endAt: s.endAt, inviteCode: s.inviteCode,
+      createdAt: s.createdAt, goingCount: s.goingCount,
+      waitlistCount: s.waitlistCount, pendingCount: s.pendingCount,
+      capacity: s.capacity, waitlistEnabled: s.waitlistEnabled,
+      signupLockHours: s.signupLockHours, isPublic: s.isPublic,
+      requiresApproval: s.requiresApproval, isActive: active,
+      isActiveOverride: false,
+    ));
+    notifyListeners();
+  }
+
 }
+

@@ -44,7 +44,7 @@ class BlockedUsersProvider extends ChangeNotifier {
       // get_profile_names is SECURITY DEFINER — bypasses user_profiles RLS
       // and returns a meaningful name (email prefix fallback, then UUID).
       final profiles = await _db.rpc(
-        'get_profile_names',
+        'get_trip_profile_names',
         params: {'p_user_ids': blockedIds},
       ) as List<dynamic>;
 

@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "Por favor selecione um tipo de evento",
   "notifications": "Notificações",
   "notificationsEmpty": "Você está em dia!",
-  "notificationsMarkAllRead": "Marcar tudo como lido"
+  "notificationsMarkAllRead": "Marcar tudo como lido",
+  "sessionActivityTab": "Atividade",
+  "queueUp": "Fila",
+  "createQueue": "Criar fila",
+  "playersPerRound": "Jogadores por rodada",
+  "maxRounds": "Máximo de rodadas",
+  "noLimit": "Sem limite",
+  "checkIn": "Fazer check-in",
+  "checkOut": "Fazer check-out",
+  "joinQueue": "Entrar na fila",
+  "leaveQueue": "Sair da fila",
+  "startQueue": "Iniciar",
+  "nextRound": "Próxima rodada",
+  "roundN": "Rodada {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "Todos voltam para a fila",
+  "releaseToFreePool": "Liberar para o pool",
+  "freePool": "Pool livre",
+  "nowPlaying": "Jogando agora",
+  "waitingQueue": "Aguardando",
+  "queueEnded": "Fila encerrada",
+  "noQueuesYet": "Nenhuma atividade ainda",
+  "createFirstQueue": "Crie a primeira fila para começar",
+  "queueRoundComplete": "Rodada {n} concluída!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "Configurar filas",
+  "numberOfQueues": "Número de filas",
+  "spotsPerQueue": "Lugares por fila",
+  "clearQueue": "Limpar",
+  "queueFull": "Fila cheia",
+  "alreadyInQueue": "Você já está em uma fila",
+  "addToSlot": "Garanta um lugar!",
+  "addMyselfToQueue": "Estou dentro!",
+  "addSomeoneElse": "Adicionar parceiro",
+  "selectAMember": "Selecionar um membro",
+  "searchMembersHint": "Pesquisar membros…",
+  "leaveSlotTitle": "Sair do lugar?",
+  "leaveSlotMessage": "Retirar-se do lugar na fila #{number}?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "Retirar",
+  "kickFromSlotTitle": "Expulsar? 👢",
+  "kickFromSlotMessage": "Remover {name} da fila #{number}?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "Expulsar! 🦵",
+  "allowDuplicates": "Permitir múltiplas filas",
+  "allowDuplicatesSubtitle": "Membros podem estar em mais de uma fila ao mesmo tempo",
+  "customizeQueues": "Personalizar filas"
 }

@@ -1662,4 +1662,139 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Marcar todo como leído';
+
+  @override
+  String get sessionActivityTab => 'Actividad';
+
+  @override
+  String get queueUp => 'Cola';
+
+  @override
+  String get createQueue => 'Crear cola';
+
+  @override
+  String get playersPerRound => 'Jugadores por ronda';
+
+  @override
+  String get maxRounds => 'Rondas máximas';
+
+  @override
+  String get noLimit => 'Sin límite';
+
+  @override
+  String get checkIn => 'Registrarse';
+
+  @override
+  String get checkOut => 'Salir';
+
+  @override
+  String get joinQueue => 'Unirse a la cola';
+
+  @override
+  String get leaveQueue => 'Salir de la cola';
+
+  @override
+  String get startQueue => 'Iniciar';
+
+  @override
+  String get nextRound => 'Siguiente ronda';
+
+  @override
+  String roundN(int n) {
+    return 'Ronda $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'Todos vuelven a la cola';
+
+  @override
+  String get releaseToFreePool => 'Liberar al pool';
+
+  @override
+  String get freePool => 'Pool libre';
+
+  @override
+  String get nowPlaying => 'Jugando ahora';
+
+  @override
+  String get waitingQueue => 'En espera';
+
+  @override
+  String get queueEnded => 'Cola terminada';
+
+  @override
+  String get noQueuesYet => 'Sin actividades aún';
+
+  @override
+  String get createFirstQueue => 'Crea la primera cola para empezar';
+
+  @override
+  String queueRoundComplete(int n) {
+    return '¡Ronda $n completada!';
+  }
+
+  @override
+  String get setupQueues => 'Configurar colas';
+
+  @override
+  String get numberOfQueues => 'Número de colas';
+
+  @override
+  String get spotsPerQueue => 'Plazas por cola';
+
+  @override
+  String get clearQueue => 'Limpiar';
+
+  @override
+  String get queueFull => 'Cola llena';
+
+  @override
+  String get alreadyInQueue => 'Ya estás en una cola';
+
+  @override
+  String get addToSlot => '¡Agarra un lugar!';
+
+  @override
+  String get addMyselfToQueue => '¡Estoy dentro!';
+
+  @override
+  String get addSomeoneElse => 'Añadir compañero';
+
+  @override
+  String get selectAMember => 'Seleccionar un miembro';
+
+  @override
+  String get searchMembersHint => 'Buscar miembros…';
+
+  @override
+  String get leaveSlotTitle => '¿Salir del turno?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return '¿Retirarte del turno en la cola #$number?';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'Retirar';
+
+  @override
+  String get kickFromSlotTitle => '¿Echarlo? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return '¿Quitar a $name de la cola #$number?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => '¡Fuera! 🦵';
+
+  @override
+  String get allowDuplicates => 'Permitir varias colas';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'Los miembros pueden estar en más de una cola a la vez';
+
+  @override
+  String get customizeQueues => 'Personalizar colas';
 }

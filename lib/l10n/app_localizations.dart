@@ -3107,6 +3107,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark all read'**
   String get notificationsMarkAllRead;
+
+  /// No description provided for @sessionActivityTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get sessionActivityTab;
+
+  /// No description provided for @queueUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue Up'**
+  String get queueUp;
+
+  /// No description provided for @createQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Queue'**
+  String get createQueue;
+
+  /// No description provided for @playersPerRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Players per round'**
+  String get playersPerRound;
+
+  /// No description provided for @maxRounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Max rounds'**
+  String get maxRounds;
+
+  /// No description provided for @noLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get noLimit;
+
+  /// No description provided for @checkIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Check In'**
+  String get checkIn;
+
+  /// No description provided for @checkOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Out'**
+  String get checkOut;
+
+  /// No description provided for @joinQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Queue'**
+  String get joinQueue;
+
+  /// No description provided for @leaveQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Queue'**
+  String get leaveQueue;
+
+  /// No description provided for @startQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get startQueue;
+
+  /// No description provided for @nextRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Round'**
+  String get nextRound;
+
+  /// No description provided for @roundN.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {n}'**
+  String roundN(int n);
+
+  /// No description provided for @allRejoinQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'All Rejoin Queue'**
+  String get allRejoinQueue;
+
+  /// No description provided for @releaseToFreePool.
+  ///
+  /// In en, this message translates to:
+  /// **'Release to Free Pool'**
+  String get releaseToFreePool;
+
+  /// No description provided for @freePool.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Pool'**
+  String get freePool;
+
+  /// No description provided for @nowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing'**
+  String get nowPlaying;
+
+  /// No description provided for @waitingQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get waitingQueue;
+
+  /// No description provided for @queueEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue Ended'**
+  String get queueEnded;
+
+  /// No description provided for @noQueuesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities yet'**
+  String get noQueuesYet;
+
+  /// No description provided for @createFirstQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Create the first queue to get started'**
+  String get createFirstQueue;
+
+  /// No description provided for @queueRoundComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Round {n} complete!'**
+  String queueRoundComplete(int n);
+
+  /// No description provided for @setupQueues.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Up Queues'**
+  String get setupQueues;
+
+  /// No description provided for @numberOfQueues.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of queues'**
+  String get numberOfQueues;
+
+  /// No description provided for @spotsPerQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Spots per queue'**
+  String get spotsPerQueue;
+
+  /// No description provided for @clearQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearQueue;
+
+  /// No description provided for @queueFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue is full'**
+  String get queueFull;
+
+  /// No description provided for @alreadyInQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re already in a queue'**
+  String get alreadyInQueue;
+
+  /// No description provided for @addToSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Grab a spot!'**
+  String get addToSlot;
+
+  /// No description provided for @addMyselfToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m in!'**
+  String get addMyselfToQueue;
+
+  /// No description provided for @addSomeoneElse.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a teammate'**
+  String get addSomeoneElse;
+
+  /// No description provided for @selectAMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a member'**
+  String get selectAMember;
+
+  /// No description provided for @searchMembersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search members…'**
+  String get searchMembersHint;
+
+  /// No description provided for @leaveSlotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave slot?'**
+  String get leaveSlotTitle;
+
+  /// No description provided for @leaveSlotMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw from your spot in queue #{number}?'**
+  String leaveSlotMessage(int number);
+
+  /// No description provided for @leaveSlotConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get leaveSlotConfirm;
+
+  /// No description provided for @kickFromSlotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Boot \'em? 👢'**
+  String get kickFromSlotTitle;
+
+  /// No description provided for @kickFromSlotMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from queue #{number}?'**
+  String kickFromSlotMessage(String name, int number);
+
+  /// No description provided for @kickFromSlotConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Boot out! 🦵'**
+  String get kickFromSlotConfirm;
+
+  /// No description provided for @allowDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow joining multiple queues'**
+  String get allowDuplicates;
+
+  /// No description provided for @allowDuplicatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Members can be in more than one queue at a time'**
+  String get allowDuplicatesSubtitle;
+
+  /// No description provided for @customizeQueues.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize queues'**
+  String get customizeQueues;
 }
 
 class _AppLocalizationsDelegate

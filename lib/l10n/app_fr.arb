@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "Veuillez sélectionner un type d'événement",
   "notifications": "Notifications",
   "notificationsEmpty": "Tout est à jour !",
-  "notificationsMarkAllRead": "Tout marquer comme lu"
+  "notificationsMarkAllRead": "Tout marquer comme lu",
+  "sessionActivityTab": "Activité",
+  "queueUp": "File d'attente",
+  "createQueue": "Créer une file",
+  "playersPerRound": "Joueurs par tour",
+  "maxRounds": "Tours maximum",
+  "noLimit": "Pas de limite",
+  "checkIn": "S'enregistrer",
+  "checkOut": "Se déconnecter",
+  "joinQueue": "Rejoindre la file",
+  "leaveQueue": "Quitter la file",
+  "startQueue": "Démarrer",
+  "nextRound": "Tour suivant",
+  "roundN": "Tour {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "Tous rejoignent la file",
+  "releaseToFreePool": "Libérer vers le pool",
+  "freePool": "Pool libre",
+  "nowPlaying": "En jeu",
+  "waitingQueue": "En attente",
+  "queueEnded": "File terminée",
+  "noQueuesYet": "Pas encore d'activités",
+  "createFirstQueue": "Créez la première file pour commencer",
+  "queueRoundComplete": "Tour {n} terminé !",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "Configurer les files",
+  "numberOfQueues": "Nombre de files",
+  "spotsPerQueue": "Places par file",
+  "clearQueue": "Vider",
+  "queueFull": "File complète",
+  "alreadyInQueue": "Vous êtes déjà dans une file",
+  "addToSlot": "Prenez une place !",
+  "addMyselfToQueue": "Je suis partant !",
+  "addSomeoneElse": "Ajouter un coéquipier",
+  "selectAMember": "Sélectionner un membre",
+  "searchMembersHint": "Rechercher des membres…",
+  "leaveSlotTitle": "Quitter la place ?",
+  "leaveSlotMessage": "Se retirer de la place dans la file #{number} ?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "Se retirer",
+  "kickFromSlotTitle": "L'expulser ? 👢",
+  "kickFromSlotMessage": "Retirer {name} de la file #{number} ?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "Expulser ! 🦵",
+  "allowDuplicates": "Autoriser plusieurs files",
+  "allowDuplicatesSubtitle": "Les membres peuvent être dans plusieurs files simultanément",
+  "customizeQueues": "Personnaliser les files"
 }

@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "イベントの種類を選択してください",
   "notifications": "通知",
   "notificationsEmpty": "すべて確認済みです！",
-  "notificationsMarkAllRead": "すべて既読にする"
+  "notificationsMarkAllRead": "すべて既読にする",
+  "sessionActivityTab": "アクティビティ",
+  "queueUp": "キュー",
+  "createQueue": "キューを作成",
+  "playersPerRound": "ラウンドあたりの人数",
+  "maxRounds": "最大ラウンド数",
+  "noLimit": "制限なし",
+  "checkIn": "チェックイン",
+  "checkOut": "チェックアウト",
+  "joinQueue": "キューに参加",
+  "leaveQueue": "キューを離れる",
+  "startQueue": "開始",
+  "nextRound": "次のラウンド",
+  "roundN": "ラウンド {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "全員がキューに戻る",
+  "releaseToFreePool": "フリープールに戻す",
+  "freePool": "フリープール",
+  "nowPlaying": "プレイ中",
+  "waitingQueue": "待機中",
+  "queueEnded": "キュー終了",
+  "noQueuesYet": "まだアクティビティはありません",
+  "createFirstQueue": "最初のキューを作成して始めましょう",
+  "queueRoundComplete": "ラウンド {n} 完了！",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "キューを設定",
+  "numberOfQueues": "キュー数",
+  "spotsPerQueue": "キューあたりのスポット数",
+  "clearQueue": "クリア",
+  "queueFull": "キューが満員です",
+  "alreadyInQueue": "すでにキューに入っています",
+  "addToSlot": "スポットをゲット！",
+  "addMyselfToQueue": "",
+  "addSomeoneElse": "",
+  "selectAMember": "メンバーを選択",
+  "searchMembersHint": "メンバーを検索…",
+  "leaveSlotTitle": "スロットを退出？",
+  "leaveSlotMessage": "キュー#{number}のスポットから撤退しますか？",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "撤退",
+  "kickFromSlotTitle": "追い出す？👢",
+  "kickFromSlotMessage": "キュー#{number}から{name}を外しますか？",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "追い出す！🦵",
+  "allowDuplicates": "複数のキューへの参加を許可",
+  "allowDuplicatesSubtitle": "メンバーは同時に複数のキューに参加できます",
+  "customizeQueues": "キューをカスタマイズ"
 }
