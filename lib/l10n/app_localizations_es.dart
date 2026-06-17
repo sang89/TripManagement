@@ -1778,7 +1778,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get leaveSlotConfirm => 'Retirar';
 
   @override
-  String get kickFromSlotTitle => '¿Echarlo? 👢';
+  String get kickFromSlotTitle => '¿Echarlo?';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1786,7 +1786,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => '¡Fuera! 🦵';
+  String get kickFromSlotConfirm => '¡Fuera!';
 
   @override
   String get allowDuplicates => 'Permitir varias colas';

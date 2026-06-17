@@ -1754,7 +1754,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get leaveSlotConfirm => '철수';
 
   @override
-  String get kickFromSlotTitle => '내보낼까요? 👢';
+  String get kickFromSlotTitle => '내보낼까요?';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1762,7 +1762,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => '내보내기! 🦵';
+  String get kickFromSlotConfirm => '내보내기!';
 
   @override
   String get allowDuplicates => '여러 대기열 참가 허용';

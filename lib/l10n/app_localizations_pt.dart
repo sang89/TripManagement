@@ -1778,7 +1778,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get leaveSlotConfirm => 'Retirar';
 
   @override
-  String get kickFromSlotTitle => 'Expulsar? 👢';
+  String get kickFromSlotTitle => 'Expulsar?';
 
   @override
   String kickFromSlotMessage(String name, int number) {
@@ -1786,7 +1786,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get kickFromSlotConfirm => 'Expulsar! 🦵';
+  String get kickFromSlotConfirm => 'Expulsar!';
 
   @override
   String get allowDuplicates => 'Permitir múltiplas filas';

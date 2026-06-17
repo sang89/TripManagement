@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "انسحاب",
-  "kickFromSlotTitle": "طرده؟ 👢",
+  "kickFromSlotTitle": "طرده؟",
   "kickFromSlotMessage": "إزالة {name} من الطابور #{number}؟",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "طرد! 🦵",
+  "kickFromSlotConfirm": "طرد!",
   "allowDuplicates": "السماح بالانضمام لعدة طوابير",
   "allowDuplicatesSubtitle": "يمكن للأعضاء التواجد في أكثر من طابور في نفس الوقت",
   "customizeQueues": "تخصيص الطوابير"

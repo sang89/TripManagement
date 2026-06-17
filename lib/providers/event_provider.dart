@@ -3365,17 +3365,23 @@ class EventProvider extends ChangeNotifier {
 
   void _recomputeFreePool(String eventId, String sessionId) {
     final activities = _sessionQueues[sessionId] ?? [];
-    // Only authenticated users can join queues, so only check auth IDs.
-    final inQueue = activities
-        .expand((a) => _queueEntries[a.id] ?? [])
+    final allEntries = activities.expand((a) => _queueEntries[a.id] ?? []);
+    final inQueueByUserId = allEntries
         .where((e) => e.userId != null)
         .map((e) => e.userId!)
+        .toSet();
+    final inQueueByName = allEntries
+        .where((e) => e.userId == null)
+        .map((e) => e.displayName.toLowerCase())
         .toSet();
     final event = _events.where((e) => e.id == eventId).firstOrNull;
     final guests = event?.guests ?? [];
     _freePool[sessionId] = guests
         .where((g) => !const {'left', 'declined'}.contains(g.status))
-        .where((g) => g.userId == null || !inQueue.contains(g.userId))
+        .where((g) {
+          if (g.userId != null) return !inQueueByUserId.contains(g.userId);
+          return !inQueueByName.contains(g.displayName.toLowerCase());
+        })
         .map((g) => SessionFreePoolEntry(
               id: g.id,
               eventId: eventId,
@@ -3473,11 +3479,80 @@ class EventProvider extends ChangeNotifier {
     await fetchSessionQueues(eventId, sessionId);
   }
 
-  /// Organizer clears all spots from a queue row (game has started).
-  /// The cleared queue rotates to the bottom of the visual list.
+  /// Sets the status of a queue row ('waiting' | 'active' | 'ended').
+  /// Any event member can call this; Realtime propagates to all clients.
+  Future<void> setQueueStatus(
+      String activityId, String sessionId, String status) async {
+    final list = _sessionQueues[sessionId];
+    if (list != null) {
+      final idx = list.indexWhere((q) => q.id == activityId);
+      if (idx >= 0) {
+        list[idx] = list[idx].copyWith(
+          status: QueueStatus.fromString(status),
+        );
+        notifyListeners();
+      }
+    }
+    await _db.rpc('set_queue_status', params: {
+      'p_activity_id': activityId,
+      'p_status': status,
+    });
+  }
+
+  /// Clears all spots from a queue row (game has started).
   Future<void> clearQueue(String activityId, String eventId, String sessionId) async {
     await _db.rpc('clear_queue', params: {'p_activity_id': activityId});
     unawaited(fetchSessionQueues(eventId, sessionId));
+  }
+
+  /// Returns true when there is at least one empty queue anywhere after this
+  /// queue — i.e. "Just Played! Back in Line" is a valid action.
+  bool canMoveQueuePastEmpty(String activityId, String sessionId) {
+    final queues = _sessionQueues[sessionId] ?? [];
+    final currentIdx = queues.indexWhere((q) => q.id == activityId);
+    if (currentIdx == -1) return false;
+    return queues.skip(currentIdx + 1).any(
+      (q) => (_queueEntries[q.id] ?? []).isEmpty,
+    );
+  }
+
+  /// Moves this queue to the position of the first empty queue after it,
+  /// shifting all intermediate queues up by one slot.
+  ///
+  /// Uses move_queue_to_position — only the affected range is updated in the
+  /// DB (O(range) rows), not every queue in the session. Realtime UPDATE
+  /// events propagate to all connected clients automatically.
+  Future<void> moveQueuePastFirstEmpty(String activityId, String sessionId) async {
+    final queues = List<SessionQueueActivity>.from(_sessionQueues[sessionId] ?? []);
+    final currentIdx = queues.indexWhere((q) => q.id == activityId);
+    if (currentIdx == -1) return;
+
+    final firstEmptyIdx = queues.indexWhere(
+      (q) => (_queueEntries[q.id] ?? []).isEmpty,
+      currentIdx + 1,
+    );
+    if (firstEmptyIdx == -1) return;
+
+    // Target is one position BEFORE the first empty slot so the played group
+    // lands at that slot and the empty row stays just after them.
+    final targetSortOrder = queues[firstEmptyIdx].sortOrder - 1;
+
+    // Optimistic update: remove from current position and reinsert just before
+    // the first empty slot so intermediate queues visually shift up immediately.
+    final played = queues.removeAt(currentIdx);
+    // After removal, original firstEmptyIdx shifts left by 1 — insert there
+    // to place played right before the empty row.
+    queues.insert(firstEmptyIdx - 1, played);
+    _sessionQueues[sessionId] = queues;
+    notifyListeners();
+
+    // Optimized RPC: 2 SQL statements (one bulk shift + one move), fires
+    // Realtime events only for the rows that actually changed sort_order.
+    await _db.rpc('move_queue_to_position', params: {
+      'p_activity_id': activityId,
+      'p_session_id': sessionId,
+      'p_new_position': targetSortOrder,
+    });
   }
 
   // Free pool is now auto-computed from the session roster; no explicit join/leave needed.

@@ -724,7 +724,7 @@
     }
   },
   "leaveSlotConfirm": "撤退",
-  "kickFromSlotTitle": "追い出す？👢",
+  "kickFromSlotTitle": "追い出す？",
   "kickFromSlotMessage": "キュー#{number}から{name}を外しますか？",
   "@kickFromSlotMessage": {
     "placeholders": {
@@ -736,7 +736,7 @@
       }
     }
   },
-  "kickFromSlotConfirm": "追い出す！🦵",
+  "kickFromSlotConfirm": "追い出す！",
   "allowDuplicates": "複数のキューへの参加を許可",
   "allowDuplicatesSubtitle": "メンバーは同時に複数のキューに参加できます",
   "customizeQueues": "キューをカスタマイズ"
