@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "Bitte einen Veranstaltungstyp auswählen",
   "notifications": "Benachrichtigungen",
   "notificationsEmpty": "Alles erledigt!",
-  "notificationsMarkAllRead": "Alle als gelesen markieren"
+  "notificationsMarkAllRead": "Alle als gelesen markieren",
+  "sessionActivityTab": "Aktivität",
+  "queueUp": "Warteschlange",
+  "createQueue": "Warteschlange erstellen",
+  "playersPerRound": "Spieler pro Runde",
+  "maxRounds": "Max. Runden",
+  "noLimit": "Kein Limit",
+  "checkIn": "Einchecken",
+  "checkOut": "Auschecken",
+  "joinQueue": "Schlange beitreten",
+  "leaveQueue": "Schlange verlassen",
+  "startQueue": "Starten",
+  "nextRound": "Nächste Runde",
+  "roundN": "Runde {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "Alle zurück in die Schlange",
+  "releaseToFreePool": "In freien Pool entlassen",
+  "freePool": "Freier Pool",
+  "nowPlaying": "Jetzt spielend",
+  "waitingQueue": "Wartend",
+  "queueEnded": "Warteschlange beendet",
+  "noQueuesYet": "Noch keine Aktivitäten",
+  "createFirstQueue": "Erstelle die erste Warteschlange",
+  "queueRoundComplete": "Runde {n} abgeschlossen!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "Warteschlangen einrichten",
+  "numberOfQueues": "Anzahl der Warteschlangen",
+  "spotsPerQueue": "Plätze pro Warteschlange",
+  "clearQueue": "Leeren",
+  "queueFull": "Warteschlange voll",
+  "alreadyInQueue": "Sie sind bereits in einer Warteschlange",
+  "addToSlot": "Einen Platz schnappen!",
+  "addMyselfToQueue": "Ich bin dabei!",
+  "addSomeoneElse": "Teammitglied hinzufügen",
+  "selectAMember": "Mitglied auswählen",
+  "searchMembersHint": "Mitglieder suchen…",
+  "leaveSlotTitle": "Slot verlassen?",
+  "leaveSlotMessage": "Platz in Warteschlange #{number} aufgeben?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "Aufgeben",
+  "kickFromSlotTitle": "Rausschmeißen? 👢",
+  "kickFromSlotMessage": "{name} aus Warteschlange #{number} entfernen?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "Raus damit! 🦵",
+  "allowDuplicates": "Mehrere Warteschlangen erlauben",
+  "allowDuplicatesSubtitle": "Mitglieder können in mehreren Warteschlangen gleichzeitig sein",
+  "customizeQueues": "Warteschlangen anpassen"
 }

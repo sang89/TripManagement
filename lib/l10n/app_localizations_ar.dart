@@ -1649,4 +1649,139 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'تحديد الكل كمقروء';
+
+  @override
+  String get sessionActivityTab => 'النشاط';
+
+  @override
+  String get queueUp => 'طابور';
+
+  @override
+  String get createQueue => 'إنشاء طابور';
+
+  @override
+  String get playersPerRound => 'لاعبون لكل جولة';
+
+  @override
+  String get maxRounds => 'الحد الأقصى للجولات';
+
+  @override
+  String get noLimit => 'بلا حد';
+
+  @override
+  String get checkIn => 'تسجيل الحضور';
+
+  @override
+  String get checkOut => 'المغادرة';
+
+  @override
+  String get joinQueue => 'الانضمام للطابور';
+
+  @override
+  String get leaveQueue => 'مغادرة الطابور';
+
+  @override
+  String get startQueue => 'بدء';
+
+  @override
+  String get nextRound => 'الجولة التالية';
+
+  @override
+  String roundN(int n) {
+    return 'الجولة $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'الجميع يعود للطابور';
+
+  @override
+  String get releaseToFreePool => 'الإفراج إلى المجموعة';
+
+  @override
+  String get freePool => 'المجموعة الحرة';
+
+  @override
+  String get nowPlaying => 'يلعب الآن';
+
+  @override
+  String get waitingQueue => 'في الانتظار';
+
+  @override
+  String get queueEnded => 'انتهى الطابور';
+
+  @override
+  String get noQueuesYet => 'لا أنشطة بعد';
+
+  @override
+  String get createFirstQueue => 'أنشئ الطابور الأول للبدء';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'اكتملت الجولة $n!';
+  }
+
+  @override
+  String get setupQueues => 'إعداد الطوابير';
+
+  @override
+  String get numberOfQueues => 'عدد الطوابير';
+
+  @override
+  String get spotsPerQueue => 'أماكن لكل طابور';
+
+  @override
+  String get clearQueue => 'مسح';
+
+  @override
+  String get queueFull => 'الطابور ممتلئ';
+
+  @override
+  String get alreadyInQueue => 'أنت بالفعل في طابور';
+
+  @override
+  String get addToSlot => 'احجز مكانك!';
+
+  @override
+  String get addMyselfToQueue => 'أنا مشارك!';
+
+  @override
+  String get addSomeoneElse => 'أضف زميلاً';
+
+  @override
+  String get selectAMember => 'اختر عضوًا';
+
+  @override
+  String get searchMembersHint => 'ابحث عن أعضاء…';
+
+  @override
+  String get leaveSlotTitle => 'مغادرة المكان؟';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'الانسحاب من مكانك في الطابور #$number؟';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'انسحاب';
+
+  @override
+  String get kickFromSlotTitle => 'طرده؟ 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return 'إزالة $name من الطابور #$number؟';
+  }
+
+  @override
+  String get kickFromSlotConfirm => 'طرد! 🦵';
+
+  @override
+  String get allowDuplicates => 'السماح بالانضمام لعدة طوابير';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'يمكن للأعضاء التواجد في أكثر من طابور في نفس الوقت';
+
+  @override
+  String get customizeQueues => 'تخصيص الطوابير';
 }

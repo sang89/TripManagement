@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "请选择活动类型",
   "notifications": "通知",
   "notificationsEmpty": "您已全部查看！",
-  "notificationsMarkAllRead": "全部标为已读"
+  "notificationsMarkAllRead": "全部标为已读",
+  "sessionActivityTab": "活动",
+  "queueUp": "排队",
+  "createQueue": "创建队列",
+  "playersPerRound": "每轮人数",
+  "maxRounds": "最大轮次",
+  "noLimit": "不限",
+  "checkIn": "签到",
+  "checkOut": "退出",
+  "joinQueue": "加入队列",
+  "leaveQueue": "离开队列",
+  "startQueue": "开始",
+  "nextRound": "下一轮",
+  "roundN": "第 {n} 轮",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "全部重新排队",
+  "releaseToFreePool": "释放到自由池",
+  "freePool": "自由池",
+  "nowPlaying": "正在进行",
+  "waitingQueue": "等待中",
+  "queueEnded": "队列已结束",
+  "noQueuesYet": "暂无活动",
+  "createFirstQueue": "创建第一个队列开始吧",
+  "queueRoundComplete": "第 {n} 轮完成！",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "设置队列",
+  "numberOfQueues": "队列数量",
+  "spotsPerQueue": "每队名额",
+  "clearQueue": "清除",
+  "queueFull": "队列已满",
+  "alreadyInQueue": "您已在队列中",
+  "addToSlot": "抢个位置！",
+  "addMyselfToQueue": "",
+  "addSomeoneElse": "",
+  "selectAMember": "选择成员",
+  "searchMembersHint": "搜索成员…",
+  "leaveSlotTitle": "离开位置？",
+  "leaveSlotMessage": "从队列#{number}的位置退出？",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "退出",
+  "kickFromSlotTitle": "踢出去？👢",
+  "kickFromSlotMessage": "从队列#{number}中移除{name}？",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "踢出！🦵",
+  "allowDuplicates": "允许加入多个队列",
+  "allowDuplicatesSubtitle": "成员可以同时在多个队列中",
+  "customizeQueues": "自定义队列"
 }

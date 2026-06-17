@@ -1664,4 +1664,139 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Alle als gelesen markieren';
+
+  @override
+  String get sessionActivityTab => 'Aktivität';
+
+  @override
+  String get queueUp => 'Warteschlange';
+
+  @override
+  String get createQueue => 'Warteschlange erstellen';
+
+  @override
+  String get playersPerRound => 'Spieler pro Runde';
+
+  @override
+  String get maxRounds => 'Max. Runden';
+
+  @override
+  String get noLimit => 'Kein Limit';
+
+  @override
+  String get checkIn => 'Einchecken';
+
+  @override
+  String get checkOut => 'Auschecken';
+
+  @override
+  String get joinQueue => 'Schlange beitreten';
+
+  @override
+  String get leaveQueue => 'Schlange verlassen';
+
+  @override
+  String get startQueue => 'Starten';
+
+  @override
+  String get nextRound => 'Nächste Runde';
+
+  @override
+  String roundN(int n) {
+    return 'Runde $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'Alle zurück in die Schlange';
+
+  @override
+  String get releaseToFreePool => 'In freien Pool entlassen';
+
+  @override
+  String get freePool => 'Freier Pool';
+
+  @override
+  String get nowPlaying => 'Jetzt spielend';
+
+  @override
+  String get waitingQueue => 'Wartend';
+
+  @override
+  String get queueEnded => 'Warteschlange beendet';
+
+  @override
+  String get noQueuesYet => 'Noch keine Aktivitäten';
+
+  @override
+  String get createFirstQueue => 'Erstelle die erste Warteschlange';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'Runde $n abgeschlossen!';
+  }
+
+  @override
+  String get setupQueues => 'Warteschlangen einrichten';
+
+  @override
+  String get numberOfQueues => 'Anzahl der Warteschlangen';
+
+  @override
+  String get spotsPerQueue => 'Plätze pro Warteschlange';
+
+  @override
+  String get clearQueue => 'Leeren';
+
+  @override
+  String get queueFull => 'Warteschlange voll';
+
+  @override
+  String get alreadyInQueue => 'Sie sind bereits in einer Warteschlange';
+
+  @override
+  String get addToSlot => 'Einen Platz schnappen!';
+
+  @override
+  String get addMyselfToQueue => 'Ich bin dabei!';
+
+  @override
+  String get addSomeoneElse => 'Teammitglied hinzufügen';
+
+  @override
+  String get selectAMember => 'Mitglied auswählen';
+
+  @override
+  String get searchMembersHint => 'Mitglieder suchen…';
+
+  @override
+  String get leaveSlotTitle => 'Slot verlassen?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'Platz in Warteschlange #$number aufgeben?';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'Aufgeben';
+
+  @override
+  String get kickFromSlotTitle => 'Rausschmeißen? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return '$name aus Warteschlange #$number entfernen?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => 'Raus damit! 🦵';
+
+  @override
+  String get allowDuplicates => 'Mehrere Warteschlangen erlauben';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'Mitglieder können in mehreren Warteschlangen gleichzeitig sein';
+
+  @override
+  String get customizeQueues => 'Warteschlangen anpassen';
 }

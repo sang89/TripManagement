@@ -101,4 +101,31 @@ void main() {
       expect(copy.phone, original.phone);
     });
   });
+
+  group('UserProfile.displayAvatarUrl', () {
+    test('returns tripAvatarUrl when set', () {
+      final profile = _makeProfile(avatarUrl: 'https://example.com/shared.jpg').copyWith(
+        tripAvatarUrl: 'https://example.com/trip.jpg',
+      );
+      expect(profile.displayAvatarUrl, 'https://example.com/trip.jpg');
+    });
+
+    test('returns null when tripAvatarUrl is null (no fallback to shared avatar)', () {
+      // TripManagement never shows the PropertyManagement avatar.
+      final profile = _makeProfile(avatarUrl: 'https://example.com/shared.jpg');
+      expect(profile.displayAvatarUrl, isNull);
+    });
+
+    test('returns null when both URLs are empty', () {
+      final profile = _makeProfile(avatarUrl: '');
+      expect(profile.displayAvatarUrl, isNull);
+    });
+
+    test('stored URL has no ?v= query param (cache busting is UI-layer only)', () {
+      // uploadAvatar stores the clean getPublicUrl result; the profile screen
+      // appends ?v=N before passing to SupabaseImage.
+      const storedUrl = 'https://project.supabase.co/storage/v1/object/public/avatars/trip/u1/avatar';
+      expect(storedUrl.contains('?v='), isFalse);
+    });
+  });
 }

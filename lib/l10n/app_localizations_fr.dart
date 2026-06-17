@@ -1669,4 +1669,139 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Tout marquer comme lu';
+
+  @override
+  String get sessionActivityTab => 'Activité';
+
+  @override
+  String get queueUp => 'File d\'attente';
+
+  @override
+  String get createQueue => 'Créer une file';
+
+  @override
+  String get playersPerRound => 'Joueurs par tour';
+
+  @override
+  String get maxRounds => 'Tours maximum';
+
+  @override
+  String get noLimit => 'Pas de limite';
+
+  @override
+  String get checkIn => 'S\'enregistrer';
+
+  @override
+  String get checkOut => 'Se déconnecter';
+
+  @override
+  String get joinQueue => 'Rejoindre la file';
+
+  @override
+  String get leaveQueue => 'Quitter la file';
+
+  @override
+  String get startQueue => 'Démarrer';
+
+  @override
+  String get nextRound => 'Tour suivant';
+
+  @override
+  String roundN(int n) {
+    return 'Tour $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'Tous rejoignent la file';
+
+  @override
+  String get releaseToFreePool => 'Libérer vers le pool';
+
+  @override
+  String get freePool => 'Pool libre';
+
+  @override
+  String get nowPlaying => 'En jeu';
+
+  @override
+  String get waitingQueue => 'En attente';
+
+  @override
+  String get queueEnded => 'File terminée';
+
+  @override
+  String get noQueuesYet => 'Pas encore d\'activités';
+
+  @override
+  String get createFirstQueue => 'Créez la première file pour commencer';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'Tour $n terminé !';
+  }
+
+  @override
+  String get setupQueues => 'Configurer les files';
+
+  @override
+  String get numberOfQueues => 'Nombre de files';
+
+  @override
+  String get spotsPerQueue => 'Places par file';
+
+  @override
+  String get clearQueue => 'Vider';
+
+  @override
+  String get queueFull => 'File complète';
+
+  @override
+  String get alreadyInQueue => 'Vous êtes déjà dans une file';
+
+  @override
+  String get addToSlot => 'Prenez une place !';
+
+  @override
+  String get addMyselfToQueue => 'Je suis partant !';
+
+  @override
+  String get addSomeoneElse => 'Ajouter un coéquipier';
+
+  @override
+  String get selectAMember => 'Sélectionner un membre';
+
+  @override
+  String get searchMembersHint => 'Rechercher des membres…';
+
+  @override
+  String get leaveSlotTitle => 'Quitter la place ?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'Se retirer de la place dans la file #$number ?';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'Se retirer';
+
+  @override
+  String get kickFromSlotTitle => 'L\'expulser ? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return 'Retirer $name de la file #$number ?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => 'Expulser ! 🦵';
+
+  @override
+  String get allowDuplicates => 'Autoriser plusieurs files';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'Les membres peuvent être dans plusieurs files simultanément';
+
+  @override
+  String get customizeQueues => 'Personnaliser les files';
 }

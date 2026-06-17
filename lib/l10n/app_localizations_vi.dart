@@ -1657,4 +1657,139 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Đánh dấu tất cả là đã đọc';
+
+  @override
+  String get sessionActivityTab => 'Hoạt động';
+
+  @override
+  String get queueUp => 'Hàng đợi';
+
+  @override
+  String get createQueue => 'Tạo hàng đợi';
+
+  @override
+  String get playersPerRound => 'Người chơi mỗi vòng';
+
+  @override
+  String get maxRounds => 'Số vòng tối đa';
+
+  @override
+  String get noLimit => 'Không giới hạn';
+
+  @override
+  String get checkIn => 'Điểm danh';
+
+  @override
+  String get checkOut => 'Ra về';
+
+  @override
+  String get joinQueue => 'Tham gia hàng đợi';
+
+  @override
+  String get leaveQueue => 'Rời hàng đợi';
+
+  @override
+  String get startQueue => 'Bắt đầu';
+
+  @override
+  String get nextRound => 'Vòng tiếp theo';
+
+  @override
+  String roundN(int n) {
+    return 'Vòng $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'Tất cả quay lại hàng đợi';
+
+  @override
+  String get releaseToFreePool => 'Trả về nhóm tự do';
+
+  @override
+  String get freePool => 'Nhóm tự do';
+
+  @override
+  String get nowPlaying => 'Đang chơi';
+
+  @override
+  String get waitingQueue => 'Đang đợi';
+
+  @override
+  String get queueEnded => 'Hàng đợi kết thúc';
+
+  @override
+  String get noQueuesYet => 'Chưa có hoạt động';
+
+  @override
+  String get createFirstQueue => 'Tạo hàng đợi đầu tiên để bắt đầu';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'Vòng $n hoàn thành!';
+  }
+
+  @override
+  String get setupQueues => 'Thiết lập hàng chờ';
+
+  @override
+  String get numberOfQueues => 'Số hàng chờ';
+
+  @override
+  String get spotsPerQueue => 'Chỗ mỗi hàng chờ';
+
+  @override
+  String get clearQueue => 'Xóa';
+
+  @override
+  String get queueFull => 'Hàng chờ đã đầy';
+
+  @override
+  String get alreadyInQueue => 'Bạn đã ở trong một hàng chờ';
+
+  @override
+  String get addToSlot => 'Chiếm chỗ thôi!';
+
+  @override
+  String get addMyselfToQueue => 'Tôi tham gia!';
+
+  @override
+  String get addSomeoneElse => 'Thêm đồng đội';
+
+  @override
+  String get selectAMember => 'Chọn thành viên';
+
+  @override
+  String get searchMembersHint => 'Tìm kiếm thành viên…';
+
+  @override
+  String get leaveSlotTitle => 'Rời ô này?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'Rút khỏi ô trong hàng đợi #$number?';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'Rút';
+
+  @override
+  String get kickFromSlotTitle => 'Đuổi không? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return 'Xóa $name khỏi hàng đợi #$number?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => 'Đuổi! 🦵';
+
+  @override
+  String get allowDuplicates => 'Cho phép tham gia nhiều hàng đợi';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'Thành viên có thể ở nhiều hàng đợi cùng lúc';
+
+  @override
+  String get customizeQueues => 'Tùy chỉnh hàng đợi';
 }

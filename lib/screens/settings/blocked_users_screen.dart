@@ -4,6 +4,7 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/blocked_users_provider.dart';
+import '../../widgets/supabase_image.dart';
 
 class BlockedUsersScreen extends StatefulWidget {
   const BlockedUsersScreen({super.key});
@@ -82,18 +83,15 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                         : '?';
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                      leading: CircleAvatar(
+                      leading: SupabaseAvatar(
+                        url: url,
                         radius: 22,
                         backgroundColor:
                             AppTheme.primary.withValues(alpha: 0.12),
-                        foregroundImage:
-                            url != null ? NetworkImage(url) : null,
-                        child: url == null
-                            ? Text(initials,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.primary))
-                            : null,
+                        fallback: Text(initials,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primary)),
                       ),
                       title: Text(
                         b.fullName.isNotEmpty ? b.fullName : b.userId,

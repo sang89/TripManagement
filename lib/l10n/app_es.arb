@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "Por favor selecciona un tipo de evento",
   "notifications": "Notificaciones",
   "notificationsEmpty": "¡Todo al día!",
-  "notificationsMarkAllRead": "Marcar todo como leído"
+  "notificationsMarkAllRead": "Marcar todo como leído",
+  "sessionActivityTab": "Actividad",
+  "queueUp": "Cola",
+  "createQueue": "Crear cola",
+  "playersPerRound": "Jugadores por ronda",
+  "maxRounds": "Rondas máximas",
+  "noLimit": "Sin límite",
+  "checkIn": "Registrarse",
+  "checkOut": "Salir",
+  "joinQueue": "Unirse a la cola",
+  "leaveQueue": "Salir de la cola",
+  "startQueue": "Iniciar",
+  "nextRound": "Siguiente ronda",
+  "roundN": "Ronda {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "Todos vuelven a la cola",
+  "releaseToFreePool": "Liberar al pool",
+  "freePool": "Pool libre",
+  "nowPlaying": "Jugando ahora",
+  "waitingQueue": "En espera",
+  "queueEnded": "Cola terminada",
+  "noQueuesYet": "Sin actividades aún",
+  "createFirstQueue": "Crea la primera cola para empezar",
+  "queueRoundComplete": "¡Ronda {n} completada!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "Configurar colas",
+  "numberOfQueues": "Número de colas",
+  "spotsPerQueue": "Plazas por cola",
+  "clearQueue": "Limpiar",
+  "queueFull": "Cola llena",
+  "alreadyInQueue": "Ya estás en una cola",
+  "addToSlot": "¡Agarra un lugar!",
+  "addMyselfToQueue": "¡Estoy dentro!",
+  "addSomeoneElse": "Añadir compañero",
+  "selectAMember": "Seleccionar un miembro",
+  "searchMembersHint": "Buscar miembros…",
+  "leaveSlotTitle": "¿Salir del turno?",
+  "leaveSlotMessage": "¿Retirarte del turno en la cola #{number}?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "Retirar",
+  "kickFromSlotTitle": "¿Echarlo? 👢",
+  "kickFromSlotMessage": "¿Quitar a {name} de la cola #{number}?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "¡Fuera! 🦵",
+  "allowDuplicates": "Permitir varias colas",
+  "allowDuplicatesSubtitle": "Los miembros pueden estar en más de una cola a la vez",
+  "customizeQueues": "Personalizar colas"
 }

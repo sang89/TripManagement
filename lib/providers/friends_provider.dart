@@ -74,7 +74,7 @@ class FriendsProvider extends ChangeNotifier {
         list.map((f) => f.otherUserId(_userId!)).toSet().toList();
     try {
       final profiles = await _db.rpc(
-        'get_profile_names',
+        'get_trip_profile_names',
         params: {'p_user_ids': otherIds},
       ) as List<dynamic>;
 

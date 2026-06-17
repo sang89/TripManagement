@@ -666,5 +666,78 @@
   "pleaseSelectEventType": "Vui lòng chọn loại sự kiện",
   "notifications": "Thông báo",
   "notificationsEmpty": "Bạn đã xem tất cả!",
-  "notificationsMarkAllRead": "Đánh dấu tất cả là đã đọc"
+  "notificationsMarkAllRead": "Đánh dấu tất cả là đã đọc",
+  "sessionActivityTab": "Hoạt động",
+  "queueUp": "Hàng đợi",
+  "createQueue": "Tạo hàng đợi",
+  "playersPerRound": "Người chơi mỗi vòng",
+  "maxRounds": "Số vòng tối đa",
+  "noLimit": "Không giới hạn",
+  "checkIn": "Điểm danh",
+  "checkOut": "Ra về",
+  "joinQueue": "Tham gia hàng đợi",
+  "leaveQueue": "Rời hàng đợi",
+  "startQueue": "Bắt đầu",
+  "nextRound": "Vòng tiếp theo",
+  "roundN": "Vòng {n}",
+  "@roundN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "allRejoinQueue": "Tất cả quay lại hàng đợi",
+  "releaseToFreePool": "Trả về nhóm tự do",
+  "freePool": "Nhóm tự do",
+  "nowPlaying": "Đang chơi",
+  "waitingQueue": "Đang đợi",
+  "queueEnded": "Hàng đợi kết thúc",
+  "noQueuesYet": "Chưa có hoạt động",
+  "createFirstQueue": "Tạo hàng đợi đầu tiên để bắt đầu",
+  "queueRoundComplete": "Vòng {n} hoàn thành!",
+  "@queueRoundComplete": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "setupQueues": "Thiết lập hàng chờ",
+  "numberOfQueues": "Số hàng chờ",
+  "spotsPerQueue": "Chỗ mỗi hàng chờ",
+  "clearQueue": "Xóa",
+  "queueFull": "Hàng chờ đã đầy",
+  "alreadyInQueue": "Bạn đã ở trong một hàng chờ",
+  "addToSlot": "Chiếm chỗ thôi!",
+  "addMyselfToQueue": "Tôi tham gia!",
+  "addSomeoneElse": "Thêm đồng đội",
+  "selectAMember": "Chọn thành viên",
+  "searchMembersHint": "Tìm kiếm thành viên…",
+  "leaveSlotTitle": "Rời ô này?",
+  "leaveSlotMessage": "Rút khỏi ô trong hàng đợi #{number}?",
+  "@leaveSlotMessage": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "leaveSlotConfirm": "Rút",
+  "kickFromSlotTitle": "Đuổi không? 👢",
+  "kickFromSlotMessage": "Xóa {name} khỏi hàng đợi #{number}?",
+  "@kickFromSlotMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "kickFromSlotConfirm": "Đuổi! 🦵",
+  "allowDuplicates": "Cho phép tham gia nhiều hàng đợi",
+  "allowDuplicatesSubtitle": "Thành viên có thể ở nhiều hàng đợi cùng lúc",
+  "customizeQueues": "Tùy chỉnh hàng đợi"
 }

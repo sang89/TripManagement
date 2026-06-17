@@ -1653,4 +1653,139 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'Mark all read';
+
+  @override
+  String get sessionActivityTab => 'Activity';
+
+  @override
+  String get queueUp => 'Queue Up';
+
+  @override
+  String get createQueue => 'Create Queue';
+
+  @override
+  String get playersPerRound => 'Players per round';
+
+  @override
+  String get maxRounds => 'Max rounds';
+
+  @override
+  String get noLimit => 'No limit';
+
+  @override
+  String get checkIn => 'Check In';
+
+  @override
+  String get checkOut => 'Check Out';
+
+  @override
+  String get joinQueue => 'Join Queue';
+
+  @override
+  String get leaveQueue => 'Leave Queue';
+
+  @override
+  String get startQueue => 'Start';
+
+  @override
+  String get nextRound => 'Next Round';
+
+  @override
+  String roundN(int n) {
+    return 'Round $n';
+  }
+
+  @override
+  String get allRejoinQueue => 'All Rejoin Queue';
+
+  @override
+  String get releaseToFreePool => 'Release to Free Pool';
+
+  @override
+  String get freePool => 'Free Pool';
+
+  @override
+  String get nowPlaying => 'Now Playing';
+
+  @override
+  String get waitingQueue => 'Waiting';
+
+  @override
+  String get queueEnded => 'Queue Ended';
+
+  @override
+  String get noQueuesYet => 'No activities yet';
+
+  @override
+  String get createFirstQueue => 'Create the first queue to get started';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'Round $n complete!';
+  }
+
+  @override
+  String get setupQueues => 'Set Up Queues';
+
+  @override
+  String get numberOfQueues => 'Number of queues';
+
+  @override
+  String get spotsPerQueue => 'Spots per queue';
+
+  @override
+  String get clearQueue => 'Clear';
+
+  @override
+  String get queueFull => 'Queue is full';
+
+  @override
+  String get alreadyInQueue => 'You\'re already in a queue';
+
+  @override
+  String get addToSlot => 'Grab a spot!';
+
+  @override
+  String get addMyselfToQueue => 'I\'m in!';
+
+  @override
+  String get addSomeoneElse => 'Add a teammate';
+
+  @override
+  String get selectAMember => 'Select a member';
+
+  @override
+  String get searchMembersHint => 'Search members…';
+
+  @override
+  String get leaveSlotTitle => 'Leave slot?';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'Withdraw from your spot in queue #$number?';
+  }
+
+  @override
+  String get leaveSlotConfirm => 'Withdraw';
+
+  @override
+  String get kickFromSlotTitle => 'Boot \'em? 👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return 'Remove $name from queue #$number?';
+  }
+
+  @override
+  String get kickFromSlotConfirm => 'Boot out! 🦵';
+
+  @override
+  String get allowDuplicates => 'Allow joining multiple queues';
+
+  @override
+  String get allowDuplicatesSubtitle =>
+      'Members can be in more than one queue at a time';
+
+  @override
+  String get customizeQueues => 'Customize queues';
 }

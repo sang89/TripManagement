@@ -1636,4 +1636,138 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get notificationsMarkAllRead => 'すべて既読にする';
+
+  @override
+  String get sessionActivityTab => 'アクティビティ';
+
+  @override
+  String get queueUp => 'キュー';
+
+  @override
+  String get createQueue => 'キューを作成';
+
+  @override
+  String get playersPerRound => 'ラウンドあたりの人数';
+
+  @override
+  String get maxRounds => '最大ラウンド数';
+
+  @override
+  String get noLimit => '制限なし';
+
+  @override
+  String get checkIn => 'チェックイン';
+
+  @override
+  String get checkOut => 'チェックアウト';
+
+  @override
+  String get joinQueue => 'キューに参加';
+
+  @override
+  String get leaveQueue => 'キューを離れる';
+
+  @override
+  String get startQueue => '開始';
+
+  @override
+  String get nextRound => '次のラウンド';
+
+  @override
+  String roundN(int n) {
+    return 'ラウンド $n';
+  }
+
+  @override
+  String get allRejoinQueue => '全員がキューに戻る';
+
+  @override
+  String get releaseToFreePool => 'フリープールに戻す';
+
+  @override
+  String get freePool => 'フリープール';
+
+  @override
+  String get nowPlaying => 'プレイ中';
+
+  @override
+  String get waitingQueue => '待機中';
+
+  @override
+  String get queueEnded => 'キュー終了';
+
+  @override
+  String get noQueuesYet => 'まだアクティビティはありません';
+
+  @override
+  String get createFirstQueue => '最初のキューを作成して始めましょう';
+
+  @override
+  String queueRoundComplete(int n) {
+    return 'ラウンド $n 完了！';
+  }
+
+  @override
+  String get setupQueues => 'キューを設定';
+
+  @override
+  String get numberOfQueues => 'キュー数';
+
+  @override
+  String get spotsPerQueue => 'キューあたりのスポット数';
+
+  @override
+  String get clearQueue => 'クリア';
+
+  @override
+  String get queueFull => 'キューが満員です';
+
+  @override
+  String get alreadyInQueue => 'すでにキューに入っています';
+
+  @override
+  String get addToSlot => 'スポットをゲット！';
+
+  @override
+  String get addMyselfToQueue => '';
+
+  @override
+  String get addSomeoneElse => '';
+
+  @override
+  String get selectAMember => 'メンバーを選択';
+
+  @override
+  String get searchMembersHint => 'メンバーを検索…';
+
+  @override
+  String get leaveSlotTitle => 'スロットを退出？';
+
+  @override
+  String leaveSlotMessage(int number) {
+    return 'キュー#$numberのスポットから撤退しますか？';
+  }
+
+  @override
+  String get leaveSlotConfirm => '撤退';
+
+  @override
+  String get kickFromSlotTitle => '追い出す？👢';
+
+  @override
+  String kickFromSlotMessage(String name, int number) {
+    return 'キュー#$numberから$nameを外しますか？';
+  }
+
+  @override
+  String get kickFromSlotConfirm => '追い出す！🦵';
+
+  @override
+  String get allowDuplicates => '複数のキューへの参加を許可';
+
+  @override
+  String get allowDuplicatesSubtitle => 'メンバーは同時に複数のキューに参加できます';
+
+  @override
+  String get customizeQueues => 'キューをカスタマイズ';
 }

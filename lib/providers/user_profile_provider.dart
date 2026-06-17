@@ -69,9 +69,14 @@ class UserProfileProvider extends ChangeNotifier {
         _profile = UserProfile.fromJson(data);
         unawaited(LocalCache.saveObject('${_cacheKey}_$_uid', data));
       } else {
+        // Pull name from auth metadata so the row is as complete as possible.
+        final meta = _db.auth.currentUser?.userMetadata;
+        final fullName = (meta?['name'] as String?)?.trim() ??
+            (meta?['full_name'] as String?)?.trim() ??
+            '';
         final inserted = await _db
             .from('user_profiles')
-            .insert({'user_id': _uid})
+            .insert({'user_id': _uid, 'full_name': fullName})
             .select()
             .single();
         _profile = UserProfile.fromJson(inserted);
@@ -131,7 +136,9 @@ class UserProfileProvider extends ChangeNotifier {
     try {
       final bytes = await imageFile.readAsBytes();
       final mime = imageFile.mimeType ?? 'image/jpeg';
-      final path = '$_uid/avatar';
+      // Store under a trip-specific prefix so the photo is independent from
+      // the PropertyManagement app, which uses the root {uid}/avatar path.
+      final path = 'trip/$_uid/avatar';
 
       await _db.storage.from('avatars').uploadBinary(
         path,
@@ -143,7 +150,7 @@ class UserProfileProvider extends ChangeNotifier {
 
       final row = await _db
           .from('user_profiles')
-          .update({'avatar_url': url})
+          .update({'trip_avatar_url': url})
           .eq('user_id', _uid)
           .select()
           .single();
@@ -161,10 +168,10 @@ class UserProfileProvider extends ChangeNotifier {
     if (!_isOnline) return kOfflineUploadError;
 
     try {
-      await _db.storage.from('avatars').remove(['$_uid/avatar']);
+      await _db.storage.from('avatars').remove(['trip/$_uid/avatar']);
       final row = await _db
           .from('user_profiles')
-          .update({'avatar_url': ''})
+          .update({'trip_avatar_url': null})
           .eq('user_id', _uid)
           .select()
           .single();
