@@ -18,6 +18,7 @@ class EventSession {
   final bool requiresApproval;
   final bool isActive;
   final bool isActiveOverride;
+  final String? notes;
 
   const EventSession({
     required this.id,
@@ -37,6 +38,7 @@ class EventSession {
     this.requiresApproval = false,
     this.isActive = false,
     this.isActiveOverride = false,
+    this.notes,
   });
 
   factory EventSession.fromJson(Map<String, dynamic> json) => EventSession(
@@ -59,6 +61,7 @@ class EventSession {
         requiresApproval: (json['requires_approval'] as bool?) ?? false,
         isActive: (json['is_active'] as bool?) ?? false,
         isActiveOverride: (json['is_active_override'] as bool?) ?? false,
+        notes: json['notes'] as String?,
       );
 
   bool get isFull =>
@@ -95,6 +98,28 @@ class EventSession {
         requiresApproval: requiresApproval,
         isActive: isActive,
         isActiveOverride: isActiveOverride,
+        notes: notes,
+      );
+
+  EventSession copyWithNotes(String? newNotes) => EventSession(
+        id: id,
+        eventId: eventId,
+        sessionNumber: sessionNumber,
+        startAt: startAt,
+        endAt: endAt,
+        inviteCode: inviteCode,
+        createdAt: createdAt,
+        goingCount: goingCount,
+        waitlistCount: waitlistCount,
+        pendingCount: pendingCount,
+        capacity: capacity,
+        waitlistEnabled: waitlistEnabled,
+        signupLockHours: signupLockHours,
+        isPublic: isPublic,
+        requiresApproval: requiresApproval,
+        isActive: isActive,
+        isActiveOverride: isActiveOverride,
+        notes: newNotes,
       );
 }
 

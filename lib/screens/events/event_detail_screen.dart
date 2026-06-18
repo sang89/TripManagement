@@ -10581,7 +10581,12 @@ class _SessionActivityTab extends StatefulWidget {
 }
 
 class _SessionActivityTabState extends State<_SessionActivityTab> {
-  EventSession? _selectedSession;
+  // Store only the ID, not the object. On every build we resolve the fresh
+  // object from the provider list, which fixes three bugs at once:
+  //   (1) new session appearing → auto-selected when it's the only one
+  //   (2) stale goingCount / isActive on the selected object
+  //   (3) selected session deactivated → selected becomes null immediately
+  String? _selectedSessionId;
   bool _loadingSessions = true;
   Timer? _autoActivateTimer;
   Timer? _queuePollTimer;
@@ -10602,7 +10607,7 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
   void _startQueuePolling(EventSession session) {
     _queuePollTimer?.cancel();
     _queuePollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (mounted && _selectedSession?.id == session.id) {
+      if (mounted && _selectedSessionId == session.id) {
         context.read<EventProvider>()
             .fetchSessionQueues(widget.event.id, session.id);
       }
@@ -10622,7 +10627,7 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
     setState(() {
       _loadingSessions = false;
       if (sessions.length == 1) {
-        _selectedSession = sessions.first;
+        _selectedSessionId = sessions.first.id;
         _fetchQueuesForSession(sessions.first);
         _startQueuePolling(sessions.first);
       }
@@ -10638,6 +10643,27 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
         (_) { if (mounted) _runAutoActivate(context.read<EventProvider>()); },
       );
     }
+  }
+
+  /// Resolves the selected session from the live provider list.
+  /// Returns null when the selected session was deactivated (bug 3 fix).
+  EventSession? _resolveSelected(List<EventSession> sessions) {
+    if (_selectedSessionId == null) return null;
+    for (final s in sessions) {
+      if (s.id == _selectedSessionId) return s;
+    }
+    return null; // was deactivated
+  }
+
+  /// Auto-selects the only available session when nothing is selected yet.
+  /// Uses a post-frame callback so we never call setState during build.
+  void _autoSelectIfNeeded(List<EventSession> sessions) {
+    if (_selectedSessionId != null) return;
+    if (sessions.length != 1) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _selectedSessionId != null) return;
+      _selectSession(sessions.first);
+    });
   }
 
   void _runAutoActivate(EventProvider provider) {
@@ -10672,7 +10698,7 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
   }
 
   void _selectSession(EventSession session) {
-    setState(() => _selectedSession = session);
+    setState(() => _selectedSessionId = session.id);
     _fetchQueuesForSession(session);
     _startQueuePolling(session);
   }
@@ -10708,7 +10734,9 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
     final provider = context.watch<EventProvider>();
     final l10n = AppLocalizations.of(context);
     final sessions = _activeSessions(provider);
-    final selected = _selectedSession;
+    // Always resolve fresh from the live list — never use a stale stored object.
+    final selected = _resolveSelected(sessions);
+    _autoSelectIfNeeded(sessions);
 
     if (_loadingSessions) {
       return const Center(child: CircularProgressIndicator());
@@ -10851,7 +10879,6 @@ class _SessionPicker extends StatelessWidget {
   final ValueChanged<EventSession> onSelect;
   final Event event;
   final bool isOrganizer;
-
   const _SessionPicker({
     required this.sessions,
     required this.selected,
@@ -10861,248 +10888,358 @@ class _SessionPicker extends StatelessWidget {
   });
 
   void _openInfo(BuildContext context, EventSession s) {
+    final position = sessions.indexOf(s) + 1;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _SessionActivityInfoSheet(
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SessionInfoSheet(
         session: s,
         event: event,
         isOrganizer: isOrganizer,
+        position: position,
       ),
     );
   }
 
+  static List<Color> _gradientFor(EventSession s) {
+    if (s.isActive) return [const Color(0xFF059669), const Color(0xFF047857)];
+    if (s.isUpcoming) return [const Color(0xFF4F46E5), const Color(0xFF6D28D9)];
+    return [const Color(0xFF374151), const Color(0xFF1F2937)];
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      color: colorScheme.surfaceContainerLow,
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: SizedBox(
-        height: 56,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: sessions.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (_, i) {
-            final s = sessions[i];
-            final isSelected = s.id == selected?.id;
-            return GestureDetector(
-              onTap: () => onSelect(s),
-              onLongPress: () => _openInfo(context, s),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? const LinearGradient(
-                          colors: [AppTheme.primary, AppTheme.primaryLight])
-                      : null,
-                  color: isSelected ? null : colorScheme.surface,
-                  borderRadius: BorderRadius.circular(28),
-                  border: isSelected
-                      ? null
-                      : Border.all(
-                          color: s.isActive
-                              ? Colors.green.shade300
-                              : colorScheme.outlineVariant,
-                          width: s.isActive ? 1.5 : 1,
+    final n = sessions.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: n == 1
+          ? _buildSingle(context)
+          : n == 2
+              ? _buildDual(context)
+              : _buildScroll(context),
+    );
+  }
+
+  // ── 1 session — full-width hero card ─────────────────────────────────────────
+
+  Widget _buildSingle(BuildContext context) {
+    final s = sessions.first;
+    final grad = _gradientFor(s);
+
+    return GestureDetector(
+      onTap: () => onSelect(s),
+      onLongPress: () => _openInfo(context, s),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: grad,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: grad[0].withValues(alpha: 0.45),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Session emoji badge
+            _SessionEmojiBadge(session: s, size: 52),
+            const SizedBox(width: 16),
+            // Center: title + status + avatars
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Row(
+                    children: [
+                      if (s.isActive)
+                        const _SessionLiveBadge()
+                      else if (s.isUpcoming)
+                        _SessionStatusPill(
+                          label: DateFormat('EEE, MMM d').format(s.startAt.toLocal()),
+                          color: Colors.white.withValues(alpha: 0.18),
+                          textColor: Colors.white.withValues(alpha: 0.85),
+                        )
+                      else
+                        _SessionStatusPill(
+                          label: 'Ended',
+                          color: Colors.white.withValues(alpha: 0.10),
+                          textColor: Colors.white54,
                         ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Active indicator dot
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: s.isActive
-                              ? (isSelected ? Colors.white : Colors.green)
-                              : (isSelected
-                                  ? Colors.white.withValues(alpha: 0.4)
-                                  : Colors.grey.shade300),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'Session ${s.sessionNumber}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: isSelected
-                            ? Colors.white
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      DateFormat('h:mm a').format(s.startAt.toLocal()),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isSelected
-                            ? Colors.white.withValues(alpha: 0.85)
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+            const SizedBox(width: 14),
+            // Right: time + capacity
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  DateFormat('h:mm a').format(s.startAt.toLocal()),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                if (s.capacity != null) ...[
+                  const SizedBox(height: 5),
+                  Text(
+                    '${s.goingCount} / ${s.capacity}',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
-}
 
-// ── Session Info Sheet ────────────────────────────────────────────────────────
+  // ── 2 sessions — side-by-side premium cards ───────────────────────────────────
 
-class _SessionActivityInfoSheet extends StatefulWidget {
-  final EventSession session;
-  final Event event;
-  final bool isOrganizer;
-
-  const _SessionActivityInfoSheet({
-    required this.session,
-    required this.event,
-    required this.isOrganizer,
-  });
-
-  @override
-  State<_SessionActivityInfoSheet> createState() => _SessionActivityInfoSheetState();
-}
-
-class _SessionActivityInfoSheetState extends State<_SessionActivityInfoSheet> {
-  bool _toggling = false;
-
-  Future<void> _toggleActive() async {
-    if (_toggling) return;
-    setState(() => _toggling = true);
-    try {
-      await context.read<EventProvider>().toggleSessionActive(
-            widget.session.id,
-            widget.event.id,
-            active: !widget.session.isActive,
-          );
-      if (mounted) Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _toggling = false);
-    }
+  Widget _buildDual(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Expanded(child: _dualCard(context, sessions[0])),
+          const SizedBox(width: 10),
+          Expanded(child: _dualCard(context, sessions[1])),
+        ],
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Use latest session from cache in case Realtime updated it.
-    final provider = context.watch<EventProvider>();
-    final session = provider.upcomingSessionsFor(widget.event.id)
-            .where((s) => s.id == widget.session.id)
-            .firstOrNull ??
-        provider.pastSessionsFor(widget.event.id)
-            .where((s) => s.id == widget.session.id)
-            .firstOrNull ??
-        widget.session;
+  Widget _dualCard(BuildContext context, EventSession s) {
+    final cs = Theme.of(context).colorScheme;
+    final isSelected = s.id == selected?.id;
+    final grad = _gradientFor(s);
 
-    final colorScheme = Theme.of(context).colorScheme;
-    final open = session.capacity != null
-        ? (session.capacity! - session.goingCount).clamp(0, session.capacity!)
-        : null;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2)),
+    return GestureDetector(
+      onTap: () => onSelect(s),
+      onLongPress: () => _openInfo(context, s),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: grad,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : cs.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: s.isActive
+                      ? const Color(0xFF34D399).withValues(alpha: 0.5)
+                      : cs.outlineVariant,
+                  width: 1.5,
+                ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: grad[0].withValues(alpha: 0.42),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _SessionEmojiBadge(session: s, size: 36),
+                const Spacer(),
+                if (s.isActive)
+                  const _LivePulseDot()
+                else if (isSelected)
+                  Icon(
+                    Icons.check_circle_rounded,
+                    size: 18,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+              ],
             ),
-          ),
+            const SizedBox(height: 10),
+            Text(
+              'Session ${s.sessionNumber}',
+              style: TextStyle(
+                color: isSelected ? Colors.white : cs.onSurface,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              s.isActive
+                  ? 'Live now'
+                  : DateFormat('h:mm a').format(s.startAt.toLocal()),
+              style: TextStyle(
+                color: isSelected
+                    ? (s.isActive ? const Color(0xFF6EE7B7) : Colors.white70)
+                    : (s.isActive ? const Color(0xFF34D399) : cs.onSurfaceVariant),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (s.capacity != null) ...[
+              const SizedBox(height: 8),
+              _SessionCapacityBar(
+                going: s.goingCount,
+                capacity: s.capacity!,
+                isSelected: isSelected,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
-          // Session header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-            child: Row(
+  // ── 3+ sessions — horizontal carousel ────────────────────────────────────────
+
+  Widget _buildScroll(BuildContext context) {
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        padding: EdgeInsets.zero,
+        itemCount: sessions.length,
+        separatorBuilder: (ctx, idx) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => _carouselCard(context, sessions[i]),
+      ),
+    );
+  }
+
+  Widget _carouselCard(BuildContext context, EventSession s) {
+    final cs = Theme.of(context).colorScheme;
+    final isSelected = s.id == selected?.id;
+    final grad = _gradientFor(s);
+
+    return GestureDetector(
+      onTap: () => onSelect(s),
+      onLongPress: () => _openInfo(context, s),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        width: 152,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: grad,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : cs.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: isSelected
+              ? null
+              : Border.all(
+                  color: s.isActive
+                      ? const Color(0xFF34D399).withValues(alpha: 0.5)
+                      : cs.outlineVariant,
+                  width: 1.5,
+                ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: grad[0].withValues(alpha: 0.38),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                _SessionEmojiBadge(session: s, size: 30),
+                const Spacer(),
+                if (s.isActive)
+                  const _LivePulseDot()
+                else if (isSelected)
+                  Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+              ],
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Session ${session.sessionNumber}',
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        DateFormat('EEE, MMM d • h:mm a')
-                            .format(session.startAt.toLocal()),
+                        'Session ${s.sessionNumber}',
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 13, color: colorScheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-                // Active badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: session.isActive
-                        ? Colors.green.shade50
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: session.isActive
-                          ? Colors.green.shade300
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: session.isActive ? Colors.green : Colors.grey,
-                          shape: BoxShape.circle,
+                          color: isSelected ? Colors.white : cs.onSurface,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 3),
                       Text(
-                        session.isActive ? 'Active' : 'Inactive',
+                        s.isActive
+                            ? 'Live now'
+                            : DateFormat('h:mm a').format(s.startAt.toLocal()),
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: session.isActive
-                              ? Colors.green.shade700
-                              : Colors.grey.shade600,
+                          color: isSelected
+                              ? (s.isActive ? const Color(0xFF6EE7B7) : Colors.white70)
+                              : (s.isActive
+                                  ? const Color(0xFF34D399)
+                                  : cs.onSurfaceVariant),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -11110,161 +11247,6 @@ class _SessionActivityInfoSheetState extends State<_SessionActivityInfoSheet> {
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Stats row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                _StatChip(
-                    label: 'Going',
-                    value: session.goingCount,
-                    color: Colors.green),
-                const SizedBox(width: 10),
-                _StatChip(
-                    label: 'Waitlist',
-                    value: session.waitlistCount,
-                    color: Colors.amber),
-                const SizedBox(width: 10),
-                if (open != null)
-                  _StatChip(
-                      label: 'Open', value: open, color: Colors.blue),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Badges row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                _InfoBadge(
-                    icon: Icons.public,
-                    label: session.isPublic ? 'Public' : 'Private'),
-                _InfoBadge(
-                    icon: Icons.list_alt_rounded,
-                    label: session.waitlistEnabled
-                        ? 'Waitlist on'
-                        : 'Waitlist off'),
-                if (session.requiresApproval)
-                  const _InfoBadge(
-                      icon: Icons.approval_rounded, label: 'Approval required'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Organizer toggle button
-          if (widget.isOrganizer)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: session.isActive
-                    ? OutlinedButton.icon(
-                        onPressed: _toggling ? null : _toggleActive,
-                        icon: const Icon(Icons.pause_circle_outline_rounded),
-                        label: const Text('Mark as Inactive'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey.shade700,
-                          side: BorderSide(color: Colors.grey.shade400),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          textStyle: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w600),
-                        ),
-                      )
-                    : DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [Color(0xFF1B5E20), Color(0xFF43A047)]),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withValues(alpha: 0.40),
-                              blurRadius: 14,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: _toggling ? null : _toggleActive,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.play_circle_outline_rounded,
-                                      color: Colors.white, size: 20),
-                                  const SizedBox(width: 8),
-                                  const Text('Mark as Active',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15)),
-                                  if (_toggling) ...[
-                                    const SizedBox(width: 12),
-                                    const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white)),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-              ),
-            )
-          else
-            const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  final String label;
-  final int value;
-  final Color color;
-
-  const _StatChip(
-      {required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.20)),
-        ),
-        child: Column(
-          children: [
-            Text('$value',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: color.withValues(alpha: 0.85))),
-            Text(label,
-                style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7))),
           ],
         ),
       ),
@@ -11272,35 +11254,219 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-class _InfoBadge extends StatelessWidget {
-  final IconData icon;
-  final String label;
+// ── Session picker helper widgets ─────────────────────────────────────────────
 
-  const _InfoBadge({required this.icon, required this.label});
+class _SessionLiveBadge extends StatefulWidget {
+  const _SessionLiveBadge();
+
+  @override
+  State<_SessionLiveBadge> createState() => _SessionLiveBadgeState();
+}
+
+class _SessionLiveBadgeState extends State<_SessionLiveBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.25, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: const Color(0xFFEF4444),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colorScheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFEF4444).withValues(alpha: 0.45),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: colorScheme.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, color: colorScheme.onSurfaceVariant)),
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (ctx, child) => Opacity(
+              opacity: _pulse.value,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'LIVE',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
+class _SessionStatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color textColor;
+  const _SessionStatusPill({
+    required this.label,
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionCapacityBar extends StatelessWidget {
+  final int going;
+  final int capacity;
+  final bool isSelected;
+  const _SessionCapacityBar({
+    required this.going,
+    required this.capacity,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final fraction = (going / capacity).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: fraction,
+            minHeight: 4,
+            backgroundColor: isSelected
+                ? Colors.white.withValues(alpha: 0.20)
+                : cs.outlineVariant.withValues(alpha: 0.4),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isSelected
+                  ? Colors.white.withValues(alpha: 0.85)
+                  : const Color(0xFF34D399),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$going / $capacity spots',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white60 : cs.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Pulsing red dot for live-session indicators in compact cards.
+class _LivePulseDot extends StatefulWidget {
+  const _LivePulseDot();
+
+  @override
+  State<_LivePulseDot> createState() => _LivePulseDotState();
+}
+
+class _LivePulseDotState extends State<_LivePulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.25, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (ctx, child) => Opacity(
+        opacity: _pulse.value,
+        child: Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEF4444),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.7),
+                blurRadius: 6,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // ── Customize Queues Card ─────────────────────────────────────────────────────
 
@@ -12391,17 +12557,17 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   }
 
   void _showUserProfileSheet(SessionQueueEntry entry) {
-    final friends = context.read<FriendsProvider>();
-    final userId = entry.userId!;
-    final isFriend = friends.accepted.any(
-      (f) => f.requesterId == userId || f.addresseeId == userId,
-    );
-    final requestSent = friends.outgoingRequests.any(
-      (f) => f.addresseeId == userId,
-    );
-    final requestReceived = friends.incomingRequests.any(
-      (f) => f.requesterId == userId,
-    );
+    final userId = entry.userId;
+    final hasAccount = userId != null;
+
+    final friends = hasAccount ? context.read<FriendsProvider>() : null;
+    final isFriend = hasAccount &&
+        friends!.accepted.any(
+            (f) => f.requesterId == userId || f.addresseeId == userId);
+    final requestSent = hasAccount &&
+        friends!.outgoingRequests.any((f) => f.addresseeId == userId);
+    final requestReceived = hasAccount &&
+        friends!.incomingRequests.any((f) => f.requesterId == userId);
 
     showModalBottomSheet<void>(
       context: context,
@@ -12437,7 +12603,32 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                 ),
               ),
               const SizedBox(height: 20),
-              if (isFriend)
+              if (!hasAccount)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.person_off_outlined,
+                          size: 20, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'No app account',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (isFriend)
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 12),
@@ -12897,7 +13088,6 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                           ? () => _showKickDialog(entry)
                           : null,
                       onViewProfile: entry != null &&
-                              entry.userId != null &&
                               entry.userId != widget.authUid &&
                               !widget.isOrganizer
                           ? () => _showUserProfileSheet(entry)
@@ -14114,6 +14304,7 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
         signupLockHours: result.signupLockHours,
         isPublic: result.isPublic,
         requiresApproval: result.requiresApproval,
+        notes: result.notes,
       );
 
       final now = DateTime.now().toUtc().toIso8601String();
@@ -15279,6 +15470,45 @@ class _SessionInfoSheet extends StatefulWidget {
 
 class _SessionInfoSheetState extends State<_SessionInfoSheet> {
   bool _toggling = false;
+  bool _savingNotes = false;
+  late final TextEditingController _notesCtrl;
+  bool _notesDirty = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesCtrl = TextEditingController(text: widget.session.notes ?? '');
+    _notesCtrl.addListener(
+      () => setState(() => _notesDirty =
+          _notesCtrl.text.trim() != (widget.session.notes ?? '').trim()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveNotes() async {
+    if (_savingNotes) return;
+    setState(() => _savingNotes = true);
+    try {
+      await context.read<EventProvider>().updateSessionNotes(
+            widget.session.id,
+            widget.event.id,
+            _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+          );
+      if (mounted) setState(() => _notesDirty = false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to save notes: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingNotes = false);
+    }
+  }
 
   Future<void> _toggleActive(EventSession session) async {
     if (_toggling) return;
@@ -15463,7 +15693,9 @@ class _SessionInfoSheetState extends State<_SessionInfoSheet> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle
@@ -15483,12 +15715,19 @@ class _SessionInfoSheetState extends State<_SessionInfoSheet> {
             margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [grad[0], grad[1]],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6B7FA0), Color(0xFF4E6180)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -15673,6 +15912,117 @@ class _SessionInfoSheetState extends State<_SessionInfoSheet> {
             ),
           ),
 
+          // ── Notes ─────────────────────────────────────────────────────────
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: widget.isOrganizer
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.sticky_note_2_outlined, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Notes',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_notesDirty)
+                            TextButton(
+                              onPressed: _savingNotes ? null : _saveNotes,
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: _savingNotes
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : const Text('Save',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _notesCtrl,
+                        decoration: InputDecoration(
+                          hintText: 'Rules, court numbers, what to bring…',
+                          hintStyle: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.6),
+                              fontSize: 13),
+                          filled: true,
+                          fillColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLow,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                        ),
+                        style: const TextStyle(fontSize: 13),
+                        maxLines: 4,
+                        minLines: 2,
+                        textCapitalization: TextCapitalization.sentences,
+                      ),
+                    ],
+                  )
+                : s.notes != null && s.notes!.isNotEmpty
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.sticky_note_2_outlined,
+                                size: 15,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                s.notes!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+          ),
+
           if (widget.isOrganizer) ...[
             const SizedBox(height: 20),
             Padding(
@@ -15753,6 +16103,7 @@ class _SessionInfoSheetState extends State<_SessionInfoSheet> {
 
           const SizedBox(height: 28),
         ],
+      ),
       ),
     );
   }
@@ -17200,6 +17551,7 @@ class _NewSessionConfig {
   final bool autoAddSelf;
   final bool isPublic;
   final bool requiresApproval;
+  final String? notes;
 
   const _NewSessionConfig({
     required this.startAt,
@@ -17210,6 +17562,7 @@ class _NewSessionConfig {
     this.autoAddSelf = false,
     this.isPublic = true,
     this.requiresApproval = false,
+    this.notes,
   });
 }
 
@@ -17232,6 +17585,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
   final _capacityCtrl = TextEditingController();
   bool _waitlistEnabled = true;
   final _lockCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
   bool _autoAddSelf = true;
   bool _isPublic = true;
   bool _requiresApproval = false;
@@ -17258,6 +17612,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
       if (t.capacity != null) _capacityCtrl.text = t.capacity.toString();
       _waitlistEnabled = t.waitlistEnabled;
       if (t.signupLockHours != null) _lockCtrl.text = t.signupLockHours.toString();
+      if (t.notes != null) _notesCtrl.text = t.notes!;
     }
   }
 
@@ -17265,6 +17620,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
   void dispose() {
     _capacityCtrl.dispose();
     _lockCtrl.dispose();
+    _notesCtrl.dispose();
     _preAddCtrl.dispose();
     super.dispose();
   }
@@ -17475,6 +17831,22 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // Notes
+          TextField(
+            controller: _notesCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Notes (optional)',
+              hintText: 'Rules, court numbers, what to bring…',
+              prefixIcon: Icon(Icons.sticky_note_2_outlined),
+              isDense: true,
+              alignLabelWithHint: true,
+            ),
+            maxLines: 3,
+            minLines: 1,
+            textCapitalization: TextCapitalization.sentences,
+          ),
           const SizedBox(height: 20),
 
           // Pre-add participants
@@ -17584,6 +17956,9 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
                   autoAddSelf: _autoAddSelf,
                   isPublic: _isPublic,
                   requiresApproval: _requiresApproval,
+                  notes: _notesCtrl.text.trim().isEmpty
+                      ? null
+                      : _notesCtrl.text.trim(),
                 ),
               );
             },
