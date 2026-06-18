@@ -14249,12 +14249,24 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _AddSessionSheet(
-        suggestion: suggestion,
-        template: source,
-        memberNames: _memberSuggestionNames(),
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (_, ctrl) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.surface,
+            child: _AddSessionSheet(
+              suggestion: suggestion,
+              template: source,
+              memberNames: _memberSuggestionNames(),
+              scrollController: ctrl,
+            ),
+          ),
+        ),
       ),
     );
     if (result == null || !context.mounted) return;
@@ -14276,11 +14288,23 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _AddSessionSheet(
-        suggestion: suggestion,
-        memberNames: _memberSuggestionNames(),
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (_, ctrl) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.surface,
+            child: _AddSessionSheet(
+              suggestion: suggestion,
+              memberNames: _memberSuggestionNames(),
+              scrollController: ctrl,
+            ),
+          ),
+        ),
       ),
     );
     if (result == null || !context.mounted) return;
@@ -17673,10 +17697,12 @@ class _AddSessionSheet extends StatefulWidget {
   final DateTime suggestion;
   final EventSession? template; // pre-fills settings when cloning
   final List<String> memberNames; // event member names for pre-add suggestions
+  final ScrollController? scrollController;
   const _AddSessionSheet({
     required this.suggestion,
     this.template,
     this.memberNames = const [],
+    this.scrollController,
   });
 
   @override
@@ -17790,6 +17816,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
+      controller: widget.scrollController,
       padding: EdgeInsets.fromLTRB(
           20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 28),
       child: Column(
