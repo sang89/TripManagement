@@ -11878,6 +11878,13 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   // Random spin angle (radians) assigned once per new entry, cleared after animation.
   final Map<String, double> _newEntryAngles = {};
 
+  // Victory Lap: fires when this queue row transitions from playing → waiting.
+  // _playingDoneGen increments each time so overlay TweenAnimationBuilders get
+  // fresh keys and restart even if _playingDone quickly cycles false→true→false.
+  bool _playingDone = false;
+  int _playingDoneGen = 0;
+  Timer? _playingDoneTimer;
+
   // Entries that just left — cached so shatter shards can show their avatar.
   final Map<String, SessionQueueEntry> _leavingEntries = {};
   final Map<String, Timer> _leavingTimers = {};
@@ -11951,6 +11958,17 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         _shimmerCtrl!.value = 0;
       }
     }
+    // Non-organizer Victory Lap: Realtime fires a sortOrder increase when the
+    // organizer presses "Back in Line". Guard with !_playingDone so the
+    // organizer's own direct-fire (from _moveToEnd) doesn't double-trigger.
+    if (!_playingDone && widget.queue.sortOrder > old.queue.sortOrder) {
+      _playingDoneTimer?.cancel();
+      setState(() { _playingDone = true; _playingDoneGen++; });
+      _playingDoneTimer = Timer(const Duration(milliseconds: 1400), () {
+        if (mounted) setState(() => _playingDone = false);
+        _playingDoneTimer = null;
+      });
+    }
     // Use _prevEntries (immutable snapshot) instead of old.entries.
     // old.entries aliases the provider list — leaveQueue's removeWhere mutates it
     // in-place before the rebuild, so old.entries already shows [B,C] when we
@@ -11975,6 +11993,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         });
       }
     }
+
 
     // ── Departures ───────────────────────────────────────────────────────
     for (final e in _prevEntries) {
@@ -12055,6 +12074,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     for (final t in _newEntryTimers.values) { t.cancel(); }
     for (final t in _leavingTimers.values) { t.cancel(); }
     for (final t in _shiftingInTimers.values) { t.cancel(); }
+    _playingDoneTimer?.cancel();
     _shiftDelayTimer?.cancel();
     super.dispose();
   }
@@ -13080,7 +13100,12 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
 
   Future<void> _moveToEnd() async {
     if (_loading) return;
-    setState(() => _loading = true);
+    _playingDoneTimer?.cancel();
+    setState(() { _loading = true; _playingDone = true; _playingDoneGen++; });
+    _playingDoneTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => _playingDone = false);
+      _playingDoneTimer = null;
+    });
     try {
       await context.read<EventProvider>().moveQueuePastFirstEmpty(
             widget.queue.id,
@@ -13222,7 +13247,11 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                   final entry = i < displayEntries.length ? displayEntries[i] : null;
                   return Padding(
                     padding: EdgeInsets.only(right: i < spots - 1 ? 8 : 0),
-                    child: AnimatedSwitcher(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                    AnimatedSwitcher(
                       duration: const Duration(milliseconds: 420),
                       reverseDuration: const Duration(milliseconds: 1400),
                       transitionBuilder: (child, animation) => AnimatedBuilder(
@@ -13286,10 +13315,10 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                                     child: _AvatarCircle(
                                       avatarUrl: leaving?.avatarUrl,
                                       displayName: leaving?.displayName ?? '',
-                                      size: 44,
+                                      size: 55,
                                       backgroundColor:
                                           isSelfLeaving ? Colors.teal : null,
-                                      fontSize: isSelfLeaving ? 9 : 13,
+                                      fontSize: isSelfLeaving ? 11 : 16,
                                       labelOverride:
                                           isSelfLeaving ? 'You' : null,
                                     ),
@@ -13321,8 +13350,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                                                   clipper: _ShardClipper(
                                                       _shardPolygons[s]),
                                                   child: SizedBox(
-                                                    width: 44,
-                                                    height: 44,
+                                                    width: 55,
+                                                    height: 55,
                                                     child: avatarShard(),
                                                   ),
                                                 ),
@@ -13396,7 +13425,99 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                             ? () => _showUserProfileSheet(entry)
                             : null,
                       ),
-                    ),
+                    ),  // AnimatedSwitcher
+                    // ── Victory Lap overlays ─────────────────────────────
+                    if (_playingDone && entry != null) ...[
+                      IgnorePointer(
+                        key: ValueKey('vl_rings_${entry.id}_$_playingDoneGen'),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1100),
+                          builder: (_, t, _) {
+                            final t2 = ((t - 0.35) / 0.65).clamp(0.0, 1.0);
+                            Widget ring(double progress, double maxOpacity, double bw) {
+                              final s = 1.0 + 1.5 * Curves.easeOut.transform(progress);
+                              final o = (1.0 - progress) * maxOpacity;
+                              return Transform.scale(
+                                scale: s,
+                                child: Container(
+                                  width: _SpotCircle._size,
+                                  height: _SpotCircle._size,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0xFFFFB300).withValues(alpha: o),
+                                      width: bw,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                ring(t, 0.75, 2.5),
+                                if (t > 0.35) ring(t2, 0.55, 1.8),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      IgnorePointer(
+                        key: ValueKey('vl_stars_${entry.id}_$_playingDoneGen'),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 850),
+                          builder: (_, t, _) {
+                            final dist = 36.0 * Curves.easeOut.transform(t);
+                            final opacity = (1.0 - t * 1.3).clamp(0.0, 1.0);
+                            return SizedBox(
+                              width: _SpotCircle._size,
+                              height: _SpotCircle._size,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.center,
+                                children: [
+                                  for (int p = 0; p < 8; p++)
+                                    Transform.translate(
+                                      offset: Offset(
+                                        cos(p * pi / 4) * dist,
+                                        sin(p * pi / 4) * dist,
+                                      ),
+                                      child: Opacity(
+                                        opacity: opacity,
+                                        child: const Text('⭐',
+                                            style: TextStyle(fontSize: 11)),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      IgnorePointer(
+                        key: ValueKey('vl_badge_${entry.id}_$_playingDoneGen'),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1300),
+                          builder: (_, t, _) {
+                            final curve = Curves.easeOut.transform(t);
+                            return Transform.translate(
+                              offset: Offset(0, -(_SpotCircle._size / 2 + 14) * curve),
+                              child: Opacity(
+                                opacity: (1.0 - t).clamp(0.0, 1.0),
+                                child: const Text('⭐',
+                                    style: TextStyle(fontSize: 14)),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],  // Stack.children
+                  ),  // Stack
                   );
                 }),
               ),
@@ -13495,7 +13616,7 @@ class _SpotCircle extends StatelessWidget {
     this.onViewProfile,
   });
 
-  static const double _size = 44;
+  static const double _size = 55;
 
   @override
   Widget build(BuildContext context) {
@@ -13518,7 +13639,7 @@ class _SpotCircle extends StatelessWidget {
           ),
           child: canClaim
               ? Icon(Icons.add_rounded,
-                  size: 20, color: Colors.teal.withValues(alpha: 0.6))
+                  size: 24, color: Colors.teal.withValues(alpha: 0.6))
               : null,
         ),
       );
@@ -13660,7 +13781,7 @@ class _SpotCircle extends StatelessWidget {
                 displayName: entry!.displayName,
                 size: _size,
                 backgroundColor: isSelf ? Colors.teal : null,
-                fontSize: isSelf ? 9 : 13,
+                fontSize: isSelf ? 11 : 16,
                 labelOverride: isSelf ? 'You' : null,
               ),
             ),
