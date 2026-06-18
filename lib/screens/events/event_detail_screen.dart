@@ -11139,7 +11139,7 @@ class _SessionPicker extends StatelessWidget {
 
   Widget _buildScroll(BuildContext context) {
     return SizedBox(
-      height: 84,
+      height: 100,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
@@ -11163,7 +11163,7 @@ class _SessionPicker extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         width: 152,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           gradient: isSelected
               ? LinearGradient(
@@ -14248,6 +14248,7 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     final result = await showModalBottomSheet<_NewSessionConfig>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _AddSessionSheet(
@@ -14274,6 +14275,7 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     final result = await showModalBottomSheet<_NewSessionConfig>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _AddSessionSheet(
@@ -14298,7 +14300,7 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
       final session = await provider.addSession(
         widget.event.id,
         result.startAt,
-        null,
+        result.endAt,
         capacity: result.capacity,
         waitlistEnabled: result.waitlistEnabled,
         signupLockHours: result.signupLockHours,
@@ -14678,7 +14680,9 @@ class _SessionCardState extends State<_SessionCard>
     final going = widget.session.goingCount;
     final waitlisted = widget.session.waitlistCount;
     final isLocked = widget.session.isLocked;
-    final hasEnded = widget.session.hasEnded;
+    // Only treat as "ended" visually when it has passed AND is no longer active.
+    // An active session whose start time is in the past should never be dimmed.
+    final hasEnded = widget.session.hasEnded && !widget.session.isActive;
     final fillFraction =
         cap != null && cap > 0 ? (going / cap).clamp(0.0, 1.0) : 0.0;
 
@@ -14709,6 +14713,7 @@ class _SessionCardState extends State<_SessionCard>
     if (_pulseCtrl == null) _initAnims();
     final pulseAnim = _pulseAnim!;
 
+    final cs = Theme.of(context).colorScheme;
     final card = AnimatedBuilder(
       animation: pulseAnim,
       builder: (_, child) => Container(
@@ -14716,12 +14721,18 @@ class _SessionCardState extends State<_SessionCard>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: pulseAnim.value),
-              blurRadius: 18,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
+            hasEnded
+                ? BoxShadow(
+                    color: cs.outlineVariant.withValues(alpha: 0.20),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                : BoxShadow(
+                    color: accentColor.withValues(alpha: pulseAnim.value),
+                    blurRadius: 18,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
+                  ),
           ],
         ),
         child: child,
@@ -14732,7 +14743,7 @@ class _SessionCardState extends State<_SessionCard>
           children: [
             // ── Card background + content ─────────────────────────────────
             Container(
-              color: Theme.of(context).colorScheme.surface,
+              color: hasEnded ? cs.surfaceContainerLow : cs.surface,
               child: Column(
         children: [
           // ── Header (always visible, counts from DB columns) ──────────────
@@ -14746,7 +14757,20 @@ class _SessionCardState extends State<_SessionCard>
                 children: [
                   Row(
                     children: [
-                      _SessionEmojiBadge(session: widget.session),
+                      hasEnded
+                          ? ColorFiltered(
+                              colorFilter: const ColorFilter.matrix(<double>[
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0.2126, 0.7152, 0.0722, 0, 0,
+                                0,      0,      0,      1, 0,
+                              ]),
+                              child: Opacity(
+                                opacity: 0.55,
+                                child: _SessionEmojiBadge(session: widget.session),
+                              ),
+                            )
+                          : _SessionEmojiBadge(session: widget.session),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -14853,17 +14877,20 @@ class _SessionCardState extends State<_SessionCard>
                   ),
                   if (cap != null) ...[
                     const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: fillFraction,
-                        minHeight: 5,
-                        backgroundColor:
-                            const Color(0xFF2E7D32).withValues(alpha: 0.12),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          fillFraction >= 1.0
-                              ? Colors.redAccent
-                              : const Color(0xFF2E7D32),
+                    Opacity(
+                      opacity: hasEnded ? 0.30 : 1.0,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: fillFraction,
+                          minHeight: 5,
+                          backgroundColor:
+                              const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            fillFraction >= 1.0
+                                ? Colors.redAccent
+                                : const Color(0xFF2E7D32),
+                          ),
                         ),
                       ),
                     ),
@@ -15470,6 +15497,7 @@ class _SessionInfoSheet extends StatefulWidget {
 
 class _SessionInfoSheetState extends State<_SessionInfoSheet> {
   bool _toggling = false;
+  bool _markingDone = false;
   bool _savingNotes = false;
   late final TextEditingController _notesCtrl;
   bool _notesDirty = false;
@@ -15527,6 +15555,49 @@ class _SessionInfoSheetState extends State<_SessionInfoSheet> {
       }
     } finally {
       if (mounted) setState(() => _toggling = false);
+    }
+  }
+
+  Future<void> _markDone(EventSession session) async {
+    if (_markingDone) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('🏁 That\'s a wrap!'),
+        content: const Text(
+          'Queues wiped, free pool emptied — clean slate! 🧹\n\n'
+          'Roster & attendance records are safe forever. '
+          'No take-backs though!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not yet'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Close it out! 🎉'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() => _markingDone = true);
+    try {
+      await context.read<EventProvider>().markSessionDone(
+            session.id,
+            widget.event.id,
+          );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _markingDone = false);
     }
   }
 
@@ -16097,6 +16168,36 @@ class _SessionInfoSheetState extends State<_SessionInfoSheet> {
                           ),
                         ),
                       ),
+              ),
+            ),
+          ],
+
+          if (widget.isOrganizer) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _markingDone ? null : () => _markDone(s),
+                  icon: _markingDone
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.check_circle_outline_rounded,
+                          size: 18),
+                  label: const Text('Mark as Done'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade400,
+                    side: BorderSide(color: Colors.red.shade200),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
               ),
             ),
           ],
@@ -17544,6 +17645,7 @@ class _SignupInviteTabState extends State<_SignupInviteTab> {
 
 class _NewSessionConfig {
   final DateTime startAt;
+  final DateTime? endAt;
   final int? capacity;
   final bool waitlistEnabled;
   final int? signupLockHours;
@@ -17555,6 +17657,7 @@ class _NewSessionConfig {
 
   const _NewSessionConfig({
     required this.startAt,
+    this.endAt,
     this.capacity,
     this.waitlistEnabled = true,
     this.signupLockHours,
@@ -17582,6 +17685,7 @@ class _AddSessionSheet extends StatefulWidget {
 
 class _AddSessionSheetState extends State<_AddSessionSheet> {
   late DateTime _startAt;
+  TimeOfDay? _endTime; // null = auto (2h after start)
   final _capacityCtrl = TextEditingController();
   bool _waitlistEnabled = true;
   final _lockCtrl = TextEditingController();
@@ -17613,6 +17717,7 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
       _waitlistEnabled = t.waitlistEnabled;
       if (t.signupLockHours != null) _lockCtrl.text = t.signupLockHours.toString();
       if (t.notes != null) _notesCtrl.text = t.notes!;
+      if (t.endAt != null) _endTime = TimeOfDay.fromDateTime(t.endAt!.toLocal());
     }
   }
 
@@ -17669,6 +17774,16 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
         _startAt.year, _startAt.month, _startAt.day, t.hour, t.minute));
   }
 
+  Future<void> _pickEndTime() async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: _endTime ??
+          TimeOfDay.fromDateTime(_startAt.add(const Duration(hours: 1))),
+    );
+    if (t == null) return;
+    setState(() => _endTime = t);
+  }
+
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('EEE, MMM d · h:mm a');
@@ -17676,11 +17791,23 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-          20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
           // Header
           Row(children: [
             const Text('📅', style: TextStyle(fontSize: 22)),
@@ -17710,6 +17837,45 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
                   child: Icon(Icons.access_time_rounded,
                       color: colorScheme.onSurfaceVariant, size: 20),
                 ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // End time (optional)
+          AppTappable(
+            onTap: _pickEndTime,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(children: [
+                Icon(Icons.timer_outlined,
+                    color: colorScheme.onSurfaceVariant, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _endTime != null
+                        ? 'Ends at ${_endTime!.format(context)}'
+                        : 'End time (optional)',
+                    style: TextStyle(
+                      fontWeight: _endTime != null
+                          ? FontWeight.w500
+                          : FontWeight.normal,
+                      color: _endTime != null
+                          ? colorScheme.onSurface
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (_endTime != null)
+                  AppTappable(
+                    onTap: () => setState(() => _endTime = null),
+                    child: Icon(Icons.close_rounded,
+                        size: 18, color: colorScheme.onSurfaceVariant),
+                  ),
               ]),
             ),
           ),
@@ -17945,10 +18111,16 @@ class _AddSessionSheetState extends State<_AddSessionSheet> {
             onPressed: () {
               final cap = int.tryParse(_capacityCtrl.text.trim());
               final lock = int.tryParse(_lockCtrl.text.trim());
+              final endAt = _endTime == null
+                  ? null
+                  : DateTime(
+                      _startAt.year, _startAt.month, _startAt.day,
+                      _endTime!.hour, _endTime!.minute);
               Navigator.pop(
                 context,
                 _NewSessionConfig(
                   startAt: _startAt,
+                  endAt: endAt,
                   capacity: cap,
                   waitlistEnabled: _waitlistEnabled,
                   signupLockHours: lock,
