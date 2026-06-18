@@ -13169,7 +13169,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     final isPlaying = widget.queue.isActive;
 
     return GestureDetector(
-      onTap: _showQueueActionsSheet,
+      onTap: widget.entries.isEmpty ? null : _showQueueActionsSheet,
       child: ScaleTransition(
       scale: _switchScale ?? const AlwaysStoppedAnimation(1.0),
       child: Stack(
@@ -13195,7 +13195,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         children: [
           // Queue number + drag handle (tap → actions, long-press → reorder)
           GestureDetector(
-            onTap: _showQueueActionsSheet,
+            onTap: widget.entries.isEmpty ? null : _showQueueActionsSheet,
             child: ReorderableDelayedDragStartListener(
             index: widget.dragIndex,
             child: SizedBox(
