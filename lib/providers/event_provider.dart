@@ -1864,6 +1864,55 @@ class EventProvider extends ChangeNotifier {
     return session;
   }
 
+  Future<void> markSessionDone(String sessionId, String eventId) async {
+    await _db.rpc('mark_session_done', params: {
+      'p_session_id': sessionId,
+      'p_event_id': eventId,
+    });
+    // Clear activity-tab data from the local cache.
+    for (final a in _sessionQueues[sessionId] ?? []) {
+      _queueEntries.remove(a.id);
+      _activityMeta.remove(a.id);
+    }
+    _sessionQueues[sessionId] = [];
+    // Free pool is computed from queues — recompute now that queues are empty.
+    _recomputeFreePool(eventId, sessionId);
+    // Move session from upcoming → past in local cache (end_at = now).
+    final upcoming = List<EventSession>.from(_upcomingSessions[eventId] ?? []);
+    final idx = upcoming.indexWhere((s) => s.id == sessionId);
+    if (idx >= 0) {
+      final s = upcoming[idx];
+      final done = EventSession(
+        id: s.id, eventId: s.eventId, sessionNumber: s.sessionNumber,
+        startAt: s.startAt, endAt: DateTime.now(),
+        inviteCode: s.inviteCode, createdAt: s.createdAt,
+        goingCount: s.goingCount, waitlistCount: s.waitlistCount,
+        pendingCount: s.pendingCount, capacity: s.capacity,
+        waitlistEnabled: s.waitlistEnabled, signupLockHours: s.signupLockHours,
+        isPublic: s.isPublic, requiresApproval: s.requiresApproval,
+        isActive: false, isActiveOverride: true, notes: s.notes,
+      );
+      upcoming.removeAt(idx);
+      _upcomingSessions[eventId] = upcoming;
+      final past = List<EventSession>.from(_pastSessions[eventId] ?? []);
+      past.insert(0, done);
+      _pastSessions[eventId] = past;
+    } else {
+      // Already in past — just patch flags.
+      _patchSessionInCache(eventId, sessionId, (s) => EventSession(
+        id: s.id, eventId: s.eventId, sessionNumber: s.sessionNumber,
+        startAt: s.startAt, endAt: s.endAt ?? DateTime.now(),
+        inviteCode: s.inviteCode, createdAt: s.createdAt,
+        goingCount: s.goingCount, waitlistCount: s.waitlistCount,
+        pendingCount: s.pendingCount, capacity: s.capacity,
+        waitlistEnabled: s.waitlistEnabled, signupLockHours: s.signupLockHours,
+        isPublic: s.isPublic, requiresApproval: s.requiresApproval,
+        isActive: false, isActiveOverride: true, notes: s.notes,
+      ));
+    }
+    notifyListeners();
+  }
+
   Future<void> updateSessionNotes(
       String sessionId, String eventId, String? notes) async {
     final value = (notes?.trim().isEmpty ?? true) ? null : notes!.trim();
