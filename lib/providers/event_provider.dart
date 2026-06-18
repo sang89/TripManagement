@@ -3322,6 +3322,16 @@ class EventProvider extends ChangeNotifier {
         list[idx] = updated;
         list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
         _activityMeta[id] = (sessionId: sessionId, eventId: updated.eventId);
+
+        // Server confirmed queue fully cleared — force local entry cache empty
+        // so the shatter animation fires on non-organizer devices even when
+        // entry DELETE Realtime events arrive out of order or are delayed.
+        if (updated.playingCount == 0 && updated.waitingCount == 0) {
+          final cached = _queueEntries[id];
+          if (cached != null && cached.isNotEmpty) {
+            _queueEntries[id] = [];
+          }
+        }
       }
     }
     // The DB trigger fires this UPDATE on every entry INSERT/DELETE
@@ -3641,6 +3651,48 @@ class EventProvider extends ChangeNotifier {
   Future<void> clearQueue(String activityId, String eventId, String sessionId) async {
     await _db.rpc('clear_queue', params: {'p_activity_id': activityId});
     unawaited(fetchSessionQueues(eventId, sessionId));
+  }
+
+  /// Clears all entries from a queue optimistically. Queue row stays — the
+  /// queue structure is immutable until the organizer reconfigures it.
+  Future<void> clearQueueForEvict(
+      String activityId, String eventId, String sessionId) async {
+    final previous = List<SessionQueueEntry>.from(
+        _queueEntries[activityId] ?? []);
+    _queueEntries[activityId] = [];
+    _recomputeFreePool(eventId, sessionId);
+    notifyListeners();
+    try {
+      await _db.rpc('clear_queue', params: {'p_activity_id': activityId});
+    } catch (e) {
+      _queueEntries[activityId] = previous;
+      _recomputeFreePool(eventId, sessionId);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> deleteQueueActivity(String activityId, String eventId, String sessionId) async {
+    // Optimistic: remove the row and all its entries from local caches immediately.
+    final removed = _sessionQueues[sessionId]
+        ?.where((a) => a.id == activityId)
+        .firstOrNull;
+    _sessionQueues[sessionId]?.removeWhere((a) => a.id == activityId);
+    _queueEntries.remove(activityId);
+    _activityMeta.remove(activityId);
+    _recomputeFreePool(eventId, sessionId);
+    notifyListeners();
+
+    try {
+      await _db.rpc('delete_queue_activity', params: {'p_activity_id': activityId});
+      // Realtime DELETE on session_queue_activities confirms removal on all clients.
+    } catch (e) {
+      if (removed != null) {
+        // Revert via a full re-fetch — we lost both the activity and entries.
+        unawaited(fetchSessionQueues(eventId, sessionId));
+      }
+      rethrow;
+    }
   }
 
   /// Returns true when there is at least one empty queue anywhere after this
