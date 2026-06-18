@@ -11860,6 +11860,11 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     with TickerProviderStateMixin {
   bool _loading = false;
 
+  // Immutable snapshot of entries from the last build.  We take a copy (not
+  // a reference) so in-place mutations to the provider list (removeWhere in
+  // leaveQueue) don't silently corrupt old-vs-new departure detection.
+  late List<SessionQueueEntry> _prevEntries;
+
   // Shimmer that sweeps left→right while in playing state.
   AnimationController? _shimmerCtrl;
   // One-shot bounce + flash when toggling playing on/off.
@@ -11867,9 +11872,33 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   Animation<double>? _switchScale;
   Animation<double>? _switchFlash;
 
+  // IDs of entries that just appeared — used to trigger the glow ring in _SpotCircle.
+  final Set<String> _newEntryIds = {};
+  final Map<String, Timer> _newEntryTimers = {};
+  // Random spin angle (radians) assigned once per new entry, cleared after animation.
+  final Map<String, double> _newEntryAngles = {};
+
+  // Entries that just left — cached so shatter shards can show their avatar.
+  final Map<String, SessionQueueEntry> _leavingEntries = {};
+  final Map<String, Timer> _leavingTimers = {};
+
+  // Entries that shifted to a new slot — get a gentle fade-in instead of bounce.
+  // Per-entry timers; duration (2000ms) outlasts hold (1400ms) + animation (420ms)
+  // so the classification survives until the incoming animation actually completes.
+  final Set<String> _shiftingInIds = {};
+  final Map<String, Timer> _shiftingInTimers = {};
+
+  // Shatter-hold: during Phase 1, display uses this list (departed slots → null)
+  // so B/C stay frozen while A shatters. Gated by _holdGeneration so overlapping
+  // kicks can't cross-contaminate timers.
+  int _holdGeneration = 0;
+  List<SessionQueueEntry?>? _shatterHoldEntries;
+  Timer? _shiftDelayTimer;
+
   @override
   void initState() {
     super.initState();
+    _prevEntries = List<SessionQueueEntry>.from(widget.entries);
     _initAnimations();
   }
 
@@ -11922,12 +11951,111 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         _shimmerCtrl!.value = 0;
       }
     }
+    // Use _prevEntries (immutable snapshot) instead of old.entries.
+    // old.entries aliases the provider list — leaveQueue's removeWhere mutates it
+    // in-place before the rebuild, so old.entries already shows [B,C] when we
+    // need it to still show [A,B,C] to detect A's departure.
+    final newIds = {for (final e in widget.entries) e.id};
+    final oldIds = {for (final e in _prevEntries) e.id};
+
+    // ── Joins ────────────────────────────────────────────────────────────
+    for (final e in widget.entries) {
+      if (!oldIds.contains(e.id)) {
+        _newEntryIds.add(e.id);
+        _newEntryAngles[e.id] = (Random().nextBool() ? 1.0 : -1.0) *
+            (1.0 + Random().nextDouble()) * pi;
+        _newEntryTimers[e.id]?.cancel();
+        _newEntryTimers[e.id] = Timer(const Duration(milliseconds: 750), () {
+          if (mounted) {
+            setState(() {
+              _newEntryIds.remove(e.id);
+              _newEntryAngles.remove(e.id);
+            });
+          }
+        });
+      }
+    }
+
+    // ── Departures ───────────────────────────────────────────────────────
+    for (final e in _prevEntries) {
+      if (!newIds.contains(e.id)) {
+        _leavingEntries[e.id] = e;
+        _leavingTimers[e.id]?.cancel();
+        _leavingTimers[e.id] = Timer(const Duration(milliseconds: 1700), () {
+          if (mounted) {
+            setState(() {
+              _leavingEntries.remove(e.id);
+              _leavingTimers.remove(e.id);
+            });
+          }
+        });
+      }
+    }
+
+    // ── Slot shifts ──────────────────────────────────────────────────────
+    // Entries that moved slot positions (not new joins) get a gentle fade-in.
+    // Per-entry timers prevent overlap when multiple rapid kicks happen.
+    for (final e in _prevEntries) {
+      if (!newIds.contains(e.id)) continue;
+      final oldSlot = _prevEntries.indexWhere((oe) => oe.id == e.id);
+      final newSlot = widget.entries.indexWhere((ne) => ne.id == e.id);
+      if (oldSlot != newSlot) {
+        _shiftingInIds.add(e.id);
+        _shiftingInTimers[e.id]?.cancel();
+        _shiftingInTimers[e.id] =
+            Timer(const Duration(milliseconds: 2000), () {
+          if (mounted) {
+            setState(() {
+              _shiftingInIds.remove(e.id);
+              _shiftingInTimers.remove(e.id);
+            });
+          }
+        });
+      }
+    }
+
+    // ── Shatter hold (sequential: A shatters THEN B/C slide up) ─────────
+    final anyDeparted = oldIds.any((id) => !newIds.contains(id));
+    final anyShifted = _prevEntries.any((e) {
+      if (!newIds.contains(e.id)) return false;
+      return _prevEntries.indexWhere((oe) => oe.id == e.id) !=
+          widget.entries.indexWhere((ne) => ne.id == e.id);
+    });
+
+    if (anyDeparted && anyShifted) {
+      _shiftDelayTimer?.cancel();
+      _holdGeneration++;
+      final myGen = _holdGeneration;
+      _shatterHoldEntries = _prevEntries
+          .map<SessionQueueEntry?>((e) => newIds.contains(e.id) ? e : null)
+          .toList();
+      _shiftDelayTimer = Timer(const Duration(milliseconds: 1400), () {
+        if (!mounted || _holdGeneration != myGen) return;
+        setState(() => _shatterHoldEntries = null);
+      });
+    } else if (anyDeparted && !anyShifted && _shatterHoldEntries != null) {
+      // The last departure(s) in a rapid sequence (e.g. Realtime DELETEs from
+      // clear_queue arriving one-by-one). No remaining entries shift, so the
+      // hold condition above is false — but a stale hold from the previous
+      // departure is still frozen. Clear it now so the last entry's shatter
+      // fires immediately instead of waiting for the hold timer.
+      _shiftDelayTimer?.cancel();
+      _holdGeneration++;
+      setState(() => _shatterHoldEntries = null);
+    }
+
+    // Snapshot updated AFTER all detection above.
+    _prevEntries = List<SessionQueueEntry>.from(widget.entries);
   }
 
   @override
   void dispose() {
     _shimmerCtrl?.dispose();
     _switchCtrl?.dispose();
+    for (final t in _newEntryTimers.values) { t.cancel(); }
+    for (final t in _leavingTimers.values) { t.cancel(); }
+    for (final t in _shiftingInTimers.values) { t.cancel(); }
+    _shiftDelayTimer?.cancel();
     super.dispose();
   }
 
@@ -12929,7 +13057,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     } else if (action == 'move') {
       await _moveToEnd();
     } else if (action == 'evict') {
-      await _clearQueue();
+      await _evictAll();
     }
   }
 
@@ -12968,19 +13096,38 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     }
   }
 
-  Future<void> _clearQueue() async {
+  Future<void> _evictAll() async {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      await context.read<EventProvider>().clearQueue(
-            widget.queue.id,
-            widget.event.id,
-            widget.session.id,
-          );
+      final provider = context.read<EventProvider>();
+
+      // Step 1: clear all entries. The optimistic update fires immediately and
+      // triggers the shatter animation; the RPC deletes them server-side.
+      await provider.clearQueueForEvict(
+        widget.queue.id, widget.event.id, widget.session.id);
+
+      if (!mounted) return;
+
+      // Step 2: wait for the shatter animation to finish (~1400ms total; the
+      // optimistic clear already started it before the RPC returned, so
+      // ~1200ms covers the remaining duration after the await above).
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      if (!mounted) return;
+
+      // Step 3: move the now-empty row to the end so the next waiting group
+      // advances. Queue structure (row/spot counts) is unchanged.
+      final queues = provider.queuesFor(widget.session.id);
+      final currentIndex = queues.indexWhere((q) => q.id == widget.queue.id);
+      if (currentIndex >= 0 && currentIndex < queues.length - 1) {
+        await provider.moveQueueByIndex(
+          widget.session.id, currentIndex, queues.length - 1);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Could not clear: $e')));
+            .showSnackBar(SnackBar(content: Text('Could not evict queue: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -12990,7 +13137,9 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   @override
   Widget build(BuildContext context) {
     final spots = widget.queue.playersPerRound;
-    final entries = widget.entries;
+    // During Phase 1 (shatter hold), show old slots with departed entries nulled out.
+    final displayEntries =
+        _shatterHoldEntries ?? List<SessionQueueEntry?>.from(widget.entries);
     final colorScheme = Theme.of(context).colorScheme;
     final isPlaying = widget.queue.isActive;
 
@@ -13070,28 +13219,183 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
               padding: const EdgeInsets.only(right: 4),
               child: Row(
                 children: List.generate(spots, (i) {
-                  final entry = i < entries.length ? entries[i] : null;
+                  final entry = i < displayEntries.length ? displayEntries[i] : null;
                   return Padding(
                     padding: EdgeInsets.only(right: i < spots - 1 ? 8 : 0),
-                    child: _SpotCircle(
-                      entry: entry,
-                      isSelf: entry?.userId == widget.authUid,
-                      canClaim: entry == null && !_loading,
-                      onClaim: _showAddSlotDialog,
-                      onLeave: entry?.userId == widget.authUid
-                          ? _showLeaveDialog
-                          : null,
-                      onKick: entry != null &&
-                              entry.userId != widget.authUid &&
-                              widget.isOrganizer &&
-                              !_loading
-                          ? () => _showKickDialog(entry)
-                          : null,
-                      onViewProfile: entry != null &&
-                              entry.userId != widget.authUid &&
-                              !widget.isOrganizer
-                          ? () => _showUserProfileSheet(entry)
-                          : null,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 420),
+                      reverseDuration: const Duration(milliseconds: 1400),
+                      transitionBuilder: (child, animation) => AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, ch) {
+                          final value = animation.value;
+                          final bool isLeaving =
+                              animation.status == AnimationStatus.reverse;
+
+                          if (isLeaving) {
+                            final leavingKey =
+                                (child.key as ValueKey<String?>?)?.value ?? '';
+                            final wasEmpty = leavingKey.startsWith('empty_');
+
+                            if (wasEmpty) {
+                              // Empty slot → new person: quick pop compressed to ~250ms.
+                              final qT = ((1.0 - value) / 0.36).clamp(0.0, 1.0);
+                              final scale = qT < 0.2
+                                  ? 1.0 + qT * 1.5
+                                  : 1.3 * (1.0 - (qT - 0.2) / 0.8);
+                              return Opacity(
+                                opacity: (1.0 - qT).clamp(0.0, 1.0),
+                                child: Transform.scale(
+                                    scale: scale.clamp(0.0, 2.0), child: ch),
+                              );
+                            }
+
+                            // Live check: if entry is still in the queue it just
+                            // shifted slots — hide instantly. No timer needed.
+                            if (widget.entries
+                                .any((e) => e.id == leavingKey)) {
+                              return Opacity(opacity: 0, child: ch);
+                            }
+
+                            // Person actually left/kicked: glass shatter.
+                            const shakeEnd = 0.55;
+                            if (value > shakeEnd) {
+                              // Shake phase: rapid left/right oscillation.
+                              final shakeT = (1.0 - value) / (1.0 - shakeEnd);
+                              final shakeX = sin(shakeT * 5 * pi) * 6.0;
+                              final shakeScale = 1.0 + 0.04 * sin(shakeT * 10 * pi);
+                              return Transform.translate(
+                                offset: Offset(shakeX, 0),
+                                child: Transform.scale(scale: shakeScale, child: ch),
+                              );
+                            } else {
+                              // Shatter phase: circle breaks into avatar-textured shards.
+                              final shatterT = 1.0 - (value / shakeEnd);
+                              final inv = 1.0 - shatterT;
+                              final avatarOpacity = (inv * inv).clamp(0.0, 1.0);
+                              final op = (1.0 - shatterT * 1.15).clamp(0.0, 1.0);
+
+                              // Recover the leaving entry's data via the outgoing child's key.
+                              final leaving = _leavingEntries[leavingKey];
+                              final isSelfLeaving =
+                                  leaving?.userId == widget.authUid;
+
+                              // Factory: fresh _AvatarCircle instance per shard
+                              // (same widget can't be placed in multiple tree positions).
+                              Widget avatarShard() => ClipOval(
+                                    child: _AvatarCircle(
+                                      avatarUrl: leaving?.avatarUrl,
+                                      displayName: leaving?.displayName ?? '',
+                                      size: 44,
+                                      backgroundColor:
+                                          isSelfLeaving ? Colors.teal : null,
+                                      fontSize: isSelfLeaving ? 9 : 13,
+                                      labelOverride:
+                                          isSelfLeaving ? 'You' : null,
+                                    ),
+                                  );
+
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.center,
+                                children: [
+                                  IgnorePointer(
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      alignment: Alignment.center,
+                                      children: [
+                                        for (int s = 0; s < 7; s++)
+                                          Transform.translate(
+                                            offset: Offset(
+                                              cos(_shardAngles[s]) * _shardDists[s] *
+                                                  Curves.easeOut.transform(shatterT),
+                                              sin(_shardAngles[s]) * _shardDists[s] *
+                                                  Curves.easeOut.transform(shatterT),
+                                            ),
+                                            child: Transform.rotate(
+                                              angle: (s.isEven ? 1.0 : -1.0) *
+                                                  _shardRots[s] * shatterT * pi,
+                                              child: Opacity(
+                                                opacity: op,
+                                                child: ClipPath(
+                                                  clipper: _ShardClipper(
+                                                      _shardPolygons[s]),
+                                                  child: SizedBox(
+                                                    width: 44,
+                                                    height: 44,
+                                                    child: avatarShard(),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Opacity(opacity: avatarOpacity, child: ch),
+                                ],
+                              );
+                            }
+                          }
+
+                          // Entry shifted up to fill a vacated slot: gentle fade-in.
+                          if (entry?.id != null &&
+                              _shiftingInIds.contains(entry!.id)) {
+                            return Opacity(
+                              opacity: (value * 2.5).clamp(0.0, 1.0),
+                              child: ch,
+                            );
+                          }
+
+                          // During Phase 1 shatter hold, the empty slot at this
+                          // position is a placeholder — suppress its appear animation
+                          // so it stays hidden until Phase 2 when B fills it.
+                          if (entry == null && _shatterHoldEntries != null) {
+                            return Opacity(opacity: 0, child: ch);
+                          }
+
+                          // New join or empty slot appearing: elastic bounce + random roll.
+                          final scale = Curves.elasticOut.transform(value);
+                          final startAngle = _newEntryAngles[entry?.id];
+                          final angle = startAngle == null
+                              ? 0.0
+                              : (1.0 - value) * startAngle;
+                          return Opacity(
+                            opacity: value.clamp(0.0, 1.0),
+                            child: Transform.rotate(
+                              angle: angle,
+                              child: Transform.scale(
+                                scale: scale.clamp(0.0, 2.0),
+                                child: ch,
+                              ),
+                            ),
+                          );
+                        },
+                        child: child,
+                      ),
+                      child: _SpotCircle(
+                        key: ValueKey(entry?.id ?? 'empty_$i'),
+                        entry: entry,
+                        isNew: entry != null &&
+                            _newEntryIds.contains(entry.id),
+                        isSelf: entry?.userId == widget.authUid,
+                        canClaim: entry == null && !_loading,
+                        onClaim: _showAddSlotDialog,
+                        onLeave: entry?.userId == widget.authUid
+                            ? _showLeaveDialog
+                            : null,
+                        onKick: entry != null &&
+                                entry.userId != widget.authUid &&
+                                widget.isOrganizer &&
+                                !_loading
+                            ? () => _showKickDialog(entry)
+                            : null,
+                        onViewProfile: entry != null &&
+                                entry.userId != widget.authUid &&
+                                !widget.isOrganizer
+                            ? () => _showUserProfileSheet(entry)
+                            : null,
+                      ),
                     ),
                   );
                 }),
@@ -13171,6 +13475,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
 
 class _SpotCircle extends StatelessWidget {
   final SessionQueueEntry? entry;
+  final bool isNew;
   final bool isSelf;
   final bool canClaim;
   final VoidCallback? onClaim;
@@ -13179,7 +13484,9 @@ class _SpotCircle extends StatelessWidget {
   final VoidCallback? onViewProfile;
 
   const _SpotCircle({
+    super.key,
     required this.entry,
+    required this.isNew,
     required this.isSelf,
     required this.canClaim,
     required this.onClaim,
@@ -13239,7 +13546,93 @@ class _SpotCircle extends StatelessWidget {
         onTap: effectiveTap,
         child: Stack(
           clipBehavior: Clip.none,
+          alignment: Alignment.center,
           children: [
+            // Two staggered glow rings that ripple outward on join.
+            if (isNew)
+              IgnorePointer(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 700),
+                  builder: (_, t, _) {
+                    final t2 = ((t - 0.35) / 0.65).clamp(0.0, 1.0);
+                    Widget ring(double progress, double maxOpacity, double bw) {
+                      final s = 1.0 + 1.5 * Curves.easeOut.transform(progress);
+                      final o = (1.0 - progress) * maxOpacity;
+                      return Transform.scale(
+                        scale: s,
+                        child: Container(
+                          width: _size,
+                          height: _size,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.teal.withValues(alpha: o),
+                              width: bw,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        ring(t, 0.65, 2.5),
+                        if (t > 0.35) ring(t2, 0.45, 1.8),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            // Particle burst — 6 coloured dots shoot outward on join.
+            if (isNew)
+              IgnorePointer(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 520),
+                  builder: (_, t, _) {
+                    const colors = [
+                      Color(0xFF00BCD4), // cyan
+                      Color(0xFFFF9800), // orange
+                      Color(0xFF4CAF50), // green
+                      Color(0xFFFFEB3B), // yellow
+                      Color(0xFF9C27B0), // purple
+                      Color(0xFFE91E63), // pink
+                    ];
+                    final dist = 30.0 * Curves.easeOut.transform(t);
+                    final opacity = (1.0 - t * 1.3).clamp(0.0, 1.0);
+                    return SizedBox(
+                      width: _size,
+                      height: _size,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          for (int p = 0; p < 6; p++)
+                            Transform.translate(
+                              offset: Offset(
+                                cos(p * pi / 3) * dist,
+                                sin(p * pi / 3) * dist,
+                              ),
+                              child: Opacity(
+                                opacity: opacity,
+                                child: Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: colors[p],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             Container(
               width: _size,
               height: _size,
@@ -13276,6 +13669,56 @@ class _SpotCircle extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Glass Shatter — shard geometry & clipper ─────────────────────────────────
+
+// Impact point (slightly off-centre) and crack end-points on the 44×44 circle.
+const _shardI  = Offset(18, 20);
+const _shardC0 = Offset(22,  0);
+const _shardC1 = Offset(44, 14);
+const _shardC2 = Offset(44, 30);
+const _shardC3 = Offset(28, 44);
+const _shardC4 = Offset(10, 44);
+const _shardC5 = Offset( 0, 28);
+const _shardC6 = Offset( 0,  8);
+
+// Seven irregular polygons that together tile the 44×44 circle.
+const _shardPolygons = [
+  [_shardI, _shardC0, Offset(0, 0), _shardC6], // upper-left quadrant
+  [_shardI, _shardC0, _shardC1],                // top
+  [_shardI, _shardC1, _shardC2],                // right-upper
+  [_shardI, _shardC2, _shardC3],                // right-lower
+  [_shardI, _shardC3, _shardC4],                // bottom
+  [_shardI, _shardC4, _shardC5],                // lower-left
+  [_shardI, _shardC5, _shardC6],                // left
+];
+
+// Direction each shard flies (radians from widget centre).
+const _shardAngles = [-2.4, -0.8, 0.1, 1.0, 1.8, 2.7, -pi];
+
+// How far each shard travels at full shatter (px).
+const _shardDists = [34.0, 40.0, 38.0, 32.0, 36.0, 30.0, 34.0];
+
+// Rotation magnitude at full shatter (× π radians, sign alternates per shard).
+const _shardRots = [0.8, 1.1, 0.9, 0.7, 1.2, 0.8, 0.7];
+
+
+class _ShardClipper extends CustomClipper<Path> {
+  final List<Offset> vertices;
+  const _ShardClipper(this.vertices);
+
+  @override
+  Path getClip(Size size) {
+    final path = Path()..moveTo(vertices[0].dx, vertices[0].dy);
+    for (final v in vertices.skip(1)) {
+      path.lineTo(v.dx, v.dy);
+    }
+    return path..close();
+  }
+
+  @override
+  bool shouldReclip(_ShardClipper old) => false;
 }
 
 // ── Setup Queues Sheet ────────────────────────────────────────────────────────

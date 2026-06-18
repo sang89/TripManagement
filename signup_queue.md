@@ -58,6 +58,7 @@ All RPCs enforce member-level access (not organizer-only) unless noted.
 | `leave_queue` | `(p_entry_id)` | Remove one entry by ID. Does NOT renumber remaining entries — gaps are intentional; the client sorts by `queue_position ASC` and renders by index. |
 | `add_member_to_queue` | `(p_activity_id, p_user_id nullable, p_display_name, p_avatar_url)` | Any member can add another member (app user or anonymous guest) |
 | `clear_queue` | `(p_activity_id)` | Deletes all entries from the row; resets `status = 'waiting'` |
+| `delete_queue_activity` | `(p_activity_id)` | Organizer-only. Deletes the activity row entirely; CASCADE removes all entries. Used internally by `deleteQueueActivity()` in the provider — NOT used by "Evict All". |
 | `set_queue_status` | `(p_activity_id, p_status)` | Sets `status` to `'waiting'`, `'active'`, or `'ended'`; does NOT affect entries |
 | `move_queue_to_position` | `(p_activity_id, p_session_id, p_new_position)` | Moves one row to a new `sort_order`; bulk-shifts the affected range in O(range) SQL updates; does NOT touch `status` |
 | `reorder_session_queues` | `(p_session_id, p_ordered_ids uuid[])` | Reassigns sort_orders sequentially for all IDs; use only when the full order is known (e.g. from a bulk-import) |
@@ -117,7 +118,7 @@ Tapping the queue card (anywhere except spot circles) opens the **Queue Actions 
 | 🔥 **Game On!** | Always | Sets `status = 'active'`; starts shimmer animation |
 | 😴 **Back to Waiting** | Only when `status == 'active'` | Sets `status = 'waiting'`; stops shimmer |
 | 🔄 **Just Played! Back in Line** | Only when a non-empty queue has an empty queue after it | See "Back in Line" logic below |
-| 💨 **Evict All** | Only when queue has ≥ 1 entry | Calls `clear_queue`; resets status to `'waiting'` |
+| 💨 **Evict All** | Only when queue has ≥ 1 entry | Clears all entries (shatter animation plays, ~1400ms), then moves the now-empty row to the end so the next waiting group advances to position #1. Queue structure (row count, spots per round) is immutable — only the setup sheet changes it. |
 
 ### "Just Played! Back in Line" logic
 
