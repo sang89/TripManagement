@@ -54,8 +54,8 @@ All RPCs enforce member-level access (not organizer-only) unless noted.
 | RPC | Signature | Effect |
 |---|---|---|
 | `setup_session_queues` | `(p_session_id, p_count, p_spots, p_allow_duplicates)` | Organizer-only. Idempotent: increases/decreases count, updates spots and allow_duplicates |
-| `join_queue` | `(p_activity_id)` | Self-join: inserts an entry for the calling user |
-| `leave_queue` | `(p_entry_id)` | Remove one entry by ID |
+| `join_queue` | `(p_activity_id)` | Self-join: inserts an entry for the calling user. Locks the activity row (`FOR UPDATE`) to serialize concurrent joins — prevents overbooking when multiple members tap Join simultaneously. Uses `MAX(queue_position)+1` for position assignment to avoid duplicates after position gaps. |
+| `leave_queue` | `(p_entry_id)` | Remove one entry by ID. Does NOT renumber remaining entries — gaps are intentional; the client sorts by `queue_position ASC` and renders by index. |
 | `add_member_to_queue` | `(p_activity_id, p_user_id nullable, p_display_name, p_avatar_url)` | Any member can add another member (app user or anonymous guest) |
 | `clear_queue` | `(p_activity_id)` | Deletes all entries from the row; resets `status = 'waiting'` |
 | `set_queue_status` | `(p_activity_id, p_status)` | Sets `status` to `'waiting'`, `'active'`, or `'ended'`; does NOT affect entries |
@@ -208,9 +208,13 @@ All changes propagate to every connected client in real time. The 8-second clien
 
 ## Optimistic Update Pattern
 
-Every mutation follows the same pattern to keep the UI snappy:
-1. Apply the change to the local cache immediately → `notifyListeners()`.
-2. `await` the RPC (so the next poll sees the correct DB state before overwriting the cache).
-3. Realtime events arrive shortly after and confirm/correct the local state.
+| Mutation | Pattern |
+|---|---|
+| `leaveQueue` | Remove entry from local cache immediately → call RPC → revert on error. Realtime DELETE confirms removal on all other clients. |
+| `joinQueue` | No optimistic insertion (the new entry's server-assigned `queue_position` isn't known client-side). Call RPC → Realtime INSERT delivers the new entry to all clients (including caller). The 8-second poll is the fallback if Realtime misses it. |
+| `addMemberToQueue` / `addMultipleMembersToQueue` | No optimistic insertion (same reason). Call RPC → Realtime INSERT delivers. |
+| `setupQueues`, `clearQueue`, `moveQueueByIndex`, `moveQueuePastFirstEmpty` | Optimistic cache update immediately → await RPC → Realtime UPDATEs confirm on other clients. |
 
-**Why `await` matters**: fire-and-forget (`unawaited`) DB calls can race with the 8-second poll, which re-fetches from the DB and overwrites the optimistic cache before the write completes — causing visible reverts.
+**Why `joinQueue` doesn't need a post-RPC refetch**: the Realtime INSERT event arrives for all subscribers (including the joining client) with the correct `queue_position` value within ~100–200 ms of the DB commit. Doing a full `fetchSessionQueues` after the RPC added 100–400 ms of unnecessary latency per join and triggered N+1 serial queries (one per queue row).
+
+**`queue_position` gaps**: after a `leaveQueue`, position values may have gaps (e.g. 1, 3, 4). This is intentional — renumbering all entries after every leave was O(N) UPDATEs at 100 members. Gaps are invisible in the UI because spot circles are rendered by list index (not by `queue_position` value). The capacity check in `join_queue` uses `COUNT(*)`, which is unaffected by gaps. The `join_queue` RPC uses `MAX(queue_position) + 1` for new entries to avoid collisions with existing position values.

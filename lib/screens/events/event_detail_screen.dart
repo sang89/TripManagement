@@ -13324,8 +13324,10 @@ class _SetupQueuesSheetState extends State<_SetupQueuesSheet> {
         // Entire queue row will be removed → everyone in it is kicked.
         count += entries.length;
       } else {
-        // Row stays but spots may shrink → kick anyone beyond the new limit.
-        count += entries.where((e) => e.queuePosition > _spotsPerQueue).length;
+        // Row stays but spots may shrink → count how many entries exceed the new
+        // capacity. Uses entry count (not position values) so position gaps from
+        // leave_queue don't cause an incorrect preview.
+        count += (entries.length - _spotsPerQueue).clamp(0, entries.length);
       }
     }
     return count;
