@@ -3460,28 +3460,33 @@ class EventProvider extends ChangeNotifier {
   /// Cache keyed by sessionId.
   Future<void> fetchSessionQueues(String eventId, String sessionId) async {
     try {
+      // Single query with embedded entries — avoids N+1 round trips.
+      // PostgREST returns session_queue_entries as a nested list inside each
+      // activity row; SessionQueueActivity.fromJson ignores unknown keys safely.
       final actRows = await _db
           .from('session_queue_activities')
-          .select()
+          .select('*, session_queue_entries(*)')
           .eq('session_id', sessionId)
           .order('sort_order', ascending: true)
           .order('created_at', ascending: true) as List<dynamic>;
-      final activities = actRows
-          .map((r) => SessionQueueActivity.fromJson(r as Map<String, dynamic>))
-          .toList();
+
+      final activities = <SessionQueueActivity>[];
+      for (final row in actRows) {
+        final rowMap = row as Map<String, dynamic>;
+        final entryRows =
+            (rowMap['session_queue_entries'] as List<dynamic>?) ?? [];
+
+        activities.add(SessionQueueActivity.fromJson(rowMap));
+
+        final actId = rowMap['id'] as String;
+        _queueEntries[actId] = entryRows
+            .map((e) => SessionQueueEntry.fromJson(e as Map<String, dynamic>))
+            .toList()
+          ..sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
+      }
+
       _sessionQueues[sessionId] = activities;
       _indexActivities(sessionId, activities);
-
-      for (final a in activities) {
-        final entRows = await _db
-            .from('session_queue_entries')
-            .select()
-            .eq('activity_id', a.id)
-            .order('queue_position', ascending: true) as List<dynamic>;
-        _queueEntries[a.id] = entRows
-            .map((r) => SessionQueueEntry.fromJson(r as Map<String, dynamic>))
-            .toList();
-      }
 
       // Free pool = event members not currently in any queue (computed client-side).
       _recomputeFreePool(eventId, sessionId);
@@ -3511,15 +3516,43 @@ class EventProvider extends ChangeNotifier {
   }
 
   Future<void> joinQueue(String activityId, String eventId, String sessionId) async {
+    // Fire the RPC; the Realtime INSERT event delivers the new entry to all
+    // clients (including the caller) without a separate fetch round-trip.
+    // The 8-second poll in the Activity tab serves as a fallback if Realtime
+    // misses the event.
     await _db.rpc('join_queue', params: {'p_activity_id': activityId});
-    // Await the refresh so notifyListeners() fires (alreadyInQueue becomes true
-    // across all rows) before the caller's finally-block clears _loading.
-    await fetchSessionQueues(eventId, sessionId);
   }
 
   Future<void> leaveQueue(String entryId, String activityId, String eventId, String sessionId) async {
-    await _db.rpc('leave_queue', params: {'p_entry_id': entryId});
-    await fetchSessionQueues(eventId, sessionId);
+    // Optimistic: remove immediately so the UI responds before the RPC completes.
+    // If the entry isn't in cache (already removed by Realtime), skip the
+    // optimistic step and just fire the RPC — the RPC is a no-op if already gone.
+    final removed = _queueEntries[activityId]
+        ?.where((e) => e.id == entryId)
+        .firstOrNull;
+
+    if (removed != null) {
+      _queueEntries[activityId]!.removeWhere((e) => e.id == entryId);
+      _recomputeFreePoolForActivity(activityId);
+      notifyListeners();
+    }
+
+    try {
+      await _db.rpc('leave_queue', params: {'p_entry_id': entryId});
+      // Realtime DELETE confirms removal on all other clients.
+    } catch (e) {
+      // Revert optimistic removal and restore the entry.
+      if (removed != null) {
+        final list = _queueEntries[activityId] ??= [];
+        if (!list.any((entry) => entry.id == entryId)) {
+          list.add(removed);
+          list.sort((a, b) => a.queuePosition.compareTo(b.queuePosition));
+        }
+        _recomputeFreePoolForActivity(activityId);
+        notifyListeners();
+      }
+      rethrow;
+    }
   }
 
   /// Atomically adds multiple members to a queue in one transaction.
@@ -3539,7 +3572,7 @@ class EventProvider extends ChangeNotifier {
       'p_activity_id': activityId,
       'p_members': payload,
     });
-    await fetchSessionQueues(eventId, sessionId);
+    // Realtime INSERT events deliver the new entries to all clients.
   }
 
   Future<void> addMemberToQueue(
@@ -3556,7 +3589,7 @@ class EventProvider extends ChangeNotifier {
       'p_display_name': displayName,
       'p_avatar_url': avatarUrl,
     });
-    await fetchSessionQueues(eventId, sessionId);
+    // Realtime INSERT event delivers the new entry to all clients.
   }
 
   /// Sets the status of a queue row ('waiting' | 'active' | 'ended').
