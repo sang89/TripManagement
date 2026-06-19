@@ -57,6 +57,8 @@ class EventProvider extends ChangeNotifier {
 
   // Per-event caches for photos and expenses (fetched on demand).
   final Map<String, List<EventPhoto>> _photos = {};
+  final Map<String, bool> _hasMorePhotos = {};
+  static const _photoPageSize = 30;
   final Map<String, List<EventExpense>> _expenses = {};
   final Map<String, List<EventBringItem>> _bringItems = {};
   final Map<String, List<EventPoll>> _polls = {};
@@ -113,6 +115,7 @@ class EventProvider extends ChangeNotifier {
   }
 
   List<EventPhoto> photosFor(String eventId) => _photos[eventId] ?? [];
+  bool hasMorePhotos(String eventId) => _hasMorePhotos[eventId] ?? false;
   List<EventExpense> expensesFor(String eventId) => _expenses[eventId] ?? [];
   List<EventBringItem> bringItemsFor(String eventId) =>
       _bringItems[eventId] ?? [];
@@ -335,6 +338,7 @@ class EventProvider extends ChangeNotifier {
     _chatBgCommitted.clear();
     _events = [];
     _photos.clear();
+    _hasMorePhotos.clear();
     _expenses.clear();
     _bringItems.clear();
     _polls.clear();
@@ -828,14 +832,25 @@ class EventProvider extends ChangeNotifier {
         )
 
         // ── event_photos INSERT ─────────────────────────────────────────────
+        // Patch in-place to preserve pagination offset and avoid re-fetching
+        // the full list every time someone uploads.
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'event_photos',
           callback: (payload) {
             final eventId = payload.newRecord['event_id'] as String?;
-            if (eventId == null) return;
-            unawaited(fetchPhotos(eventId));
+            if (eventId == null || !_photos.containsKey(eventId)) return;
+            try {
+              final photo = _resolvePhotoUrls(
+                  Map<String, dynamic>.from(payload.newRecord));
+              // Skip if addPhoto() already prepended this row.
+              if (_photos[eventId]!.any((p) => p.id == photo.id)) return;
+              _photos[eventId] = [photo, ...(_photos[eventId]!)];
+              notifyListeners();
+            } catch (e) {
+              debugPrint('EventProvider photos Realtime patch error: $e');
+            }
           },
         )
 
@@ -1430,6 +1445,7 @@ class EventProvider extends ChangeNotifier {
     await _db.from('events').delete().eq('id', eventId);
     _events = _events.where((e) => e.id != eventId).toList();
     _photos.remove(eventId);
+    _hasMorePhotos.remove(eventId);
     _expenses.remove(eventId);
     _bringItems.remove(eventId);
     _polls.remove(eventId);
@@ -2376,21 +2392,22 @@ class EventProvider extends ChangeNotifier {
 
   // ─── Photos ────────────────────────────────────────────────────────────────
 
-  Future<List<EventPhoto>> fetchPhotos(String eventId) async {
+  Future<List<EventPhoto>> fetchPhotos(String eventId, {int offset = 0}) async {
     try {
       final data = await _db
           .from('event_photos')
           .select()
           .eq('event_id', eventId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(offset, offset + _photoPageSize - 1);
       final rows = List<Map<String, dynamic>>.from(data as List);
-      final photos = rows.map((r) {
-        final photo = EventPhoto.fromJson(r);
-        final url =
-            _db.storage.from('event-photos').getPublicUrl(photo.storagePath);
-        return photo.withPublicUrl(url);
-      }).toList();
-      _photos[eventId] = photos;
+      final photos = rows.map(_resolvePhotoUrls).toList();
+      if (offset == 0) {
+        _photos[eventId] = photos;
+      } else {
+        _photos[eventId] = [...(_photos[eventId] ?? []), ...photos];
+      }
+      _hasMorePhotos[eventId] = rows.length == _photoPageSize;
       notifyListeners();
       return photos;
     } catch (e) {
@@ -2399,29 +2416,45 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadMorePhotos(String eventId) async {
+    if (!hasMorePhotos(eventId)) return;
+    await fetchPhotos(eventId, offset: _photos[eventId]?.length ?? 0);
+  }
+
+  Future<void> loadAllPhotos(String eventId) async {
+    while (hasMorePhotos(eventId)) {
+      await fetchPhotos(eventId, offset: _photos[eventId]?.length ?? 0);
+    }
+  }
+
+  EventPhoto _resolvePhotoUrls(Map<String, dynamic> row) {
+    final photo = EventPhoto.fromJson(row);
+    final publicUrl =
+        _db.storage.from('event-photos').getPublicUrl(photo.storagePath);
+    final thumbnailUrl = _db.storage.from('event-photos').getPublicUrl(
+      photo.storagePath,
+      transform: const TransformOptions(width: 400, quality: 60),
+    );
+    return photo.withUrls(publicUrl: publicUrl, thumbnailUrl: thumbnailUrl);
+  }
+
   Future<EventPhoto?> addPhoto({
     required String eventId,
     required String storagePath,
     String caption = '',
   }) async {
-    try {
-      final data = await _db.from('event_photos').insert({
-        'event_id': eventId,
-        'uploaded_by': _userId,
-        'storage_path': storagePath,
-        'caption': caption,
-      }).select().single();
-      final photo = EventPhoto.fromJson(data);
-      final url =
-          _db.storage.from('event-photos').getPublicUrl(photo.storagePath);
-      final withUrl = photo.withPublicUrl(url);
-      _photos[eventId] = [withUrl, ...(_photos[eventId] ?? [])];
-      notifyListeners();
-      return withUrl;
-    } catch (e) {
-      debugPrint('EventProvider.addPhoto error: $e');
-      return null;
-    }
+    // Rethrows PostgrestException so the UI can surface rate_limit_exceeded /
+    // photo_cap_exceeded messages from the DB triggers.
+    final data = await _db.from('event_photos').insert({
+      'event_id': eventId,
+      'uploaded_by': _userId,
+      'storage_path': storagePath,
+      'caption': caption,
+    }).select().single();
+    final photo = _resolvePhotoUrls(Map<String, dynamic>.from(data as Map));
+    _photos[eventId] = [photo, ...(_photos[eventId] ?? [])];
+    notifyListeners();
+    return photo;
   }
 
   Future<void> deletePhoto(EventPhoto photo) async {
@@ -2429,6 +2462,20 @@ class EventProvider extends ChangeNotifier {
     await _db.from('event_photos').delete().eq('id', photo.id);
     _photos[photo.eventId] =
         (_photos[photo.eventId] ?? []).where((p) => p.id != photo.id).toList();
+    notifyListeners();
+  }
+
+  Future<void> updatePhotoCaption(String photoId, String caption) async {
+    await _db
+        .from('event_photos')
+        .update({'caption': caption}).eq('id', photoId);
+    for (final list in _photos.values) {
+      final idx = list.indexWhere((p) => p.id == photoId);
+      if (idx != -1) {
+        list[idx] = list[idx].copyWith(caption: caption);
+        break;
+      }
+    }
     notifyListeners();
   }
 

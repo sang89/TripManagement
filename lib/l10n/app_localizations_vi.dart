@@ -878,6 +878,48 @@ class AppLocalizationsVi extends AppLocalizations {
   String get deletePhotoConfirm => 'Delete this photo?';
 
   @override
+  String get noMemoriesYet => 'Chưa có kỷ niệm nào';
+
+  @override
+  String get addFirstPhoto => 'Nhấn + để thêm ảnh đầu tiên của bạn!';
+
+  @override
+  String get slideshow => 'Trình chiếu';
+
+  @override
+  String get captionHint => 'Thêm chú thích…';
+
+  @override
+  String get photoUploadLimit =>
+      'Đã đạt giới hạn tải lên. Thử lại sau một giờ.';
+
+  @override
+  String get photoCapReached => 'Sự kiện này đã đạt giới hạn ảnh.';
+
+  @override
+  String get loadMore => 'Tải thêm';
+
+  @override
+  String get storiesEditCaption => 'Chỉnh sửa chú thích';
+
+  @override
+  String get captionSaved => 'Đã lưu chú thích';
+
+  @override
+  String get saveToGallery => 'Lưu';
+
+  @override
+  String get savedToGallery => 'Đã lưu vào thư viện ảnh';
+
+  @override
+  String get sharePhoto => 'Chia sẻ';
+
+  @override
+  String uploadingProgress(int current, int total) {
+    return 'Đang tải lên $current / $total…';
+  }
+
+  @override
   String get addExpense => 'Add expense';
 
   @override

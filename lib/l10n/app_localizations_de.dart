@@ -882,6 +882,49 @@ class AppLocalizationsDe extends AppLocalizations {
   String get deletePhotoConfirm => 'Delete this photo?';
 
   @override
+  String get noMemoriesYet => 'Noch keine Erinnerungen';
+
+  @override
+  String get addFirstPhoto => 'Tippe auf +, um dein erstes Foto hinzuzufügen!';
+
+  @override
+  String get slideshow => 'Diashow';
+
+  @override
+  String get captionHint => 'Beschriftung hinzufügen…';
+
+  @override
+  String get photoUploadLimit =>
+      'Upload-Limit erreicht. Versuche es in einer Stunde erneut.';
+
+  @override
+  String get photoCapReached =>
+      'Diese Veranstaltung hat ihr Fotolimit erreicht.';
+
+  @override
+  String get loadMore => 'Mehr laden';
+
+  @override
+  String get storiesEditCaption => 'Beschriftung bearbeiten';
+
+  @override
+  String get captionSaved => 'Beschriftung gespeichert';
+
+  @override
+  String get saveToGallery => 'Speichern';
+
+  @override
+  String get savedToGallery => 'In Galerie gespeichert';
+
+  @override
+  String get sharePhoto => 'Teilen';
+
+  @override
+  String uploadingProgress(int current, int total) {
+    return 'Hochladen $current / $total…';
+  }
+
+  @override
   String get addExpense => 'Add expense';
 
   @override

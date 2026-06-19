@@ -1728,6 +1728,84 @@ abstract class AppLocalizations {
   /// **'Delete this photo?'**
   String get deletePhotoConfirm;
 
+  /// No description provided for @noMemoriesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No memories yet'**
+  String get noMemoriesYet;
+
+  /// No description provided for @addFirstPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to add your first photo!'**
+  String get addFirstPhoto;
+
+  /// No description provided for @slideshow.
+  ///
+  /// In en, this message translates to:
+  /// **'Slideshow'**
+  String get slideshow;
+
+  /// No description provided for @captionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a caption…'**
+  String get captionHint;
+
+  /// No description provided for @photoUploadLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload limit reached. Try again in an hour.'**
+  String get photoUploadLimit;
+
+  /// No description provided for @photoCapReached.
+  ///
+  /// In en, this message translates to:
+  /// **'This event has reached its photo limit.'**
+  String get photoCapReached;
+
+  /// No description provided for @loadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get loadMore;
+
+  /// No description provided for @storiesEditCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Caption'**
+  String get storiesEditCaption;
+
+  /// No description provided for @captionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Caption saved'**
+  String get captionSaved;
+
+  /// No description provided for @saveToGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveToGallery;
+
+  /// No description provided for @savedToGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to Gallery'**
+  String get savedToGallery;
+
+  /// No description provided for @sharePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get sharePhoto;
+
+  /// No description provided for @uploadingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading {current} / {total}…'**
+  String uploadingProgress(int current, int total);
+
   /// No description provided for @addExpense.
   ///
   /// In en, this message translates to:

@@ -863,6 +863,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deletePhotoConfirm => 'Delete this photo?';
 
   @override
+  String get noMemoriesYet => '还没有回忆';
+
+  @override
+  String get addFirstPhoto => '点击 + 添加第一张照片！';
+
+  @override
+  String get slideshow => '幻灯片';
+
+  @override
+  String get captionHint => '添加说明…';
+
+  @override
+  String get photoUploadLimit => '已达到上传限制，请一小时后再试。';
+
+  @override
+  String get photoCapReached => '此活动已达到照片上限。';
+
+  @override
+  String get loadMore => '加载更多';
+
+  @override
+  String get storiesEditCaption => '编辑说明';
+
+  @override
+  String get captionSaved => '说明已保存';
+
+  @override
+  String get saveToGallery => '保存';
+
+  @override
+  String get savedToGallery => '已保存到相册';
+
+  @override
+  String get sharePhoto => '分享';
+
+  @override
+  String uploadingProgress(int current, int total) {
+    return '上传中 $current / $total…';
+  }
+
+  @override
   String get addExpense => 'Add expense';
 
   @override
