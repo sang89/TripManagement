@@ -34,6 +34,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Select a profile photo from your photo library</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save event photos to your gallery</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a profile photo with your camera</string>
 	<key>NSFaceIDUsageDescription</key>

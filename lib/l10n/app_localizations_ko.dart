@@ -866,6 +866,47 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deletePhotoConfirm => 'Delete this photo?';
 
   @override
+  String get noMemoriesYet => '아직 추억이 없습니다';
+
+  @override
+  String get addFirstPhoto => '+를 눌러 첫 번째 사진을 추가하세요!';
+
+  @override
+  String get slideshow => '슬라이드쇼';
+
+  @override
+  String get captionHint => '캡션 추가…';
+
+  @override
+  String get photoUploadLimit => '업로드 한도에 도달했습니다. 1시간 후에 다시 시도하세요.';
+
+  @override
+  String get photoCapReached => '이 이벤트는 사진 한도에 도달했습니다.';
+
+  @override
+  String get loadMore => '더 불러오기';
+
+  @override
+  String get storiesEditCaption => '캡션 편집';
+
+  @override
+  String get captionSaved => '캡션이 저장되었습니다';
+
+  @override
+  String get saveToGallery => '저장';
+
+  @override
+  String get savedToGallery => '갤러리에 저장됨';
+
+  @override
+  String get sharePhoto => '공유';
+
+  @override
+  String uploadingProgress(int current, int total) {
+    return '업로드 중 $current / $total…';
+  }
+
+  @override
   String get addExpense => 'Add expense';
 
   @override

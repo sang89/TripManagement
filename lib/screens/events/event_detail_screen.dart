@@ -24,6 +24,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:gal/gal.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 
 import '../../config/api_keys.dart';
 import '../../l10n/app_localizations.dart';
@@ -6222,6 +6225,390 @@ class _ChatThemePickerSheetState extends State<_ChatThemePickerSheet> {
 
 // ── Photos tab ────────────────────────────────────────────────────────────────
 
+// ── Shared photo utility ──────────────────────────────────────────────────────
+
+String _photoTimeAgo(DateTime dt) {
+  final d = DateTime.now().difference(dt);
+  if (d.inDays > 365) return '${d.inDays ~/ 365}y ago';
+  if (d.inDays > 30) return '${d.inDays ~/ 30}mo ago';
+  if (d.inDays > 0) return '${d.inDays}d ago';
+  if (d.inHours > 0) return '${d.inHours}h ago';
+  if (d.inMinutes > 0) return '${d.inMinutes}m ago';
+  return 'just now';
+}
+
+// ── Delete photo bottom sheet ─────────────────────────────────────────────────
+
+const _deletePhotoQuotes = [
+  'Gone but not forgotten. Well… actually gone. 👻',
+  'RIP little memory. You served us well. 🪦',
+  'Say cheese… wait, too late. 📸',
+  'Hasta la vista, pixel. 🤖',
+  'Your future self might disagree with this. 😬',
+  'One click and poof — into the void! 🌌',
+  'No take-backs in the shadow realm. 🌑',
+  'Somewhere a pixel is crying right now. 😢',
+  'This photo\'s final countdown begins now. 🚀',
+  'Are you really sure? REALLY sure? 🤔',
+];
+
+Future<bool?> _showDeletePhotoSheet(
+    BuildContext context, EventPhoto photo, AppLocalizations l10n) {
+  final thumbUrl = photo.thumbnailUrl ?? photo.publicUrl;
+  final quote =
+      _deletePhotoQuotes[Random().nextInt(_deletePhotoQuotes.length)];
+  return showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (sheetCtx) {
+      final bottomPadding = MediaQuery.of(sheetCtx).padding.bottom;
+      return Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.fromLTRB(24, 12, 24, bottomPadding + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 28),
+
+            // Photo thumbnail with gradient trash badge
+            if (thumbUrl != null) ...[
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: CachedNetworkImage(
+                      imageUrl: thumbUrl,
+                      width: 140,
+                      height: 105,
+                      fit: BoxFit.cover,
+                      color: Colors.black.withAlpha(30),
+                      colorBlendMode: BlendMode.darken,
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF6B6B), Color(0xFFEE2557)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEE2557).withAlpha(120),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.delete_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+            ] else ...[
+              // No thumbnail — show large icon
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6B6B), Color(0xFFEE2557)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEE2557).withAlpha(80),
+                      blurRadius: 18,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.delete_rounded,
+                    color: Colors.white, size: 38),
+              ),
+              const SizedBox(height: 22),
+            ],
+
+            // Title
+            Text(
+              l10n.deletePhoto,
+              style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E),
+                  letterSpacing: -0.3),
+            ),
+            const SizedBox(height: 10),
+
+            // Fun random quote
+            Text(
+              quote,
+              style: TextStyle(
+                  fontSize: 14, color: Colors.grey[500], height: 1.45),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(sheetCtx, false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      side: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    child: Text(
+                      l10n.cancel,
+                      style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFEE2557)]),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEE2557).withAlpha(70),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(sheetCtx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: Text(
+                        l10n.delete,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+// ── Polaroid card widget ───────────────────────────────────────────────────────
+
+class _PolaroidCard extends StatefulWidget {
+  final EventPhoto photo;
+  final int index;
+  final bool canDelete;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  const _PolaroidCard({
+    required this.photo,
+    required this.index,
+    required this.canDelete,
+    required this.onTap,
+    this.onLongPress,
+  });
+
+  @override
+  State<_PolaroidCard> createState() => _PolaroidCardState();
+}
+
+class _PolaroidCardState extends State<_PolaroidCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 700));
+    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.linear));
+    final delay = min(widget.index * 80, 600);
+    Future.delayed(
+        Duration(milliseconds: delay), () { if (mounted) _ctrl.forward(); });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photo = widget.photo;
+    final angle = (photo.id.hashCode % 11 - 5) * 0.035;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, child) => Opacity(
+            opacity: _fade.value,
+            child: Transform.scale(scale: _scale.value, child: child),
+          ),
+          child: Transform.rotate(
+            angle: angle,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                      offset: Offset(2, 4)),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 28),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ClipRect(
+                      child: (photo.thumbnailUrl ?? photo.publicUrl) != null
+                          ? CachedNetworkImage(
+                              imageUrl: photo.thumbnailUrl ?? photo.publicUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                            )
+                          : Container(color: Colors.grey[200]),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    height: 16,
+                    child: Text(
+                      photo.caption.isNotEmpty
+                          ? photo.caption
+                          : _photoTimeAgo(photo.createdAt),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black54,
+                          fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Ken Burns image widget ─────────────────────────────────────────────────────
+
+class _KenBurnsImage extends StatefulWidget {
+  final EventPhoto photo;
+  final int index;
+
+  const _KenBurnsImage({super.key, required this.photo, required this.index});
+
+  @override
+  State<_KenBurnsImage> createState() => _KenBurnsImageState();
+}
+
+class _KenBurnsImageState extends State<_KenBurnsImage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<Offset> _offset;
+
+  @override
+  void initState() {
+    super.initState();
+    final dx = (widget.index % 4) * 4.0 - 6.0;
+    final dy = (widget.index % 3) * 3.0 - 3.0;
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 6));
+    _scale = Tween<double>(begin: 1.0, end: 1.12).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _offset = Tween<Offset>(
+            begin: Offset.zero, end: Offset(dx, dy))
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _ctrl.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, child) => Transform.translate(
+          offset: _offset.value,
+          child: Transform.scale(scale: _scale.value, child: child),
+        ),
+        child: SizedBox.expand(
+          child: widget.photo.publicUrl != null
+              ? CachedNetworkImage(
+                  imageUrl: widget.photo.publicUrl!,
+                  fit: BoxFit.cover,
+                )
+              : Container(color: Colors.black),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Photos tab ────────────────────────────────────────────────────────────────
+
 class _PhotosTab extends StatefulWidget {
   final Event event;
   final List<EventPhoto> photos;
@@ -6241,38 +6628,121 @@ class _PhotosTab extends StatefulWidget {
 
 class _PhotosTabState extends State<_PhotosTab> {
   bool _uploading = false;
+  int _uploadCurrent = 0;
+  int _uploadTotal = 0;
+  bool _loadingMore = false;
+  bool _slideshowLoading = false;
+  late final ScrollController _scrollCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl = ScrollController()..addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_loadingMore) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300) _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    final provider = context.read<EventProvider>();
+    if (!provider.hasMorePhotos(widget.event.id)) return;
+    setState(() => _loadingMore = true);
+    await provider.loadMorePhotos(widget.event.id);
+    if (mounted) setState(() => _loadingMore = false);
+  }
 
   Future<void> _pickAndUpload() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(
-        source: ImageSource.gallery, imageQuality: 80);
-    if (image == null || !mounted) return;
+    final picked = await picker.pickMultiImage(imageQuality: 80);
+    if (picked.isEmpty || !mounted) return;
 
-    setState(() => _uploading = true);
-    try {
-      final bytes = await image.readAsBytes();
-      final ext = image.name.split('.').last;
-      final db = Supabase.instance.client;
-      final eventId = widget.event.id;
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
-      final storagePath = '$eventId/$fileName';
+    final l10n = AppLocalizations.of(context);
+    final authUid = widget.authUid;
 
-      await db.storage.from('event-photos').uploadBinary(
-        storagePath,
-        bytes,
-        fileOptions:
-            FileOptions(contentType: 'image/$ext', upsert: false),
-      );
-
-      if (mounted) {
-        await context
-            .read<EventProvider>()
-            .addPhoto(eventId: eventId, storagePath: storagePath);
+    // Rate limit: 20 uploads per event per hour per user
+    List<XFile> images = picked;
+    if (authUid != null) {
+      final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
+      final recentCount = widget.photos
+          .where((p) =>
+              p.uploadedBy == authUid && p.createdAt.isAfter(oneHourAgo))
+          .length;
+      const rateLimit = 20;
+      if (recentCount >= rateLimit) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.photoUploadLimit)));
+        }
+        return;
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString())));
+      if (recentCount + picked.length > rateLimit) {
+        images = picked.take(rateLimit - recentCount).toList();
+      }
+    }
+
+    setState(() {
+      _uploading = true;
+      _uploadCurrent = 0;
+      _uploadTotal = images.length;
+    });
+
+    final db = Supabase.instance.client;
+    final eventId = widget.event.id;
+
+    for (final image in images) {
+      String? storagePath;
+      try {
+        final bytes = await image.readAsBytes();
+        final ext = image.name.split('.').last;
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+        storagePath = '$eventId/$fileName';
+
+        await db.storage.from('event-photos').uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(contentType: 'image/$ext', upsert: false),
+        );
+
+        if (!mounted) break;
+
+        try {
+          await context
+              .read<EventProvider>()
+              .addPhoto(eventId: eventId, storagePath: storagePath);
+          setState(() => _uploadCurrent++);
+        } catch (dbErr) {
+          // DB insert rejected — remove the orphaned storage file.
+          unawaited(db.storage.from('event-photos').remove([storagePath]));
+          final msg = dbErr.toString();
+          if (mounted) {
+            String display;
+            if (msg.contains('rate_limit_exceeded')) {
+              display = l10n.photoUploadLimit;
+            } else if (msg.contains('photo_cap_exceeded')) {
+              display = l10n.photoCapReached;
+            } else {
+              display = msg;
+            }
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(display)));
+          }
+          // Both limits mean all further uploads will also fail — stop early.
+          break;
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(e.toString())));
+        }
       }
     }
     if (mounted) setState(() => _uploading = false);
@@ -6281,40 +6751,169 @@ class _PhotosTabState extends State<_PhotosTab> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final photos = widget.photos;
 
     return Stack(
       children: [
-        widget.photos.isEmpty
+        photos.isEmpty
             ? Center(
-                child: Text(l10n.noPhotosYet,
-                    style: TextStyle(color: Colors.grey[400])))
-            : GridView.builder(
-                padding: const EdgeInsets.all(8),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 4,
-                  mainAxisSpacing: 4,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.photo_library_outlined,
+                        size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 12),
+                    Text(l10n.noMemoriesYet,
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600])),
+                    const SizedBox(height: 6),
+                    Text(l10n.addFirstPhoto,
+                        style: TextStyle(
+                            fontSize: 14, color: Colors.grey[400])),
+                  ],
                 ),
-                itemCount: widget.photos.length,
-                itemBuilder: (_, i) {
-                  final photo = widget.photos[i];
-                  final canDelete = widget.isOrganizer ||
-                      photo.uploadedBy == widget.authUid;
-                  return GestureDetector(
-                    onLongPress: canDelete
-                        ? () => _confirmDelete(context, photo)
-                        : null,
-                    onTap: () => _showFullScreen(context, photo),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: photo.publicUrl != null
-                          ? Image.network(photo.publicUrl!,
-                              fit: BoxFit.cover)
-                          : Container(color: Colors.grey[200]),
+              )
+            : Column(
+                children: [
+                  // Pinned slideshow button
+                  if (photos.length >= 2)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                      child: HoverShimmer(
+                        borderRadius: BorderRadius.circular(30),
+                        child: AppTappable(
+                          onTap: _slideshowLoading
+                              ? null
+                              : () => _openSlideshow(context, photos, 0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF6A11CB),
+                                  Color(0xFFAB20FD),
+                                  Color(0xFFE91E63),
+                                  Color(0xFFFF6B35),
+                                ],
+                                stops: [0.0, 0.33, 0.67, 1.0],
+                              ),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                    color:
+                                        const Color(0xFFAB20FD).withAlpha(130),
+                                    blurRadius: 22,
+                                    offset: const Offset(0, 6),
+                                    spreadRadius: -2),
+                                BoxShadow(
+                                    color:
+                                        const Color(0xFFE91E63).withAlpha(70),
+                                    blurRadius: 44,
+                                    offset: const Offset(0, 14),
+                                    spreadRadius: -10),
+                              ],
+                            ),
+                            child: _slideshowLoading
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: Colors.white),
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text('🎬',
+                                          style: TextStyle(fontSize: 20)),
+                                      const SizedBox(width: 10),
+                                      Text(l10n.slideshow,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 15,
+                                              letterSpacing: 0.6)),
+                                      const SizedBox(width: 10),
+                                      const Text('✨',
+                                          style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
-                  );
-                },
+                  Expanded(
+                    child: CustomScrollView(
+                      controller: _scrollCtrl,
+                      slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 100),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 14,
+                        crossAxisSpacing: 4,
+                        childAspectRatio: 0.82,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (_, i) {
+                          final photo = photos[i];
+                          final canDelete = widget.isOrganizer ||
+                              photo.uploadedBy == widget.authUid;
+                          return _PolaroidCard(
+                            photo: photo,
+                            index: i,
+                            canDelete: canDelete,
+                            onTap: () => _openViewer(context, photos, i),
+                            onLongPress: canDelete
+                                ? () => _confirmDelete(context, photo)
+                                : null,
+                          );
+                        },
+                        childCount: photos.length,
+                      ),
+                    ),
+                  ),
+                  // Load-more indicator / button
+                  if (_loadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(0, 8, 0, 100),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (context
+                      .read<EventProvider>()
+                      .hasMorePhotos(widget.event.id))
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 4, 0, 100),
+                        child: Center(
+                          child: TextButton.icon(
+                            onPressed: _loadMore,
+                            icon: const Icon(Icons.expand_more),
+                            label: Text(l10n.loadMore),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+                  ),
+                ],
               ),
         Positioned(
           bottom: 16,
@@ -6323,11 +6922,23 @@ class _PhotosTabState extends State<_PhotosTab> {
             onPressed: _uploading ? null : _pickAndUpload,
             icon: Icons.add_a_photo,
             child: _uploading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      ),
+                      if (_uploadTotal > 1)
+                        Text(
+                          '$_uploadCurrent/$_uploadTotal',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 9),
+                        ),
+                    ],
+                  )
                 : null,
           ),
         ),
@@ -6335,30 +6946,50 @@ class _PhotosTabState extends State<_PhotosTab> {
     );
   }
 
-  void _showFullScreen(BuildContext context, EventPhoto photo) {
-    if (photo.publicUrl == null) return;
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: EdgeInsets.zero,
-        child: Stack(
-          alignment: Alignment.topRight,
-          children: [
-            Center(
-              child: InteractiveViewer(
-                child: Image.network(photo.publicUrl!),
-              ),
-            ),
-            AppTappable(
-              onTap: () => Navigator.pop(context),
-              child: const Padding(
-                padding: EdgeInsets.all(12),
-                child: Icon(Icons.close, color: Colors.white),
-              ),
-            ),
-          ],
+  void _openViewer(
+      BuildContext context, List<EventPhoto> photos, int initialIndex) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        fullscreenDialog: true,
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (_, _, _) => _PhotoViewerPage(
+          photos: photos,
+          initialIndex: initialIndex,
+          authUid: widget.authUid,
+          isOrganizer: widget.isOrganizer,
+          event: widget.event,
         ),
+        transitionsBuilder: (_, anim, _, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+
+  Future<void> _openSlideshow(
+      BuildContext context, List<EventPhoto> photos, int initialIndex) async {
+    final provider = context.read<EventProvider>();
+    if (provider.hasMorePhotos(widget.event.id)) {
+      setState(() => _slideshowLoading = true);
+      await provider.loadAllPhotos(widget.event.id);
+      if (!mounted) return;
+      setState(() => _slideshowLoading = false);
+    }
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        fullscreenDialog: true,
+        transitionDuration: const Duration(milliseconds: 400),
+        pageBuilder: (_, _, _) => _StoriesViewerPage(
+          photos: provider.photosFor(widget.event.id),
+          initialIndex: initialIndex,
+          authUid: widget.authUid,
+          isOrganizer: widget.isOrganizer,
+          event: widget.event,
+        ),
+        transitionsBuilder: (_, anim, _, child) =>
+            FadeTransition(opacity: anim, child: child),
       ),
     );
   }
@@ -6366,26 +6997,781 @@ class _PhotosTabState extends State<_PhotosTab> {
   Future<void> _confirmDelete(
       BuildContext context, EventPhoto photo) async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.deletePhoto),
-        content: Text(l10n.deletePhotoConfirm),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.delete,
-                style: const TextStyle(color: AppTheme.danger)),
-          ),
-        ],
-      ),
-    );
+    final confirmed = await _showDeletePhotoSheet(context, photo, l10n);
     if (confirmed == true && context.mounted) {
       await context.read<EventProvider>().deletePhoto(photo);
     }
+  }
+}
+
+// ── Simple photo viewer ───────────────────────────────────────────────────────
+
+class _PhotoViewerPage extends StatefulWidget {
+  final List<EventPhoto> photos;
+  final int initialIndex;
+  final String? authUid;
+  final bool isOrganizer;
+  final Event event;
+
+  const _PhotoViewerPage({
+    required this.photos,
+    required this.initialIndex,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.event,
+  });
+
+  @override
+  State<_PhotoViewerPage> createState() => _PhotoViewerPageState();
+}
+
+class _PhotoViewerPageState extends State<_PhotoViewerPage>
+    with SingleTickerProviderStateMixin {
+  late int _currentIndex;
+  late PageController _pageCtrl;
+  late TextEditingController _captionController;
+  late AnimationController _heartCtrl;
+  late Animation<double> _heartScale;
+  late Animation<double> _heartOpacity;
+  bool _showHeart = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageCtrl = PageController(initialPage: widget.initialIndex);
+    _captionController =
+        TextEditingController(text: widget.photos[widget.initialIndex].caption);
+
+    _heartCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _heartScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.5, end: 1.3), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
+    ]).animate(_heartCtrl);
+    _heartOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_heartCtrl);
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    _heartCtrl.dispose();
+    _captionController.dispose();
+    super.dispose();
+  }
+
+  bool get _canModify {
+    final p = widget.photos[_currentIndex];
+    return widget.isOrganizer || p.uploadedBy == widget.authUid;
+  }
+
+  String _uploaderName(EventPhoto photo) {
+    if (photo.uploadedBy == widget.authUid) return 'You';
+    return widget.event.guests
+            .where((g) => g.userId == photo.uploadedBy)
+            .firstOrNull
+            ?.displayName ??
+        '';
+  }
+
+  void _onDoubleTap() {
+    setState(() => _showHeart = true);
+    _heartCtrl.forward(from: 0).then((_) {
+      if (mounted) setState(() => _showHeart = false);
+    });
+  }
+
+  Future<void> _saveToGallery() async {
+    final photo = widget.photos[_currentIndex];
+    if (photo.publicUrl == null) return;
+    setState(() => _saving = true);
+    try {
+      final res = await http.get(Uri.parse(photo.publicUrl!));
+      await Gal.putImageBytes(res.bodyBytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text(AppLocalizations.of(context).savedToGallery)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not save to gallery')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _sharePhoto(BuildContext btnCtx) async {
+    final photo = widget.photos[_currentIndex];
+    if (photo.publicUrl == null) return;
+    try {
+      final box = btnCtx.findRenderObject() as RenderBox?;
+      final origin =
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+      if (kIsWeb) {
+        await Share.share(photo.publicUrl!, sharePositionOrigin: origin);
+        return;
+      }
+      final res = await http.get(Uri.parse(photo.publicUrl!));
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/photo_${photo.id}.jpg');
+      await file.writeAsBytes(res.bodyBytes);
+      await Share.shareXFiles([XFile(file.path)],
+          sharePositionOrigin: origin);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not share')));
+      }
+    }
+  }
+
+  Future<void> _saveCaption() async {
+    final caption = _captionController.text.trim();
+    final provider = context.read<EventProvider>();
+    await provider.updatePhotoCaption(
+        widget.photos[_currentIndex].id, caption);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).captionSaved)));
+      Navigator.pop(context);
+    }
+  }
+
+  void _openCaptionSheet() {
+    _captionController.text = widget.photos[_currentIndex].caption;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2))),
+              ),
+              const SizedBox(height: 16),
+              Text(AppLocalizations.of(context).storiesEditCaption,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 15)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _captionController,
+                autofocus: true,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context).captionHint,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onSubmitted: (_) => _saveCaption(),
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                  label: AppLocalizations.of(context).save,
+                  onPressed: _saveCaption),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteCurrentPhoto() async {
+    final l10n = AppLocalizations.of(context);
+    final photo = widget.photos[_currentIndex];
+    final provider = context.read<EventProvider>();
+    final confirmed = await _showDeletePhotoSheet(context, photo, l10n);
+    if (confirmed == true && mounted) {
+      await provider.deletePhoto(photo);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = widget.photos;
+    final total = photos.length;
+    final photo = photos[_currentIndex];
+    final l10n = AppLocalizations.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      body: GestureDetector(
+        onDoubleTap: _onDoubleTap,
+        onVerticalDragEnd: (d) {
+          if (d.velocity.pixelsPerSecond.dy > 400) Navigator.pop(context);
+        },
+        child: Stack(
+          children: [
+            // Photo gallery — pinch-zoom + swipe between photos
+            PhotoViewGallery.builder(
+              itemCount: total,
+              pageController: _pageCtrl,
+              onPageChanged: (i) => setState(() {
+                _currentIndex = i;
+                _captionController.text = photos[i].caption;
+              }),
+              backgroundDecoration:
+                  const BoxDecoration(color: Colors.black),
+              builder: (_, i) {
+                final p = photos[i];
+                return PhotoViewGalleryPageOptions(
+                  imageProvider: p.publicUrl != null
+                      ? CachedNetworkImageProvider(p.publicUrl!)
+                      : const AssetImage(
+                              'assets/images/placeholder.png')
+                          as ImageProvider,
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 3,
+                );
+              },
+            ),
+
+            // Top bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                  child: Row(
+                    children: [
+                      AppTappable(
+                        onTap: () => Navigator.pop(context),
+                        child: const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(Icons.arrow_back_ios_new,
+                              color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${_currentIndex + 1} / $total',
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      if (_canModify) ...[
+                        AppTappable(
+                          onTap: _openCaptionSheet,
+                          child: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Icon(Icons.edit_outlined,
+                                color: Colors.white70, size: 20),
+                          ),
+                        ),
+                        AppTappable(
+                          onTap: _deleteCurrentPhoto,
+                          child: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Icon(Icons.delete_outline,
+                                color: Colors.white70, size: 20),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Bottom bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Color(0xDD000000), Colors.transparent],
+                    ),
+                  ),
+                  padding:
+                      const EdgeInsets.fromLTRB(16, 40, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (photo.caption.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            photo.caption,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontStyle: FontStyle.italic,
+                                height: 1.4),
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline,
+                              color: Colors.white54, size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _uploaderName(photo),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 12),
+                            ),
+                          ),
+                          Text(
+                            _photoTimeAgo(photo.createdAt),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _saving
+                                ? const SizedBox(
+                                    height: 44,
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white),
+                                      ),
+                                    ),
+                                  )
+                                : _ViewerActionButton(
+                                    icon: Icons.download_rounded,
+                                    label: l10n.saveToGallery,
+                                    onTap: kIsWeb ? null : _saveToGallery,
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Builder(
+                              builder: (btnCtx) => _ViewerActionButton(
+                                icon: Icons.ios_share_rounded,
+                                label: l10n.sharePhoto,
+                                onTap: () => _sharePhoto(btnCtx),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Heart burst on double-tap
+            if (_showHeart)
+              Center(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _heartCtrl,
+                    builder: (_, _) => Opacity(
+                      opacity: _heartOpacity.value,
+                      child: Transform.scale(
+                        scale: _heartScale.value,
+                        child: const Icon(Icons.favorite,
+                            color: Colors.red, size: 80),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ViewerActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  const _ViewerActionButton(
+      {required this.icon, required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Material(
+      color: Colors.white.withAlpha(26),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  color: enabled ? Colors.white : Colors.white38,
+                  size: 18),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      color: enabled ? Colors.white : Colors.white38,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Stories viewer ────────────────────────────────────────────────────────────
+
+class _StoriesViewerPage extends StatefulWidget {
+  final List<EventPhoto> photos;
+  final int initialIndex;
+  final String? authUid;
+  final bool isOrganizer;
+  final Event event;
+
+  const _StoriesViewerPage({
+    required this.photos,
+    required this.initialIndex,
+    required this.authUid,
+    required this.isOrganizer,
+    required this.event,
+  });
+
+  @override
+  State<_StoriesViewerPage> createState() => _StoriesViewerPageState();
+}
+
+class _StoriesViewerPageState extends State<_StoriesViewerPage>
+    with TickerProviderStateMixin {
+  late int _currentIndex;
+  late Key _photoKey;
+  late AnimationController _progressCtrl;
+  late AnimationController _heartCtrl;
+  late Animation<double> _heartScale;
+  late Animation<double> _heartOpacity;
+  bool _paused = false;
+  bool _showHeart = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _photoKey = UniqueKey();
+
+    _progressCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 5));
+    _progressCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _advancePhoto();
+    });
+    _progressCtrl.forward();
+
+    _heartCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _heartScale = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 0.5, end: 1.3), weight: 40),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.3, end: 1.0), weight: 20),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.0), weight: 40),
+    ]).animate(_heartCtrl);
+    _heartOpacity = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 1.0), weight: 10),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_heartCtrl);
+  }
+
+  @override
+  void dispose() {
+    _progressCtrl.dispose();
+    _heartCtrl.dispose();
+    super.dispose();
+  }
+
+  void _goToPhoto(int index) {
+    final clamped = index.clamp(0, widget.photos.length - 1);
+    setState(() {
+      _currentIndex = clamped;
+      _photoKey = UniqueKey();
+    });
+    _progressCtrl.reset();
+    if (!_paused) _progressCtrl.forward();
+  }
+
+  void _advancePhoto() {
+    _goToPhoto((_currentIndex + 1) % widget.photos.length);
+  }
+
+  void _onDoubleTap() {
+    setState(() => _showHeart = true);
+    _heartCtrl.forward(from: 0).then((_) {
+      if (mounted) setState(() => _showHeart = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = widget.photos;
+    final total = photos.length;
+    final photo = photos[_currentIndex];
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTapDown: (d) {
+          if (d.localPosition.dx < screenWidth * 0.4) {
+            _goToPhoto(_currentIndex == 0 ? total - 1 : _currentIndex - 1);
+          } else {
+            _advancePhoto();
+          }
+        },
+        onDoubleTap: _onDoubleTap,
+        onLongPressStart: (_) {
+          setState(() => _paused = true);
+          _progressCtrl.stop();
+        },
+        onLongPressEnd: (_) {
+          setState(() => _paused = false);
+          _progressCtrl.forward();
+        },
+        onVerticalDragEnd: (d) {
+          if (d.velocity.pixelsPerSecond.dy > 300) Navigator.pop(context);
+        },
+        child: Stack(
+          children: [
+            // A. Ken Burns background
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: _KenBurnsImage(
+                  key: _photoKey,
+                  photo: photo,
+                  index: _currentIndex),
+            ),
+
+            // B. Progress bars
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                  child: Row(
+                    children: List.generate(total, (i) {
+                      return Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 2),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: i < _currentIndex
+                                ? const LinearProgressIndicator(
+                                    value: 1.0,
+                                    backgroundColor: Colors.white30,
+                                    valueColor: AlwaysStoppedAnimation(
+                                        Colors.white),
+                                    minHeight: 3)
+                                : i == _currentIndex
+                                    ? AnimatedBuilder(
+                                        animation: _progressCtrl,
+                                        builder: (_, _) =>
+                                            LinearProgressIndicator(
+                                              value: _progressCtrl.value,
+                                              backgroundColor:
+                                                  Colors.white30,
+                                              valueColor:
+                                                  const AlwaysStoppedAnimation(
+                                                      Colors.white),
+                                              minHeight: 3,
+                                            ))
+                                    : const LinearProgressIndicator(
+                                        value: 0.0,
+                                        backgroundColor: Colors.white30,
+                                        valueColor:
+                                            AlwaysStoppedAnimation(
+                                                Colors.white),
+                                        minHeight: 3),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+            ),
+
+            // C. Top action bar
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 36, 4, 0),
+                  child: Row(
+                    children: [
+                      AppTappable(
+                        onTap: () => Navigator.pop(context),
+                        child: const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(Icons.arrow_back_ios_new,
+                              color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${_currentIndex + 1} / $total',
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // D. Bottom info strip
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Color(0xDD000000), Colors.transparent],
+                    ),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (photo.caption.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            photo.caption,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontStyle: FontStyle.italic,
+                                height: 1.4),
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline,
+                              color: Colors.white54, size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              photo.uploadedBy == widget.authUid
+                                  ? 'You'
+                                  : (widget.event.guests
+                                          .where((g) =>
+                                              g.userId == photo.uploadedBy)
+                                          .firstOrNull
+                                          ?.displayName ??
+                                      ''),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 12),
+                            ),
+                          ),
+                          Text(
+                            _photoTimeAgo(photo.createdAt),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // E. Heart burst on double-tap
+            if (_showHeart)
+              Center(
+                child: AnimatedBuilder(
+                  animation: _heartCtrl,
+                  builder: (_, _) => Opacity(
+                    opacity: _heartOpacity.value,
+                    child: Transform.scale(
+                      scale: _heartScale.value,
+                      child: const Icon(Icons.favorite,
+                          color: Colors.red, size: 80),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

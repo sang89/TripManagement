@@ -416,6 +416,29 @@
   "noPhotosYet": "No photos yet.",
   "deletePhoto": "Delete photo",
   "deletePhotoConfirm": "Delete this photo?",
+  "noMemoriesYet": "No memories yet",
+  "addFirstPhoto": "Tap + to add your first photo!",
+  "slideshow": "Slideshow",
+  "captionHint": "Add a caption…",
+  "photoUploadLimit": "Upload limit reached. Try again in an hour.",
+  "photoCapReached": "This event has reached its photo limit.",
+  "loadMore": "Load more",
+  "storiesEditCaption": "Edit Caption",
+  "captionSaved": "Caption saved",
+  "saveToGallery": "Save",
+  "savedToGallery": "Saved to Gallery",
+  "sharePhoto": "Share",
+  "uploadingProgress": "Uploading {current} / {total}…",
+  "@uploadingProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "addExpense": "Add expense",
   "editExpense": "Edit expense",
   "deleteExpenseTitle": "Delete expense",

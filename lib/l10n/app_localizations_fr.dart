@@ -883,6 +883,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deletePhotoConfirm => 'Delete this photo?';
 
   @override
+  String get noMemoriesYet => 'Pas encore de souvenirs';
+
+  @override
+  String get addFirstPhoto =>
+      'Appuyez sur + pour ajouter votre première photo !';
+
+  @override
+  String get slideshow => 'Diaporama';
+
+  @override
+  String get captionHint => 'Ajouter une légende…';
+
+  @override
+  String get photoUploadLimit =>
+      'Limite d\'envoi atteinte. Réessayez dans une heure.';
+
+  @override
+  String get photoCapReached => 'Cet événement a atteint sa limite de photos.';
+
+  @override
+  String get loadMore => 'Charger plus';
+
+  @override
+  String get storiesEditCaption => 'Modifier la légende';
+
+  @override
+  String get captionSaved => 'Légende enregistrée';
+
+  @override
+  String get saveToGallery => 'Enregistrer';
+
+  @override
+  String get savedToGallery => 'Enregistré dans la galerie';
+
+  @override
+  String get sharePhoto => 'Partager';
+
+  @override
+  String uploadingProgress(int current, int total) {
+    return 'Envoi $current / $total…';
+  }
+
+  @override
   String get addExpense => 'Add expense';
 
   @override
