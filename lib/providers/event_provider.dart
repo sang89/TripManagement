@@ -870,6 +870,26 @@ class EventProvider extends ChangeNotifier {
           },
         )
 
+        // ── event_photos UPDATE (caption edits) ────────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'event_photos',
+          callback: (payload) {
+            final eventId = payload.newRecord['event_id'] as String?;
+            final photoId = payload.newRecord['id'] as String?;
+            final caption = payload.newRecord['caption'] as String? ?? '';
+            if (eventId == null || photoId == null) return;
+            final list = _photos[eventId];
+            if (list == null) return;
+            final idx = list.indexWhere((p) => p.id == photoId);
+            if (idx != -1) {
+              list[idx] = list[idx].copyWith(caption: caption);
+              notifyListeners();
+            }
+          },
+        )
+
         // ── event_expenses INSERT / UPDATE / DELETE ─────────────────────────
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
@@ -2412,6 +2432,8 @@ class EventProvider extends ChangeNotifier {
       return photos;
     } catch (e) {
       debugPrint('EventProvider.fetchPhotos error: $e');
+      // Prevent loadAllPhotos from looping forever when the network fails.
+      _hasMorePhotos[eventId] = false;
       return [];
     }
   }
@@ -2458,8 +2480,11 @@ class EventProvider extends ChangeNotifier {
   }
 
   Future<void> deletePhoto(EventPhoto photo) async {
-    await _db.storage.from('event-photos').remove([photo.storagePath]);
+    // Delete the DB row first: if this fails (RLS, network), the storage file
+    // is still intact and the photo remains accessible. Deleting storage first
+    // would orphan the DB row if the DB delete subsequently failed.
     await _db.from('event_photos').delete().eq('id', photo.id);
+    await _db.storage.from('event-photos').remove([photo.storagePath]);
     _photos[photo.eventId] =
         (_photos[photo.eventId] ?? []).where((p) => p.id != photo.id).toList();
     notifyListeners();

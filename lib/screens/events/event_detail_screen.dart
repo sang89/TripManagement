@@ -6647,7 +6647,7 @@ class _PhotosTabState extends State<_PhotosTab> {
   }
 
   void _onScroll() {
-    if (_loadingMore) return;
+    if (!mounted || _loadingMore) return;
     final pos = _scrollCtrl.position;
     if (pos.pixels >= pos.maxScrollExtent - 300) _loadMore();
   }
@@ -6702,7 +6702,29 @@ class _PhotosTabState extends State<_PhotosTab> {
       String? storagePath;
       try {
         final bytes = await image.readAsBytes();
-        final ext = image.name.split('.').last;
+
+        // Enforce 20 MB per-photo limit before hitting the network.
+        const maxBytes = 20 * 1024 * 1024;
+        if (bytes.length > maxBytes) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Photo is too large (max 20 MB). Skipped.')));
+          }
+          setState(() => _uploadTotal--);
+          continue;
+        }
+
+        final ext = image.name.split('.').last.toLowerCase();
+        const allowedExts = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'};
+        if (!allowedExts.contains(ext)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Unsupported file type. Skipped.')));
+          }
+          setState(() => _uploadTotal--);
+          continue;
+        }
+
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
         storagePath = '$eventId/$fileName';
 
@@ -6873,7 +6895,7 @@ class _PhotosTabState extends State<_PhotosTab> {
                             canDelete: canDelete,
                             onTap: () => _openViewer(context, photos, i),
                             onLongPress: canDelete
-                                ? () => _confirmDelete(context, photo)
+                                ? () => _confirmDelete(photo)
                                 : null,
                           );
                         },
@@ -6971,9 +6993,12 @@ class _PhotosTabState extends State<_PhotosTab> {
     final provider = context.read<EventProvider>();
     if (provider.hasMorePhotos(widget.event.id)) {
       setState(() => _slideshowLoading = true);
-      await provider.loadAllPhotos(widget.event.id);
+      try {
+        await provider.loadAllPhotos(widget.event.id);
+      } finally {
+        if (mounted) setState(() => _slideshowLoading = false);
+      }
       if (!mounted) return;
-      setState(() => _slideshowLoading = false);
     }
     if (!context.mounted) return;
     Navigator.push(
@@ -6994,12 +7019,19 @@ class _PhotosTabState extends State<_PhotosTab> {
     );
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, EventPhoto photo) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await _showDeletePhotoSheet(context, photo, l10n);
-    if (confirmed == true && context.mounted) {
-      await context.read<EventProvider>().deletePhoto(photo);
+  Future<void> _confirmDelete(EventPhoto photo) async {
+    final ctx = context;
+    final l10n = AppLocalizations.of(ctx);
+    final confirmed = await _showDeletePhotoSheet(ctx, photo, l10n);
+    if (confirmed == true && mounted) {
+      try {
+        await context.read<EventProvider>().deletePhoto(photo);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not delete photo')));
+        }
+      }
     }
   }
 }
@@ -7207,8 +7239,15 @@ class _PhotoViewerPageState extends State<_PhotoViewerPage>
     final provider = context.read<EventProvider>();
     final confirmed = await _showDeletePhotoSheet(context, photo, l10n);
     if (confirmed == true && mounted) {
-      await provider.deletePhoto(photo);
-      if (mounted) Navigator.pop(context);
+      try {
+        await provider.deletePhoto(photo);
+        if (mounted) Navigator.pop(context);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not delete photo')));
+        }
+      }
     }
   }
 
