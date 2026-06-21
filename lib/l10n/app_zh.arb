@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} 个名额已满",
   "signupWaitlistCount": "{count} 人在候补名单",
   "signupEventFull": "活动已满",
+  "signupSessionFull": "此场次已满",
   "signupJoinWaitlist": "加入候补名单",
   "signupClaimSpot": "抢占名额",
   "signupConfirmedPosition": "您在名单第 #{pos} 位！",

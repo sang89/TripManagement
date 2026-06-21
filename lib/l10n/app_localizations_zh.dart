@@ -1208,6 +1208,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get signupEventFull => '活动已满';
 
   @override
+  String get signupSessionFull => '此场次已满';
+
+  @override
   String get signupJoinWaitlist => '加入候补名单';
 
   @override

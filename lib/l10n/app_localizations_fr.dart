@@ -1232,6 +1232,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get signupEventFull => 'Événement complet';
 
   @override
+  String get signupSessionFull => 'Session complète';
+
+  @override
   String get signupJoinWaitlist => 'Rejoindre la liste d\'attente';
 
   @override

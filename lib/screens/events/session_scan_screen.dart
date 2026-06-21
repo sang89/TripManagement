@@ -177,15 +177,16 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
     final provider = context.read<EventProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final router = GoRouter.of(context);
     try {
       final rows = await Supabase.instance.client.rpc('rsvp_session', params: {
         'p_invite_code': code,
         'p_display_name': auth.userName,
       }) as List<dynamic>;
 
-      // Close the scanner first so the user returns to the events list
-      // immediately, then reload events in the background so the newly
-      // joined event appears without any manual refresh.
+      // Close the scanner first, then route the user straight to the event
+      // they just joined (sessions tab) so they land on the exact event and
+      // session rather than the generic events list.
       navigator.pop();
 
       if (rows.isNotEmpty) {
@@ -201,8 +202,9 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
         ));
       }
 
-      // Reload the full event list so the newly joined event appears,
-      // then refresh the specific session's cache.
+      // Reload the full event list so the newly joined event appears, then
+      // navigate to the event detail's sessions tab so the user is taken to
+      // the exact event and session they just joined.
       final eventId = s['event_id'] as String?;
       unawaited(provider.load().then((_) async {
         if (eventId != null) {
@@ -213,6 +215,9 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
           }
         }
       }));
+      if (eventId != null) {
+        router.push('/event/$eventId?tab=session');
+      }
     } catch (e) {
       final msg = e.toString();
       messenger.showSnackBar(SnackBar(
@@ -221,7 +226,7 @@ class _SessionScanScreenState extends State<SessionScanScreen> {
             : msg.contains('signup_locked')
                 ? l10n.signupLocked
                 : msg.contains('session_full')
-                    ? l10n.signupEventFull
+                    ? l10n.signupSessionFull
                     : msg),
       ));
       if (mounted) {
@@ -417,7 +422,7 @@ class _SessionJoinSheet extends StatelessWidget {
           if (isLocked)
             _Banner(text: l10n.signupLockedMessage, color: Colors.orange)
           else if (isFull && !waitlistEnabled)
-            _Banner(text: l10n.signupEventFull, color: Colors.red)
+            _Banner(text: l10n.signupSessionFull, color: Colors.red)
           else
             AppButton(
               label: isFull

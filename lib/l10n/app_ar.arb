@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} أماكن مشغولة",
   "signupWaitlistCount": "{count} في قائمة الانتظار",
   "signupEventFull": "الفعالية ممتلئة",
+  "signupSessionFull": "الجلسة ممتلئة",
   "signupJoinWaitlist": "انضم لقائمة الانتظار",
   "signupClaimSpot": "احجز مكانًا",
   "signupConfirmedPosition": "أنت رقم #{pos} في القائمة!",

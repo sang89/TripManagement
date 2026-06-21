@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} 자리 사용 중",
   "signupWaitlistCount": "{count}명 대기 중",
   "signupEventFull": "자리가 꽉 찼습니다",
+  "signupSessionFull": "세션이 가득 찼습니다",
   "signupJoinWaitlist": "대기 명단에 등록",
   "signupClaimSpot": "자리 확보",
   "signupConfirmedPosition": "목록의 #{pos}번째입니다!",

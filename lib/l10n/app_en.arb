@@ -611,6 +611,7 @@
     }
   },
   "signupEventFull": "Event full",
+  "signupSessionFull": "Session full",
   "signupJoinWaitlist": "Join the waitlist",
   "signupClaimSpot": "Claim a Spot",
   "signupConfirmedPosition": "You're #{pos} on the list!",

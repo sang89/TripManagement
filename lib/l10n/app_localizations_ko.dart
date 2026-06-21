@@ -1211,6 +1211,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get signupEventFull => '자리가 꽉 찼습니다';
 
   @override
+  String get signupSessionFull => '세션이 가득 찼습니다';
+
+  @override
   String get signupJoinWaitlist => '대기 명단에 등록';
 
   @override

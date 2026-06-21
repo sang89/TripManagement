@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} vagas preenchidas",
   "signupWaitlistCount": "{count} na lista de espera",
   "signupEventFull": "Evento lotado",
+  "signupSessionFull": "Sessão lotada",
   "signupJoinWaitlist": "Entrar na lista de espera",
   "signupClaimSpot": "Reservar uma vaga",
   "signupConfirmedPosition": "Você é o #{pos} na lista!",

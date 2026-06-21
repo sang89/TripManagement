@@ -1228,6 +1228,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get signupEventFull => 'Evento lotado';
 
   @override
+  String get signupSessionFull => 'Sessão lotada';
+
+  @override
   String get signupJoinWaitlist => 'Entrar na lista de espera';
 
   @override

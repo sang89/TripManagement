@@ -2358,6 +2358,12 @@ abstract class AppLocalizations {
   /// **'Event full'**
   String get signupEventFull;
 
+  /// No description provided for @signupSessionFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Session full'**
+  String get signupSessionFull;
+
   /// No description provided for @signupJoinWaitlist.
   ///
   /// In en, this message translates to:

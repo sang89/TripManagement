@@ -1225,6 +1225,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get signupEventFull => 'Sự kiện đã đầy';
 
   @override
+  String get signupSessionFull => 'Buổi đã đầy';
+
+  @override
   String get signupJoinWaitlist => 'Tham gia danh sách chờ';
 
   @override

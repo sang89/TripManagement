@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} 席が埋まっています",
   "signupWaitlistCount": "{count} 人がウェイトリストに登録中",
   "signupEventFull": "満席",
+  "signupSessionFull": "セッションは満員です",
   "signupJoinWaitlist": "ウェイトリストに追加",
   "signupClaimSpot": "席を確保する",
   "signupConfirmedPosition": "リストの#{pos}番目です！",
