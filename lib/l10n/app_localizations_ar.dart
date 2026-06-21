@@ -1219,6 +1219,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get signupEventFull => 'الفعالية ممتلئة';
 
   @override
+  String get signupSessionFull => 'الجلسة ممتلئة';
+
+  @override
   String get signupJoinWaitlist => 'انضم لقائمة الانتظار';
 
   @override

@@ -1231,6 +1231,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signupEventFull => 'Veranstaltung ausgebucht';
 
   @override
+  String get signupSessionFull => 'Session ausgebucht';
+
+  @override
   String get signupJoinWaitlist => 'Warteliste beitreten';
 
   @override

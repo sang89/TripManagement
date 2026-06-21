@@ -1210,6 +1210,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get signupEventFull => '満席';
 
   @override
+  String get signupSessionFull => 'セッションは満員です';
+
+  @override
   String get signupJoinWaitlist => 'ウェイトリストに追加';
 
   @override

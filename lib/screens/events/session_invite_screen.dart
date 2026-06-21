@@ -126,7 +126,7 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
       setState(() {
         _submitting = false;
         _error = msg.contains('session_full')
-            ? AppLocalizations.of(context).signupEventFull
+            ? AppLocalizations.of(context).signupSessionFull
             : msg.contains('signup_locked')
                 ? AppLocalizations.of(context).signupLocked
                 : msg.contains('already_signed_up')
@@ -292,7 +292,7 @@ class _SessionInviteScreenState extends State<SessionInviteScreen> {
                   ),
                 ] else if (isFull && !waitlistEnabled) ...[
                   Center(
-                    child: Text(l10n.signupEventFull,
+                    child: Text(l10n.signupSessionFull,
                         style: const TextStyle(
                             color: AppTheme.danger,
                             fontWeight: FontWeight.bold,

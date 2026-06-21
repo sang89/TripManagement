@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} chỗ đã được đặt",
   "signupWaitlistCount": "{count} người trong danh sách chờ",
   "signupEventFull": "Sự kiện đã đầy",
+  "signupSessionFull": "Buổi đã đầy",
   "signupJoinWaitlist": "Tham gia danh sách chờ",
   "signupClaimSpot": "Đặt chỗ",
   "signupConfirmedPosition": "Bạn đứng thứ #{pos} trong danh sách!",

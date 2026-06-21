@@ -528,6 +528,7 @@
   "signupSpotsFilled": "{filled} / {total} Plätze belegt",
   "signupWaitlistCount": "{count} auf der Warteliste",
   "signupEventFull": "Veranstaltung ausgebucht",
+  "signupSessionFull": "Session ausgebucht",
   "signupJoinWaitlist": "Warteliste beitreten",
   "signupClaimSpot": "Platz reservieren",
   "signupConfirmedPosition": "Du bist #{pos} auf der Liste!",
