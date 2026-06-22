@@ -151,6 +151,8 @@
   "navTrips": "Viajes",
   "navJournal": "Diario",
   "navProfile": "Perfil",
+  "navLive": "En vivo",
+  "liveNoneNow": "No hay eventos en vivo ahora mismo",
   "journalComingSoon": "Diario próximamente",
   "memberSearching": "Buscando…",
   "memberAccountFound": "Cuenta encontrada",

@@ -73,7 +73,17 @@ class EventDetailScreen extends StatefulWidget {
   final String eventId;
   final int initialTab;
 
-  const EventDetailScreen({super.key, required this.eventId, this.initialTab = 0});
+  /// When opening on the session/Activity tab, pre-selects this specific
+  /// signup session (used by the bottom-nav Live button to cycle through an
+  /// event's individual live sessions).
+  final String? initialSessionId;
+
+  const EventDetailScreen({
+    super.key,
+    required this.eventId,
+    this.initialTab = 0,
+    this.initialSessionId,
+  });
 
   @override
   State<EventDetailScreen> createState() => _EventDetailScreenState();
@@ -115,6 +125,22 @@ class _EventDetailScreenState extends State<EventDetailScreen>
           ..fetchToasts(eventId);
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(EventDetailScreen old) {
+    super.didUpdateWidget(old);
+    // The Live button (and any deep-link) navigates with `context.go`, which can
+    // REUSE this screen's State when the path is unchanged (same /event/:id, new
+    // query). initState only ran once, so honor a changed initialTab here by
+    // switching the outer tab — otherwise a deep-link to the Session tab would be
+    // ignored and the user would stay on whatever tab they were on (e.g. Info).
+    if (widget.initialTab != old.initialTab &&
+        widget.initialTab >= 0 &&
+        widget.initialTab < _tabController.length &&
+        _tabController.index != widget.initialTab) {
+      _tabController.animateTo(widget.initialTab);
+    }
   }
 
   @override
@@ -304,6 +330,7 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                 items: provider.bringItemsFor(event.id),
                 expenses: provider.expensesFor(event.id),
                 polls: provider.pollsFor(event.id),
+                initialSessionId: widget.initialSessionId,
               ),
               if (event.isBirthday)
                 _MemoriesTabGroup(
@@ -613,7 +640,9 @@ class _InfoTabGroup extends StatefulWidget {
 }
 
 class _InfoTabGroupState extends State<_InfoTabGroup>
-    with SingleTickerProviderStateMixin {
+    // Plural mixin: this State recreates its TabController when the event type
+    // changes, so more than one ticker is created over its lifetime.
+    with TickerProviderStateMixin {
   late TabController _ctrl;
 
   int get _tabCount => widget.event.isTrip ? 3 : widget.event.isSignup ? 3 : 2;
@@ -706,6 +735,7 @@ class _OrganizeTabGroup extends StatefulWidget {
   final List<EventBringItem> items;
   final List<EventExpense> expenses;
   final List<EventPoll> polls;
+  final String? initialSessionId;
 
   const _OrganizeTabGroup({
     super.key,
@@ -715,6 +745,7 @@ class _OrganizeTabGroup extends StatefulWidget {
     required this.items,
     required this.expenses,
     required this.polls,
+    this.initialSessionId,
   });
 
   @override
@@ -722,7 +753,9 @@ class _OrganizeTabGroup extends StatefulWidget {
 }
 
 class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
-    with SingleTickerProviderStateMixin {
+    // Plural mixin: this State recreates its TabController when the event type
+    // changes, so more than one ticker is created over its lifetime.
+    with TickerProviderStateMixin {
   late TabController _ctrl;
 
   int get _tabCount => widget.event.isSignup
@@ -735,10 +768,24 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                   ? 4
                   : 3;
 
+  // Inner tab order for signup events: Roster(0), Activity(1), Polls(2), Invite(3).
+  static const _signupActivityTabIndex = 1;
+
+  /// The Live-button session deep-link should open the Activity (session) inner
+  /// tab; everything else opens the first inner tab.
+  int get _initialInnerIndex =>
+      (widget.event.isSignup && widget.initialSessionId != null)
+          ? _signupActivityTabIndex
+          : 0;
+
   @override
   void initState() {
     super.initState();
-    _ctrl = TabController(length: _tabCount, vsync: this);
+    _ctrl = TabController(
+      length: _tabCount,
+      initialIndex: _initialInnerIndex.clamp(0, _tabCount - 1),
+      vsync: this,
+    );
   }
 
   @override
@@ -749,7 +796,24 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
         old.event.isBirthday != widget.event.isBirthday ||
         old.event.isTrip != widget.event.isTrip) {
       _ctrl.dispose();
-      _ctrl = TabController(length: _tabCount, vsync: this);
+      _ctrl = TabController(
+        length: _tabCount,
+        initialIndex: _initialInnerIndex.clamp(0, _tabCount - 1),
+        vsync: this,
+      );
+    }
+
+    // Re-tapping Live (e.g. session X → Y) while this screen is reused: jump to
+    // the Activity tab if a new session was deep-linked.
+    if (widget.event.isSignup &&
+        widget.initialSessionId != null &&
+        widget.initialSessionId != old.initialSessionId &&
+        _ctrl.index != _signupActivityTabIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _ctrl.index != _signupActivityTabIndex) {
+          _ctrl.animateTo(_signupActivityTabIndex);
+        }
+      });
     }
   }
 
@@ -832,6 +896,7 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
                   event: widget.event,
                   authUid: widget.authUid,
                   isOrganizer: widget.isOrganizer,
+                  initialSessionId: widget.initialSessionId,
                 )
               else
                 _ExpensesTab(
@@ -10804,7 +10869,9 @@ class _MemoriesTabGroup extends StatefulWidget {
 }
 
 class _MemoriesTabGroupState extends State<_MemoriesTabGroup>
-    with SingleTickerProviderStateMixin {
+    // Plural mixin: this State can recreate its TabController (hot-reload /
+    // length guard), so more than one ticker may be created over its lifetime.
+    with TickerProviderStateMixin {
   late TabController _ctrl;
 
   @override
@@ -12140,11 +12207,13 @@ class _SessionActivityTab extends StatefulWidget {
   final Event event;
   final String? authUid;
   final bool isOrganizer;
+  final String? initialSessionId;
 
   const _SessionActivityTab({
     required this.event,
     required this.authUid,
     required this.isOrganizer,
+    this.initialSessionId,
   });
 
   @override
@@ -12166,6 +12235,19 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadSessions());
+  }
+
+  @override
+  void didUpdateWidget(_SessionActivityTab old) {
+    super.didUpdateWidget(old);
+    // Deep-link re-target: tapping the Live button again routes here with a new
+    // sessionId while the screen is reused (e.g. cycling X → Y within one event).
+    final id = widget.initialSessionId;
+    if (id == null || id == old.initialSessionId || id == _selectedSessionId) {
+      return;
+    }
+    final target = _resolveInitialSession(context.read<EventProvider>());
+    if (target != null) _selectSession(target);
   }
 
   @override
@@ -12195,12 +12277,16 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
     if (!mounted) return;
 
     final sessions = _activeSessions(provider);
+    // Prefer a deep-linked session (Live button); else auto-select the only one.
+    final preselect = _resolveInitialSession(provider);
     setState(() {
       _loadingSessions = false;
-      if (sessions.length == 1) {
-        _selectedSessionId = sessions.first.id;
-        _fetchQueuesForSession(sessions.first);
-        _startQueuePolling(sessions.first);
+      final target =
+          preselect ?? (sessions.length == 1 ? sessions.first : null);
+      if (target != null) {
+        _selectedSessionId = target.id;
+        _fetchQueuesForSession(target);
+        _startQueuePolling(target);
       }
     });
 
@@ -12258,14 +12344,37 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
     }
   }
 
-  /// All sessions that should appear in the picker: active ones + upcoming ones.
-  /// Only sessions that are currently active (organizer-controlled flag).
+  List<EventSession> _allSessions(EventProvider provider) => [
+        ...provider.upcomingSessionsFor(widget.event.id),
+        ...provider.pastSessionsFor(widget.event.id),
+      ];
+
+  EventSession? _sessionById(EventProvider provider, String id) {
+    for (final s in _allSessions(provider)) {
+      if (s.id == id) return s;
+    }
+    return null;
+  }
+
+  /// Sessions to show in the picker: those flagged active (organizer-controlled),
+  /// PLUS a deep-linked target (Live button) that may not be flagged active yet —
+  /// so jumping to a brand-new live session always lands on it.
   List<EventSession> _activeSessions(EventProvider provider) {
-    final all = [
-      ...provider.upcomingSessionsFor(widget.event.id),
-      ...provider.pastSessionsFor(widget.event.id),
-    ];
-    return all.where((s) => s.isActive).toList();
+    final sessions = _allSessions(provider).where((s) => s.isActive).toList();
+    final id = widget.initialSessionId;
+    if (id != null && !sessions.any((s) => s.id == id)) {
+      final target = _sessionById(provider, id);
+      if (target != null) sessions.add(target);
+    }
+    return sessions;
+  }
+
+  /// Resolves the deep-linked [_SessionActivityTab.initialSessionId] from the
+  /// full session list (active or not), or null when none was requested.
+  EventSession? _resolveInitialSession(EventProvider provider) {
+    final id = widget.initialSessionId;
+    if (id == null) return null;
+    return _sessionById(provider, id);
   }
 
   void _selectSession(EventSession session) {

@@ -72,6 +72,11 @@ class EventProvider extends ChangeNotifier {
   // the activity was added via Realtime rather than fetchSessionQueues.
   final Map<String, ({String sessionId, String eventId})> _activityMeta = {};
 
+  // Signup sessions that are happening right now (time window includes now),
+  // across ALL of the user's events. Populated by fetchLiveSessions() — used by
+  // the bottom-nav "Live" button to cycle through currently-live sessions.
+  List<EventSession> _liveSessions = [];
+
   // Birthday-specific caches (fetched on demand for birthday events only).
   final Map<String, List<EventWishlistItem>> _wishlistItems = {};
   final Map<String, EventGiftPool?> _giftPools = {};
@@ -125,6 +130,10 @@ class EventProvider extends ChangeNotifier {
   List<SessionQueueActivity> queuesFor(String sessionId)   => _sessionQueues[sessionId] ?? [];
   List<SessionQueueEntry>    entriesFor(String activityId) => _queueEntries[activityId] ?? [];
   List<SessionFreePoolEntry> freePoolFor(String sessionId) => _freePool[sessionId] ?? [];
+
+  /// Signup sessions whose time window includes now, across all the user's
+  /// events. Refreshed by [fetchLiveSessions].
+  List<EventSession> get liveSessions => List.unmodifiable(_liveSessions);
 
   List<EventWishlistItem> wishlistFor(String eventId) =>
       _wishlistItems[eventId] ?? [];
@@ -326,6 +335,7 @@ class EventProvider extends ChangeNotifier {
     _loaded = true;
     notifyListeners();
     _subscribeRealtime();
+    unawaited(fetchLiveSessions());
   }
 
   void clear() {
@@ -346,6 +356,7 @@ class EventProvider extends ChangeNotifier {
     _queueEntries.clear();
     _freePool.clear();
     _activityMeta.clear();
+    _liveSessions = [];
     _loaded = false;
     _loadError = null;
     if (_userId != null) {
@@ -1705,6 +1716,44 @@ class EventProvider extends ChangeNotifier {
         .toList();
     await _fetchMySessionStatuses(eventId);
     notifyListeners();
+  }
+
+  /// Refreshes [liveSessions] — every session across the user's events that is
+  /// "live right now", by the UNION of two definitions so it works whatever the
+  /// data looks like:
+  ///   (a) flagged active (`is_active = true`) — what the Activity tab shows; and
+  ///   (b) within its time window (`start_at <= now AND (end_at IS NULL OR end_at > now)`)
+  ///       — the same "should be active" window the auto-activate logic uses,
+  ///       which catches sessions the organizer hasn't opened/activated yet.
+  /// Two simple queries merged client-side (deduped by id) — avoids brittle nested
+  /// PostgREST filters. RLS already restricts rows to the user's events, so no
+  /// event_id filter is needed.
+  Future<void> fetchLiveSessions() async {
+    const cols =
+        'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override,notes';
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      final activeRows = await _db
+          .from('event_sessions')
+          .select(cols)
+          .eq('is_active', true) as List<dynamic>;
+      final windowRows = await _db
+          .from('event_sessions')
+          .select(cols)
+          .lte('start_at', now)
+          .or('end_at.is.null,end_at.gt.$now') as List<dynamic>;
+
+      final byId = <String, EventSession>{};
+      for (final r in [...activeRows, ...windowRows]) {
+        final s = EventSession.fromJson(r as Map<String, dynamic>);
+        byId[s.id] = s;
+      }
+      _liveSessions = byId.values.toList()
+        ..sort((a, b) => a.startAt.compareTo(b.startAt));
+      notifyListeners();
+    } catch (e, st) {
+      debugPrint('EventProvider.fetchLiveSessions error: $e\n$st');
+    }
   }
 
   /// Fetches the first page of past sessions (start_at < now, newest first).

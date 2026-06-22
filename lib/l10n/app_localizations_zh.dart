@@ -493,6 +493,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navProfile => '资料';
 
   @override
+  String get navLive => '直播';
+
+  @override
+  String get liveNoneNow => '当前没有正在进行的活动';
+
+  @override
   String get journalComingSoon => '日记即将推出';
 
   @override

@@ -151,6 +151,8 @@
   "navTrips": "Chuyến đi",
   "navJournal": "Nhật ký",
   "navProfile": "Hồ sơ",
+  "navLive": "Trực tiếp",
+  "liveNoneNow": "Hiện không có sự kiện nào đang diễn ra",
   "journalComingSoon": "Nhật ký sắp ra mắt",
   "memberSearching": "Đang tìm kiếm…",
   "memberAccountFound": "Đã tìm thấy tài khoản",

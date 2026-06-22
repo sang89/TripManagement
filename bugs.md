@@ -139,6 +139,33 @@ The `_fetchLatest()` incremental fetch deduplicates by notification ID. When an 
 
 ## General gotchas
 
+### go_router reuses the page on same-path navigation — deep-links to a tab/section are ignored
+`context.go('/event/:id?tab=session&sessionId=X')` while already on `/event/:id` (or when go_router
+otherwise reuses the page) does **not** re-run the screen's `initState`, because the **path is
+unchanged** — only the query differs. Any state read once in `initState` (here: `initialTab`,
+`initialSessionId` → the outer `TabController`'s initial index) is therefore silently ignored, and
+the user stays on whatever tab they were on (the Live button "lands on Info instead of Session").
+**Fix:** give the route a `pageBuilder` with a `ValueKey` that includes the deep-link target
+(`'event-$id-$initialTab-$initialSessionId'`), so a different tab/section is a distinct page and
+rebuilds fresh. **Lesson for tests:** a widget test that constructs the screen directly with the
+target args ALWAYS gets a fresh `initState` and will pass while the real app fails — the e2e test
+must drive the real `ShellScaffold` button → real GoRoute → real screen, including the "already on
+the event" reuse path (see `test/screens/live_button_full_chain_test.dart`).
+
+
+
+### A `State` that recreates a `TabController` must use `TickerProviderStateMixin` (plural)
+`SingleTickerProviderStateMixin` permanently records that a ticker was created — disposing the old
+`TabController` frees its ticker, but the mixin still throws *"multiple tickers were created"* on the
+next `createTicker`. So any `State` that recreates its controller (in `didUpdateWidget` when the
+event type changes, or in the `build` hot-reload/length guard) **must** use `TickerProviderStateMixin`.
+This surfaced when the bottom-nav **Live** button (`ShellScaffold`) navigated between events of
+different types: the reused `EventDetailScreen` rebuilt `_InfoTabGroup`/`_OrganizeTabGroup` with a new
+event type, hit `didUpdateWidget`, and tried to recreate the `TabController` under the single-ticker
+mixin → crash. Fixed by switching `_InfoTabGroupState`, `_OrganizeTabGroupState`, and
+`_MemoriesTabGroupState` to `TickerProviderStateMixin`. **Invariant:** if a `State` ever reassigns
+`_ctrl = TabController(...)` after `initState`, it cannot use `SingleTickerProviderStateMixin`.
+
 ### Events with no `endAt` never become "Past" automatically
 "Past" was historically computed as `endAt != null && endAt < now`. Single-day events have
 `endAt == null`, so this is **always false** — they stay "Ongoing"/Upcoming forever and pile up on

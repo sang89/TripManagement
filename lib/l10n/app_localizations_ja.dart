@@ -494,6 +494,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get navProfile => 'プロフィール';
 
   @override
+  String get navLive => 'ライブ';
+
+  @override
+  String get liveNoneNow => '現在ライブ中のイベントはありません';
+
+  @override
   String get journalComingSoon => '日記機能は近日公開';
 
   @override

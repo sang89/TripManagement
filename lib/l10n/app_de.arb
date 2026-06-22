@@ -151,6 +151,8 @@
   "navTrips": "Reisen",
   "navJournal": "Tagebuch",
   "navProfile": "Profil",
+  "navLive": "Live",
+  "liveNoneNow": "Derzeit keine Live-Events",
   "journalComingSoon": "Tagebuch demnächst",
   "memberSearching": "Suche läuft…",
   "memberAccountFound": "Konto gefunden",

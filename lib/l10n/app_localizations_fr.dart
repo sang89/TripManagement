@@ -501,6 +501,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navLive => 'En direct';
+
+  @override
+  String get liveNoneNow => 'Aucun événement en direct pour le moment';
+
+  @override
   String get journalComingSoon => 'Journal bientôt disponible';
 
   @override

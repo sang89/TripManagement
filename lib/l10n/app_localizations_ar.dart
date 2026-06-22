@@ -496,6 +496,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navProfile => 'الملف الشخصي';
 
   @override
+  String get navLive => 'مباشر';
+
+  @override
+  String get liveNoneNow => 'لا توجد فعاليات مباشرة الآن';
+
+  @override
   String get journalComingSoon => 'المذكرات قريباً';
 
   @override

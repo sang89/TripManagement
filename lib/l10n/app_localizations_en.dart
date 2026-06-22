@@ -498,6 +498,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
+  String get navLive => 'Live';
+
+  @override
+  String get liveNoneNow => 'No live events right now';
+
+  @override
   String get journalComingSoon => 'Journal coming soon';
 
   @override

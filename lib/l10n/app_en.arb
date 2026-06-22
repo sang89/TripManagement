@@ -212,6 +212,8 @@
   "navTrips": "Trips",
   "navJournal": "Journal",
   "navProfile": "Profile",
+  "navLive": "Live",
+  "liveNoneNow": "No live events right now",
   "journalComingSoon": "Journal coming soon",
   "memberSearching": "Searching…",
   "memberAccountFound": "Account found",

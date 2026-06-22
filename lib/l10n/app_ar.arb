@@ -151,6 +151,8 @@
   "navTrips": "الرحلات",
   "navJournal": "المذكرات",
   "navProfile": "الملف الشخصي",
+  "navLive": "مباشر",
+  "liveNoneNow": "لا توجد فعاليات مباشرة الآن",
   "journalComingSoon": "المذكرات قريباً",
   "memberSearching": "جارٍ البحث…",
   "memberAccountFound": "تم العثور على الحساب",
