@@ -116,6 +116,18 @@ class Event {
   int? get honoreeAge =>
       birthYear == null ? null : DateTime.now().year - birthYear!;
 
+  // ── "Past for this user" — single source of truth ─────────────────────────
+  // An event is past when its end date has passed (auto), OR the current user
+  // has manually moved it to their Past tab (per-user archive). Events with no
+  // end date never become past automatically — only via manual archive.
+  bool get isDatePast => endAt != null && endAt!.isBefore(DateTime.now());
+
+  bool isArchivedFor(String? userId) =>
+      userId != null &&
+      guests.any((g) => g.userId == userId && g.isArchived);
+
+  bool isPastFor(String? userId) => isDatePast || isArchivedFor(userId);
+
   factory Event.fromJson(Map<String, dynamic> json) {
     final rawStops = (json['event_stops'] as List<dynamic>? ?? [])
         .map((s) => EventStop.fromJson(s as Map<String, dynamic>))

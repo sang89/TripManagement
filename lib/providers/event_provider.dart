@@ -1534,6 +1534,40 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
+  /// Per-user "Move to Past" / "Move to Upcoming".
+  ///
+  /// Sets `is_archived` on the current user's own `event_guests` row. The change
+  /// is scoped to this user only — other members keep seeing the event in their
+  /// own Upcoming tab. The existing event_guests Realtime UPDATE handler syncs
+  /// the flag to this user's other devices automatically.
+  Future<void> setEventArchived(String eventId, bool archived) async {
+    final event = getById(eventId);
+    if (event == null) return;
+
+    EventGuest? myGuest;
+    for (final g in event.guests) {
+      if (g.userId == _userId) {
+        myGuest = g;
+        break;
+      }
+    }
+    if (myGuest == null) return;
+
+    await _db
+        .from('event_guests')
+        .update({'is_archived': archived}).eq('id', myGuest.id);
+
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx >= 0) {
+      final updatedGuests = _events[idx].guests.map((g) {
+        return g.id == myGuest!.id ? g.copyWith(isArchived: archived) : g;
+      }).toList();
+      _events[idx] = _events[idx].copyWith(guests: updatedGuests);
+      notifyListeners();
+      unawaited(_saveCache());
+    }
+  }
+
   // ─── Guests ────────────────────────────────────────────────────────────────
 
   /// Add a casual guest to a non-trip event (immediate 'going' status).

@@ -203,5 +203,6 @@ If `block_reinvite = false`:
 | `on_invite_inserted` | Trigger (AFTER INSERT OR UPDATE) | Runs `handle_new_invite()` |
 | `on_member_reinvite_check` | Trigger (BEFORE UPDATE) | Runs `prevent_blocked_reinvite()` |
 | `trip_members_trip_user_unique` | UNIQUE CONSTRAINT on `(trip_id, user_id)` | Enables upsert; NULLs treated as distinct so guests are unaffected |
+| `event_guests.is_archived` | Column (bool, default false) | **Not** part of the invite/RSVP status lifecycle — a per-user view flag for "Move to Past" on the events landing page. Writable by the row owner via the existing `..._update_own_status` UPDATE policy; never changes `status`, so the invite triggers don't fire. |
 | `device_tokens` | Table | FCM tokens per user/device; stale tokens auto-deleted by Edge Function |
 | `send-invite-notification` | Edge Function | Sends FCM push via service-account OAuth2; called by pg_net trigger |

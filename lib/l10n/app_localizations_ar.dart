@@ -291,6 +291,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get past => 'الماضية';
 
   @override
+  String get moveToPast => 'نقل إلى الماضية';
+
+  @override
+  String get moveToUpcoming => 'نقل إلى القادمة';
+
+  @override
+  String get movedToPast => 'نُقل إلى السابقة 🗂️';
+
+  @override
+  String get movedToUpcoming => 'عاد إلى القادمة 🎉';
+
+  @override
+  String get moveToPastSubtitle => 'يزيله من القادمة — تراه أنت فقط';
+
+  @override
+  String get moveToUpcomingSubtitle => 'يعيده إلى قائمة القادمة';
+
+  @override
   String get deleteTripTitle => 'حذف الرحلة؟';
 
   @override

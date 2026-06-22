@@ -49,22 +49,20 @@ List<Event> _filteredEvents({
   required EventType? typeFilter,
   required String? currentUserId,
 }) {
-  final now = DateTime.now();
   var events = [...provider.myEvents, ...provider.invitedEvents];
 
+  // "Past" = end date passed (auto) OR the user manually moved it to Past.
   events = switch (tab) {
-    _EventTab.upcoming => events
-        .where((e) => !(e.endAt != null && e.endAt!.isBefore(now)))
-        .toList(),
+    _EventTab.upcoming =>
+      events.where((e) => !e.isPastFor(currentUserId)).toList(),
     _EventTab.invited => events
         .where((e) =>
-            !(e.endAt != null && e.endAt!.isBefore(now)) &&
+            !e.isPastFor(currentUserId) &&
             currentUserId != null &&
             e.guests.any((g) => g.userId == currentUserId && g.isPending))
         .toList(),
-    _EventTab.past => events
-        .where((e) => e.endAt != null && e.endAt!.isBefore(now))
-        .toList(),
+    _EventTab.past =>
+      events.where((e) => e.isPastFor(currentUserId)).toList(),
   };
 
   if (typeFilter != null) {

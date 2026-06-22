@@ -14,6 +14,10 @@ class EventGuest {
   final bool blockReinvite;
   final String role;
 
+  // Per-user "Move to Past" flag — when true, this user has archived the event
+  // to their own Past tab. Other members are unaffected.
+  final bool isArchived;
+
   final String? rsvpNote;
 
   // Enriched in-memory.
@@ -32,6 +36,7 @@ class EventGuest {
     this.invitedBy,
     this.blockReinvite = false,
     this.role = 'member',
+    this.isArchived = false,
     this.rsvpNote,
     this.avatarUrl,
   });
@@ -51,6 +56,7 @@ class EventGuest {
         invitedBy: json['invited_by'] as String?,
         blockReinvite: json['block_reinvite'] as bool? ?? false,
         role: json['role'] as String? ?? 'member',
+        isArchived: json['is_archived'] as bool? ?? false,
         rsvpNote: json['rsvp_note'] as String?,
         avatarUrl: json['avatar_url'] as String?,
       );
@@ -67,6 +73,7 @@ class EventGuest {
     String? avatarUrl,
     bool? blockReinvite,
     String? invitedBy,
+    bool? isArchived,
   }) =>
       EventGuest(
         id: id,
@@ -81,6 +88,7 @@ class EventGuest {
         invitedBy: invitedBy ?? this.invitedBy,
         blockReinvite: blockReinvite ?? this.blockReinvite,
         role: role,
+        isArchived: isArchived ?? this.isArchived,
         rsvpNote: clearRsvpNote ? null : (rsvpNote ?? this.rsvpNote),
         avatarUrl: avatarUrl ?? this.avatarUrl,
       );

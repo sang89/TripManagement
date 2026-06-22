@@ -293,6 +293,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get past => 'Pasados';
 
   @override
+  String get moveToPast => 'Mover a Pasados';
+
+  @override
+  String get moveToUpcoming => 'Mover a Próximos';
+
+  @override
+  String get movedToPast => 'Guardado en Pasados 🗂️';
+
+  @override
+  String get movedToUpcoming => 'De vuelta en Próximos 🎉';
+
+  @override
+  String get moveToPastSubtitle => 'Quítalo de Próximos — solo tú lo verás';
+
+  @override
+  String get moveToUpcomingSubtitle => 'Devuélvelo a tu lista de Próximos';
+
+  @override
   String get deleteTripTitle => '¿Eliminar viaje?';
 
   @override

@@ -289,6 +289,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get past => '已完成';
 
   @override
+  String get moveToPast => '移至已完成';
+
+  @override
+  String get moveToUpcoming => '移至即将出行';
+
+  @override
+  String get movedToPast => '已收进已完成 🗂️';
+
+  @override
+  String get movedToUpcoming => '已放回即将出行 🎉';
+
+  @override
+  String get moveToPastSubtitle => '从即将出行中移除 — 仅你可见';
+
+  @override
+  String get moveToUpcomingSubtitle => '放回你的即将出行列表';
+
+  @override
   String get deleteTripTitle => '删除行程？';
 
   @override

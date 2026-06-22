@@ -57,6 +57,23 @@ void main() {
       expect(updated.id, g.id);
       expect(updated.displayName, g.displayName);
     });
+
+    test('isArchived defaults to false when absent', () {
+      expect(EventGuest.fromJson(guestJson).isArchived, isFalse);
+    });
+
+    test('isArchived parses true from is_archived', () {
+      final j = Map<String, dynamic>.from(guestJson)..['is_archived'] = true;
+      expect(EventGuest.fromJson(j).isArchived, isTrue);
+    });
+
+    test('copyWith updates isArchived only', () {
+      final g = EventGuest.fromJson(guestJson);
+      final archived = g.copyWith(isArchived: true);
+      expect(archived.isArchived, isTrue);
+      expect(archived.status, g.status);
+      expect(archived.id, g.id);
+    });
   });
 
   group('Event.fromJson', () {
@@ -167,6 +184,74 @@ void main() {
       expect(copy.title, 'New Title');
       expect(copy.location, e.location);
       expect(copy.guests.length, e.guests.length);
+    });
+  });
+
+  // ── Past-for-user / archive ──────────────────────────────────────────────────
+
+  group('Event.isPastFor (per-user archive)', () {
+    final now = DateTime.now();
+
+    EventGuest guest(String userId, {bool archived = false}) => EventGuest(
+          id: 'g-$userId',
+          eventId: 'e1',
+          userId: userId,
+          displayName: userId,
+          status: 'going',
+          rsvpAt: now,
+          createdAt: now,
+          isArchived: archived,
+        );
+
+    test('isDatePast true only when endAt has passed', () {
+      final past = Event.fromJson(eventJson).copyWith(
+        startAt: now.subtract(const Duration(days: 3)),
+        endAt: now.subtract(const Duration(days: 2)),
+      );
+      final future = Event.fromJson(eventJson).copyWith(
+        startAt: now.add(const Duration(days: 2)),
+        endAt: now.add(const Duration(days: 3)),
+      );
+      expect(past.isDatePast, isTrue);
+      expect(future.isDatePast, isFalse);
+    });
+
+    test('single-day event (no endAt) is never date-past', () {
+      final e = Event.fromJson(eventJson).copyWith(
+        startAt: now.subtract(const Duration(days: 30)),
+        clearEndAt: true,
+      );
+      expect(e.isDatePast, isFalse);
+      expect(e.isPastFor('u2'), isFalse);
+    });
+
+    test('manual archive makes it past for that user only', () {
+      final e = Event.fromJson(eventJson).copyWith(
+        startAt: now.subtract(const Duration(days: 30)),
+        clearEndAt: true,
+        guests: [guest('u2', archived: true), guest('u3')],
+      );
+      expect(e.isArchivedFor('u2'), isTrue);
+      expect(e.isPastFor('u2'), isTrue); // archiver sees it in Past
+      expect(e.isArchivedFor('u3'), isFalse);
+      expect(e.isPastFor('u3'), isFalse); // others still see it in Upcoming
+    });
+
+    test('null userId is never archived', () {
+      final e = Event.fromJson(eventJson).copyWith(
+        clearEndAt: true,
+        guests: [guest('u2', archived: true)],
+      );
+      expect(e.isArchivedFor(null), isFalse);
+    });
+
+    test('date-past event is past regardless of archive flag', () {
+      final e = Event.fromJson(eventJson).copyWith(
+        startAt: now.subtract(const Duration(days: 3)),
+        endAt: now.subtract(const Duration(days: 2)),
+        guests: [guest('u2')],
+      );
+      expect(e.isPastFor('u2'), isTrue);
     });
   });
 

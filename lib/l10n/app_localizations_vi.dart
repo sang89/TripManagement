@@ -292,6 +292,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get past => 'Đã qua';
 
   @override
+  String get moveToPast => 'Chuyển sang Đã qua';
+
+  @override
+  String get moveToUpcoming => 'Chuyển sang Sắp tới';
+
+  @override
+  String get movedToPast => 'Đã cất vào Đã qua 🗂️';
+
+  @override
+  String get movedToUpcoming => 'Đã đưa lại vào Sắp tới 🎉';
+
+  @override
+  String get moveToPastSubtitle => 'Ẩn khỏi Sắp tới — chỉ mình bạn thấy';
+
+  @override
+  String get moveToUpcomingSubtitle => 'Đưa lại vào danh sách Sắp tới';
+
+  @override
   String get deleteTripTitle => 'Xóa chuyến đi?';
 
   @override
