@@ -654,6 +654,42 @@ abstract class AppLocalizations {
   /// **'Past'**
   String get past;
 
+  /// No description provided for @moveToPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to Past'**
+  String get moveToPast;
+
+  /// No description provided for @moveToUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to Upcoming'**
+  String get moveToUpcoming;
+
+  /// No description provided for @movedToPast.
+  ///
+  /// In en, this message translates to:
+  /// **'Tucked into Past 🗂️'**
+  String get movedToPast;
+
+  /// No description provided for @movedToUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Back in Upcoming 🎉'**
+  String get movedToUpcoming;
+
+  /// No description provided for @moveToPastSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear it from Upcoming — only you\'ll see this'**
+  String get moveToPastSubtitle;
+
+  /// No description provided for @moveToUpcomingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring it back to your Upcoming list'**
+  String get moveToUpcomingSubtitle;
+
   /// No description provided for @deleteTripTitle.
   ///
   /// In en, this message translates to:

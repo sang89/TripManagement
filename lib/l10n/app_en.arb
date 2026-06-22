@@ -125,6 +125,12 @@
   "all": "All",
   "upcoming": "Upcoming",
   "past": "Past",
+  "moveToPast": "Move to Past",
+  "moveToUpcoming": "Move to Upcoming",
+  "movedToPast": "Tucked into Past 🗂️",
+  "movedToUpcoming": "Back in Upcoming 🎉",
+  "moveToPastSubtitle": "Clear it from Upcoming — only you'll see this",
+  "moveToUpcomingSubtitle": "Bring it back to your Upcoming list",
   "deleteTripTitle": "Delete trip?",
   "deleteTripMessage": "Delete {tripTitle}? This cannot be undone.",
   "@deleteTripMessage": {

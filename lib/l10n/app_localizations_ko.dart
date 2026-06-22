@@ -291,6 +291,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get past => '지난';
 
   @override
+  String get moveToPast => '지난 항목으로 이동';
+
+  @override
+  String get moveToUpcoming => '예정 항목으로 이동';
+
+  @override
+  String get movedToPast => '지난 항목으로 정리했어요 🗂️';
+
+  @override
+  String get movedToUpcoming => '예정 항목으로 되돌렸어요 🎉';
+
+  @override
+  String get moveToPastSubtitle => '예정에서 치워요 — 나에게만 보여요';
+
+  @override
+  String get moveToUpcomingSubtitle => '예정 목록으로 다시 가져와요';
+
+  @override
   String get deleteTripTitle => '여행을 삭제하시겠습니까?';
 
   @override

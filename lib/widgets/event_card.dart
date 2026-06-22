@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_ui/shared_ui.dart';
+import '../l10n/app_localizations.dart';
 import '../models/event.dart';
+import '../providers/event_provider.dart';
 import 'event_type_banner.dart';
+
+// Standard luminance greyscale matrix — desaturates past/archived cards.
+const ColorFilter _kGreyscale = ColorFilter.matrix(<double>[
+  0.2126, 0.7152, 0.0722, 0, 0,
+  0.2126, 0.7152, 0.0722, 0, 0,
+  0.2126, 0.7152, 0.0722, 0, 0,
+  0, 0, 0, 1, 0,
+]);
 
 class EventCard extends StatelessWidget {
   final Event event;
@@ -14,7 +25,7 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final isPast = event.endAt != null && event.endAt!.isBefore(now);
+    final isPast = event.isPastFor(currentUserId);
     final isOngoing = !isPast &&
         event.startAt.isBefore(now) &&
         (event.endAt == null || event.endAt!.isAfter(now));
@@ -57,23 +68,153 @@ class EventCard extends StatelessWidget {
         event.isTrip ? event.guests.where((g) => g.status == 'pending').length : 0;
     const String? recurringLabel = null;
 
+    // Move-to-Past / Move-to-Upcoming availability (per-user).
+    final canMoveToPast = !isPast;
+    final canRestore =
+        event.isArchivedFor(currentUserId) && !event.isDatePast;
+    final hasLongPressAction = canMoveToPast || canRestore;
+
+    Widget body = _ThemedCardBody(
+      bannerTheme: bannerThemeFor(event.eventType),
+      typeIcon: typeIcon,
+      title: event.title,
+      location: event.location,
+      dateRange: dateRange,
+      guestCount: event.guests.length,
+      pendingCount: pendingCount,
+      recurringLabel: recurringLabel,
+      statusLabel: statusLabel,
+      statusColor: statusColor,
+    );
+
+    // Past / archived cards read as "done": desaturated + faded.
+    if (isPast) {
+      body = ColorFiltered(
+        key: const ValueKey('eventCardDim'),
+        colorFilter: _kGreyscale,
+        child: Opacity(opacity: 0.6, child: body),
+      );
+    }
+
     return AppTappable(
       onTap: () => context.push('/event/${event.id}'),
+      onLongPress: hasLongPressAction
+          ? () => _showMoveSheet(context, toPast: canMoveToPast)
+          : null,
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         clipBehavior: Clip.antiAlias,
-        child: _ThemedCardBody(
-          bannerTheme: bannerThemeFor(event.eventType),
-          typeIcon: typeIcon,
-          title: event.title,
-          location: event.location,
-          dateRange: dateRange,
-          guestCount: event.guests.length,
-          pendingCount: pendingCount,
-          recurringLabel: recurringLabel,
-          statusLabel: statusLabel,
-          statusColor: statusColor,
+        child: body,
+      ),
+    );
+  }
+
+  Future<void> _showMoveSheet(BuildContext context,
+      {required bool toPast}) async {
+    final l10n = AppLocalizations.of(context);
+    final provider = context.read<EventProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final accent = toPast ? AppTheme.primary : AppTheme.accent;
+    final emoji = toPast ? '🗂️' : '🎉';
+    final title = toPast ? l10n.moveToPast : l10n.moveToUpcoming;
+    final subtitle =
+        toPast ? l10n.moveToPastSubtitle : l10n.moveToUpcomingSubtitle;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
+        padding: EdgeInsets.fromLTRB(
+            16, 12, 16, 16 + MediaQuery.of(ctx).padding.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Which event this is about.
+            Text(
+              event.title,
+              style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 14),
+            AppTappable(
+              onTap: () => Navigator.of(ctx).pop(true),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      accent.withValues(alpha: 0.12),
+                      accent.withValues(alpha: 0.04),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: accent.withValues(alpha: 0.25), width: 1),
+                ),
+                child: Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 28)),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: accent,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.grey.shade600,
+                                height: 1.25),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        color: accent.withValues(alpha: 0.6)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+    await provider.setEventArchived(event.id, toPast);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(toPast ? l10n.movedToPast : l10n.movedToUpcoming),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

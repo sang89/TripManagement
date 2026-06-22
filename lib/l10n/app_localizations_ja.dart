@@ -290,6 +290,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get past => '過去';
 
   @override
+  String get moveToPast => '過去に移動';
+
+  @override
+  String get moveToUpcoming => '予定に移動';
+
+  @override
+  String get movedToPast => '過去に収納しました 🗂️';
+
+  @override
+  String get movedToUpcoming => '予定に戻しました 🎉';
+
+  @override
+  String get moveToPastSubtitle => '予定から外します — 自分だけに表示';
+
+  @override
+  String get moveToUpcomingSubtitle => '予定リストに戻します';
+
+  @override
   String get deleteTripTitle => '旅行を削除しますか？';
 
   @override

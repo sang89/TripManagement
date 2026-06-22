@@ -139,6 +139,17 @@ The `_fetchLatest()` incremental fetch deduplicates by notification ID. When an 
 
 ## General gotchas
 
+### Events with no `endAt` never become "Past" automatically
+"Past" was historically computed as `endAt != null && endAt < now`. Single-day events have
+`endAt == null`, so this is **always false** — they stay "Ongoing"/Upcoming forever and pile up on
+the landing page. The fix: `Event.isPastFor(userId)` is the single source of truth, combining
+`isDatePast` (end date passed) with `isArchivedFor(userId)` (the user manually moved it to Past).
+The per-user manual archive (`event_guests.is_archived`, toggled by `EventProvider.setEventArchived`,
+surfaced via long-press on `EventCard`) is the intended mechanism for getting no-end-date events out
+of Upcoming. **Invariant:** use `event.isPastFor(currentUserId)` everywhere you decide Upcoming vs
+Past — never re-derive the `endAt < now` check inline (it will reintroduce this bug). `isArchived` is
+per-user: only the actor's view changes; other members keep seeing the event in their Upcoming.
+
 ### Realtime UPDATE handlers must reconstruct all columns
 When a Supabase Realtime UPDATE payload arrives, `payload.newRecord` contains the full row.
 Do not use a `copyWith`-style partial update that only patches the fields you expect to change —

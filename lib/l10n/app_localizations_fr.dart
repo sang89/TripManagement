@@ -294,6 +294,25 @@ class AppLocalizationsFr extends AppLocalizations {
   String get past => 'Passés';
 
   @override
+  String get moveToPast => 'Déplacer vers Passés';
+
+  @override
+  String get moveToUpcoming => 'Déplacer vers À venir';
+
+  @override
+  String get movedToPast => 'Rangé dans Passés 🗂️';
+
+  @override
+  String get movedToUpcoming => 'De retour dans À venir 🎉';
+
+  @override
+  String get moveToPastSubtitle =>
+      'Le retire de À venir — visible par vous seul';
+
+  @override
+  String get moveToUpcomingSubtitle => 'Le remet dans votre liste À venir';
+
+  @override
   String get deleteTripTitle => 'Supprimer le voyage ?';
 
   @override

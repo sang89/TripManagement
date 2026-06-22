@@ -293,6 +293,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String get past => 'Vergangen';
 
   @override
+  String get moveToPast => 'Nach Vergangen verschieben';
+
+  @override
+  String get moveToUpcoming => 'Nach Bevorstehend verschieben';
+
+  @override
+  String get movedToPast => 'In Vergangen abgelegt 🗂️';
+
+  @override
+  String get movedToUpcoming => 'Zurück in Bevorstehend 🎉';
+
+  @override
+  String get moveToPastSubtitle =>
+      'Aus Bevorstehend entfernen — nur für dich sichtbar';
+
+  @override
+  String get moveToUpcomingSubtitle => 'Zurück in deine Liste Bevorstehend';
+
+  @override
   String get deleteTripTitle => 'Reise löschen?';
 
   @override

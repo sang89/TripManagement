@@ -292,6 +292,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get past => 'Passadas';
 
   @override
+  String get moveToPast => 'Mover para Passadas';
+
+  @override
+  String get moveToUpcoming => 'Mover para Próximas';
+
+  @override
+  String get movedToPast => 'Guardado em Passadas 🗂️';
+
+  @override
+  String get movedToUpcoming => 'De volta em Próximas 🎉';
+
+  @override
+  String get moveToPastSubtitle => 'Remove de Próximas — só você vê isto';
+
+  @override
+  String get moveToUpcomingSubtitle =>
+      'Traz de volta para a sua lista de Próximas';
+
+  @override
   String get deleteTripTitle => 'Excluir viagem?';
 
   @override
