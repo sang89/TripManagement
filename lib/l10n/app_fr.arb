@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "Expulser !",
   "allowDuplicates": "Autoriser plusieurs files",
   "allowDuplicatesSubtitle": "Les membres peuvent être dans plusieurs files simultanément",
-  "customizeQueues": "Personnaliser les files"
+  "customizeQueues": "Personnaliser les files",
+  "pollSpinButton": "Tourner",
+  "pollWheelTitle": "Tournez la roue",
+  "pollWheelResult": "La roue a choisi !",
+  "pollWheelSpin": "Tourner",
+  "pollWheelSpinAgain": "Tourner encore",
+  "pollsDeleteConfirmTitle": "Supprimer le sondage ?",
+  "pollsDeleteConfirmBody": "Cela supprime le sondage et tous les votes. Action irréversible.",
+  "pollWheelHeadline": "Laisse la roue décider !",
+  "pollWheelHeadlineFood": "À table !",
+  "pollWheelSpinning": "Ça tourne…"
 }

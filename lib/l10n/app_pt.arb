@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "Expulsar!",
   "allowDuplicates": "Permitir múltiplas filas",
   "allowDuplicatesSubtitle": "Membros podem estar em mais de uma fila ao mesmo tempo",
-  "customizeQueues": "Personalizar filas"
+  "customizeQueues": "Personalizar filas",
+  "pollSpinButton": "Girar",
+  "pollWheelTitle": "Gire a roleta",
+  "pollWheelResult": "A roleta escolheu!",
+  "pollWheelSpin": "Girar",
+  "pollWheelSpinAgain": "Girar de novo",
+  "pollsDeleteConfirmTitle": "Excluir enquete?",
+  "pollsDeleteConfirmBody": "Isso remove a enquete e todos os votos. Não dá para desfazer.",
+  "pollWheelHeadline": "Deixe a roleta decidir!",
+  "pollWheelHeadlineFood": "Hora de comer!",
+  "pollWheelSpinning": "Girando…"
 }

@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "طرد!",
   "allowDuplicates": "السماح بالانضمام لعدة طوابير",
   "allowDuplicatesSubtitle": "يمكن للأعضاء التواجد في أكثر من طابور في نفس الوقت",
-  "customizeQueues": "تخصيص الطوابير"
+  "customizeQueues": "تخصيص الطوابير",
+  "pollSpinButton": "أدِر",
+  "pollWheelTitle": "أدِر العجلة",
+  "pollWheelResult": "لقد اختارت العجلة!",
+  "pollWheelSpin": "أدِر",
+  "pollWheelSpinAgain": "أدِر مرة أخرى",
+  "pollsDeleteConfirmTitle": "حذف الاستطلاع؟",
+  "pollsDeleteConfirmBody": "سيؤدي ذلك إلى حذف الاستطلاع وجميع الأصوات. لا يمكن التراجع عن هذا.",
+  "pollWheelHeadline": "دع العجلة تقرر!",
+  "pollWheelHeadlineFood": "حان وقت الوليمة!",
+  "pollWheelSpinning": "يدور…"
 }

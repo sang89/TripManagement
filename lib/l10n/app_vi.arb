@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "Đuổi!",
   "allowDuplicates": "Cho phép tham gia nhiều hàng đợi",
   "allowDuplicatesSubtitle": "Thành viên có thể ở nhiều hàng đợi cùng lúc",
-  "customizeQueues": "Tùy chỉnh hàng đợi"
+  "customizeQueues": "Tùy chỉnh hàng đợi",
+  "pollSpinButton": "Quay",
+  "pollWheelTitle": "Quay bánh xe",
+  "pollWheelResult": "Bánh xe đã chọn!",
+  "pollWheelSpin": "Quay",
+  "pollWheelSpinAgain": "Quay lại",
+  "pollsDeleteConfirmTitle": "Xóa cuộc bình chọn?",
+  "pollsDeleteConfirmBody": "Thao tác này sẽ xóa cuộc bình chọn và mọi lượt bình chọn. Không thể hoàn tác.",
+  "pollWheelHeadline": "Để bánh xe quyết định!",
+  "pollWheelHeadlineFood": "Đến giờ ăn rồi!",
+  "pollWheelSpinning": "Đang quay…"
 }

@@ -1845,4 +1845,35 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get customizeQueues => 'Warteschlangen anpassen';
+
+  @override
+  String get pollSpinButton => 'Drehen';
+
+  @override
+  String get pollWheelTitle => 'Dreh das Rad';
+
+  @override
+  String get pollWheelResult => 'Das Rad hat gewählt!';
+
+  @override
+  String get pollWheelSpin => 'Drehen';
+
+  @override
+  String get pollWheelSpinAgain => 'Nochmal drehen';
+
+  @override
+  String get pollsDeleteConfirmTitle => 'Umfrage löschen?';
+
+  @override
+  String get pollsDeleteConfirmBody =>
+      'Damit werden die Umfrage und alle Stimmen gelöscht. Das kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get pollWheelHeadline => 'Lass das Rad entscheiden!';
+
+  @override
+  String get pollWheelHeadlineFood => 'Zeit zum Schlemmen!';
+
+  @override
+  String get pollWheelSpinning => 'Dreht sich…';
 }

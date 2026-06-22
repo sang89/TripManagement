@@ -3443,6 +3443,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Customize queues'**
   String get customizeQueues;
+
+  /// No description provided for @pollSpinButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin'**
+  String get pollSpinButton;
+
+  /// No description provided for @pollWheelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin the wheel'**
+  String get pollWheelTitle;
+
+  /// No description provided for @pollWheelResult.
+  ///
+  /// In en, this message translates to:
+  /// **'The wheel chose!'**
+  String get pollWheelResult;
+
+  /// No description provided for @pollWheelSpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin'**
+  String get pollWheelSpin;
+
+  /// No description provided for @pollWheelSpinAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin again'**
+  String get pollWheelSpinAgain;
+
+  /// No description provided for @pollsDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete poll?'**
+  String get pollsDeleteConfirmTitle;
+
+  /// No description provided for @pollsDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the poll and everyone\'s votes. This can\'t be undone.'**
+  String get pollsDeleteConfirmBody;
+
+  /// No description provided for @pollWheelHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the wheel decide!'**
+  String get pollWheelHeadline;
+
+  /// No description provided for @pollWheelHeadlineFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Time to feast!'**
+  String get pollWheelHeadlineFood;
+
+  /// No description provided for @pollWheelSpinning.
+  ///
+  /// In en, this message translates to:
+  /// **'Spinning…'**
+  String get pollWheelSpinning;
 }
 
 class _AppLocalizationsDelegate

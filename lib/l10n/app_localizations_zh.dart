@@ -1811,4 +1811,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get customizeQueues => '自定义队列';
+
+  @override
+  String get pollSpinButton => '转动';
+
+  @override
+  String get pollWheelTitle => '转动转盘';
+
+  @override
+  String get pollWheelResult => '转盘选好了！';
+
+  @override
+  String get pollWheelSpin => '转动';
+
+  @override
+  String get pollWheelSpinAgain => '再转一次';
+
+  @override
+  String get pollsDeleteConfirmTitle => '删除投票？';
+
+  @override
+  String get pollsDeleteConfirmBody => '这将删除该投票及所有人的票数，且无法撤销。';
+
+  @override
+  String get pollWheelHeadline => '让转盘来决定！';
+
+  @override
+  String get pollWheelHeadlineFood => '开饭啦！';
+
+  @override
+  String get pollWheelSpinning => '转动中…';
 }

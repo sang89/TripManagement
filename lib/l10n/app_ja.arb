@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "追い出す！",
   "allowDuplicates": "複数のキューへの参加を許可",
   "allowDuplicatesSubtitle": "メンバーは同時に複数のキューに参加できます",
-  "customizeQueues": "キューをカスタマイズ"
+  "customizeQueues": "キューをカスタマイズ",
+  "pollSpinButton": "回す",
+  "pollWheelTitle": "ルーレットを回す",
+  "pollWheelResult": "ルーレットが選びました！",
+  "pollWheelSpin": "回す",
+  "pollWheelSpinAgain": "もう一度回す",
+  "pollsDeleteConfirmTitle": "投票を削除しますか？",
+  "pollsDeleteConfirmBody": "投票とすべての票が削除されます。元に戻せません。",
+  "pollWheelHeadline": "ルーレットにおまかせ！",
+  "pollWheelHeadlineFood": "いただきます！",
+  "pollWheelSpinning": "回転中…"
 }
