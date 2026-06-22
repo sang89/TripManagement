@@ -52,6 +52,7 @@ Edge Functions are Deno TypeScript functions deployed to Supabase. They hold ser
 |----------|------|---------|
 | `ai-chat` | `supabase/functions/ai-chat/index.ts` | AI chat proxy — holds `GEMINI_API_KEY`, selects model by tier. Shared with PropertyManagement. |
 | `session-signup` | `supabase/functions/session-signup/index.ts` | Public HTML signup page for signup-event sessions. Session QR codes point here so guests **without the app** can sign up in any browser. Deployed with `--no-verify-jwt`. GET `?code=<session_invite_code>` renders the form (via `get_session_by_invite_code` RPC); POST submits to `rsvp_session` RPC and renders position/waitlist result. No secrets — uses anon key. |
+| `places-proxy` | `supabase/functions/places-proxy/index.ts` | Server-side proxy for Google Places (New) REST + Geocoding so the API key never ships for those calls. Holds `GOOGLE_PLACES_API_KEY`. Deployed with `--no-verify-jwt` (the `photo` action is loaded directly by `Image.network`/`<img>`, which cannot send auth headers). Actions via `?action=`: `searchText`, `autocomplete`, `placeDetails`, `restaurantDetails`, `geocode`, `photo`. The `photo` action **streams the image bytes** (never redirects to a keyed URL), so the key is never exposed. |
 
 ### Deployment workflow
 
@@ -154,30 +155,39 @@ Write tools must be in `kWriteToolNames` — the tool-call loop uses this set to
 
 ## Google Places API (New)
 
-**Purpose:** Address autocomplete and lat/lng lookup for trip destinations and stops.  
-**Config key:** `kGooglePlacesApiKey` (`lib/config/api_keys.dart`)  
-**Enabled APIs required:** Places API (New) — already enabled on this key.
+**Purpose:** Address autocomplete, lat/lng lookup, restaurant text search (Cravings), and restaurant photos.  
+**Key location:** **server-side** — `GOOGLE_PLACES_API_KEY` secret on the `places-proxy` Edge Function (see Edge Functions inventory). The native REST calls below go through `places-proxy`, so the Google key is **not** used client-side for them.  
+**Enabled APIs required:** Places API (New) for search/details/photos; **Geocoding API** for the `geocode` action (reverse-geocode "Current Location" + forward-geocode a typed Cravings location) — enable separately in Google Cloud Console.
 
-| Endpoint | Method | Used for |
-|----------|--------|---------|
-| `https://places.googleapis.com/v1/places:autocomplete` | POST | Autocomplete suggestions |
-| `https://places.googleapis.com/v1/places/{placeId}` | GET | Fetch formatted address + coordinates |
+All native REST calls hit the proxy (`$kSupabaseUrl/functions/v1/places-proxy?action=...`), which injects the key and forwards Google's response verbatim:
+
+| Proxy action | Method | Backed by | Used for |
+|----------|--------|---------|---------|
+| `autocomplete` | POST | `places:autocomplete` | Autocomplete suggestions |
+| `placeDetails` | GET | `places/{placeId}` | Formatted address + coordinates |
+| `searchText` | POST | `places:searchText` | Restaurant search (Cravings) |
+| `restaurantDetails` | GET | `places/{placeId}` | Rating / price level / photos |
+| `geocode` | GET | `maps/api/geocode/json` | Reverse + forward geocoding |
+| `photo` | GET | `places/{ref}/media` | Streams restaurant photo bytes (see below) |
 
 | File | Role |
 |------|------|
-| `lib/services/trip_places_service.dart` | Entry point — platform-adaptive, in-memory cache |
+| `lib/services/trip_places_service.dart` | Entry point — platform-adaptive, in-memory cache, proxy URL builders (`placesPhotoUrl`) |
 | `lib/services/trip_places_stub.dart` | No-op stub for non-web builds |
-| `lib/services/trip_places_web.dart` | Web implementation via Google Maps JS SDK + `dart:js_interop` |
+| `lib/services/trip_places_web.dart` | Web autocomplete/details via Google Maps JS SDK + `dart:js_interop` (referrer-restricted web key, **not** the proxy) |
 | `lib/widgets/places_autocomplete_field.dart` | Inline autocomplete text field |
 | `lib/widgets/destination_search_dialog.dart` | Full-screen search dialog |
 
+**Restaurant photos:** built via `placesPhotoUrl(photoRef, maxWidth:)` → `places-proxy?action=photo`. The proxy fetches Google's `media` endpoint (which 302s to the image) and **streams the bytes back**, so the key is never present in any client-visible URL. Works in `Image.network`/web `<img>` because the proxy is deployed `--no-verify-jwt` and sends CORS headers.
+
 **Platform notes:**
-- **Native (iOS/Android):** REST calls via `http` package.
-- **Web:** Loads Google Maps JS SDK and calls `google.maps.importLibrary('places')` — conditional export via `if (dart.library.js_interop)`.
+- **Native (iOS/Android):** REST calls via `http` package → `places-proxy`. `searchText`/`geocode`/`photo` now also work because the proxy adds CORS.
+- **Web:** Autocomplete/details still load the Google Maps JS SDK (`google.maps.importLibrary('places')`) using the referrer-restricted web key from `web_maps_loader.dart`; restaurant search + photos go through `places-proxy`.
 
 **Caching:**
 - Suggestions: in-memory, 1-hour TTL per query (`CacheEntry`).
 - Place details: in-memory, indefinite per session.
+- Photos: `Cache-Control: public, max-age=86400` set by the proxy.
 
 ---
 
@@ -209,7 +219,7 @@ https://tiles.stadiamaps.com/tiles/{style}/{z}/{x}/{y}.png?api_key={key}
 ## Google Maps — Directions API
 
 **Purpose:** Fetch real road-following routes between trip stops (replaces straight-line polylines).  
-**Config key:** `kGooglePlacesApiKey` (same key)  
+**Config key:** `kGooglePlacesApiKey` — **client-side** (mobile only). This and the web Maps JS SDK are the only remaining client-side uses of the Google key; everything else routes through `places-proxy`. Directions REST is CORS-blocked on web, so this is native-only and not worth proxying.  
 **Enabled APIs required:** **Directions API** — must be enabled separately in Google Cloud Console.
 
 | Endpoint | Method | Used for |

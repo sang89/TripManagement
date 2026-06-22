@@ -768,6 +768,9 @@ Generic push notification function — called by `call_push_edge_function()` hel
 #### `send-mention-notification`
 Client-initiated (called directly from Flutter after a message with `@[userId:…]` tokens is sent). Validates mentioned users are active event members; respects `user_profiles.mention_notifications_enabled` opt-out; writes in-app `trip_notifications` rows (type `chat_mention`, `reference_id = event_id`); sends FCM push to each opted-in user's devices. Uses `event_guests` and `events` tables (updated from legacy `trip_members`/`trips` naming). Accepts `event_id` or legacy `trip_id` in the request body.
 
+#### `places-proxy`
+Server-side proxy for Google Places (New) REST + Geocoding so the Google API key never ships in the app for those calls. Holds the `GOOGLE_PLACES_API_KEY` secret; deployed with `--no-verify-jwt` so the `photo` action loads in `Image.network`/web `<img>`. Actions via `?action=`: `searchText`, `autocomplete`, `placeDetails`, `restaurantDetails`, `geocode`, `photo`. The `photo` action streams image bytes (never a keyed redirect URL). Called from `TripPlacesService` (native REST + `placesPhotoUrl`) and the Cravings geocode helpers in `event_detail_screen.dart`. Deploy: `supabase functions deploy places-proxy --no-verify-jwt`. See `api.md → Google Places API (New)`. The Directions API and the web Maps JS SDK remain the only client-side uses of `kGooglePlacesApiKey`.
+
 **Secrets required (all functions):**
 ```
 supabase secrets set FCM_SERVICE_ACCOUNT_JSON='<json>'
@@ -894,7 +897,7 @@ If the user has not granted notification permission, the in-app notification cen
 
 **Required APIs:**
 - `kStadiaMapsApiKey` — Stadia Maps key for tile rendering (sign up at stadiamaps.com; free tier 200k tiles/month). No native setup — key is a URL query parameter only.
-- `kGooglePlacesApiKey` — Directions API must be enabled in Google Cloud Console (same key as Places). The Maps SDK itself is no longer a dependency.
+- `kGooglePlacesApiKey` — now used client-side **only** for the Directions API (mobile) and the web Maps JS SDK; Places REST + photos are proxied via `places-proxy`. Required Google Cloud APIs: Places API (New), Directions API, Geocoding API (for the proxy `geocode` action), Maps JavaScript API (web). The Maps SDK itself is no longer a dependency.
 
 ---
 
@@ -918,11 +921,13 @@ The optional `tools` parameter on `AIChatService.send()` lets callers override t
 
 ## Places Search
 
-`TripPlacesService` provides address autocomplete and lat/lng lookup for both the destination field and stop addresses.
+`TripPlacesService` provides address autocomplete, lat/lng lookup, restaurant search (Cravings) and restaurant photos.
 
-- **Mobile** (iOS/Android): REST calls to `places.googleapis.com/v1/places:autocomplete` and `places.googleapis.com/v1/places/{placeId}` via `http` package.
-- **Web**: loads the Google Maps JS SDK and calls `google.maps.importLibrary('places')` — implemented in `trip_places_web.dart` using `dart:js_interop`. Conditional export via `if (dart.library.js_interop)`.
-- **Caching:** Suggestions are cached in-memory with a 1-hour TTL (`CacheEntry`). Place details are cached indefinitely per session.
+- **Server-side key:** all native REST calls and all restaurant photos route through the `places-proxy` Edge Function (holds `GOOGLE_PLACES_API_KEY`). The Google key is no longer used client-side for these. See `api.md → Google Places API (New)` for the action table.
+- **Mobile** (iOS/Android): REST calls to `places-proxy?action={autocomplete,placeDetails,searchText,restaurantDetails,geocode}` via `http` package.
+- **Web**: address autocomplete/details load the Google Maps JS SDK and call `google.maps.importLibrary('places')` — implemented in `trip_places_web.dart` using `dart:js_interop` (conditional export via `if (dart.library.js_interop)`), using the referrer-restricted web key. Restaurant search + photos use `places-proxy`.
+- **Photos:** `placesPhotoUrl(photoRef, maxWidth:)` builds a `places-proxy?action=photo` URL; the proxy streams the image bytes so the key is never exposed. Used by Cravings poll cards and the restaurant detail sheet.
+- **Caching:** Suggestions are cached in-memory with a 1-hour TTL (`CacheEntry`). Place details are cached indefinitely per session. Photos carry a 1-day `Cache-Control` from the proxy.
 
 ---
 
