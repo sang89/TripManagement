@@ -166,7 +166,10 @@ Tracks every billable API call with per-call pricing, trigger conditions, and mo
 
 ### Google Maps Platform — per-call pricing
 
-All calls use `kGooglePlacesApiKey`. Prices are in USD and consume the $200/month free credit first.
+Prices are in USD and consume the $200/month free credit first. **Note:** Places (New) REST calls + photos now route through the `places-proxy` Edge Function (key held server-side). Google bills the **same per-call price** regardless of the proxy, so the figures below are unchanged. The proxy does add two Supabase-side costs:
+
+- **Edge Function invocations:** 1 per Places/photo call. Even worst-case (tens of thousands/month) stays well within the 500K/month free tier.
+- **⚠ Photo egress bandwidth:** photos now stream *through* Supabase (proxy fetches Google → returns bytes to the device) instead of loading straight from Google's CDN. At ~15 KB/photo, the worst-case scale rows below (~25K photos/month) ≈ **~375 MB/month** of Supabase egress — within the 2 GB free tier today, but a line item to watch as Cravings usage grows. The proxy sets `Cache-Control: public, max-age=86400` to limit repeat fetches.
 
 #### Places API (New)
 

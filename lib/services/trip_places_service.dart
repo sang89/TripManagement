@@ -2,9 +2,21 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:http/http.dart' as http;
 
+import '../config/api_keys.dart';
 import 'cache_entry.dart';
 import 'trip_places_stub.dart'
     if (dart.library.js_interop) 'trip_places_web.dart' as impl;
+
+/// Base URL of the `places-proxy` Supabase Edge Function that holds the Google
+/// API key server-side and proxies all Places (New) REST calls + photos.
+String get _placesProxyBase => '$kSupabaseUrl/functions/v1/places-proxy';
+
+/// Builds a URL to the `places-proxy` `photo` action. The function streams the
+/// image bytes, so this works on every platform (including a web `<img>`, which
+/// cannot send auth headers) and never exposes the API key.
+String placesPhotoUrl(String photoRef, {int maxWidth = 400}) =>
+    '$_placesProxyBase'
+    '?action=photo&ref=${Uri.encodeComponent(photoRef)}&maxWidth=$maxWidth';
 
 class PlacePrediction {
   final String placeId;
@@ -85,6 +97,14 @@ class TripPlacesService {
   bool get isConfigured =>
       apiKey.isNotEmpty && apiKey != 'YOUR_GOOGLE_PLACES_API_KEY';
 
+  /// Auth headers sent to the proxy. The function is deployed `--no-verify-jwt`,
+  /// so these are not strictly required, but sending the anon key keeps the
+  /// request consistent with every other Supabase call.
+  Map<String, String> get _proxyAuth => {
+        'apikey': kSupabaseAnonKey,
+        'Authorization': 'Bearer $kSupabaseAnonKey',
+      };
+
   void preload() {
     if (isConfigured && kIsWeb) impl.preloadWeb(apiKey);
   }
@@ -108,10 +128,10 @@ class TripPlacesService {
     try {
       final response = await _client
           .post(
-            Uri.parse('https://places.googleapis.com/v1/places:autocomplete'),
+            Uri.parse('$_placesProxyBase?action=autocomplete'),
             headers: {
               'Content-Type': 'application/json',
-              'X-Goog-Api-Key': apiKey,
+              ..._proxyAuth,
             },
             body: jsonEncode({'input': input, 'languageCode': 'en'}),
           )
@@ -172,11 +192,9 @@ class TripPlacesService {
       try {
         final response = await _client
             .get(
-              Uri.parse('https://places.googleapis.com/v1/places/$placeId'),
-              headers: {
-                'X-Goog-Api-Key': apiKey,
-                'X-Goog-FieldMask': 'formattedAddress,location',
-              },
+              Uri.parse('$_placesProxyBase?action=placeDetails'
+                  '&placeId=${Uri.encodeComponent(placeId)}'),
+              headers: _proxyAuth,
             )
             .timeout(const Duration(seconds: 10));
 
@@ -222,13 +240,10 @@ class TripPlacesService {
       }
       final response = await _client
           .post(
-            Uri.parse(
-                'https://places.googleapis.com/v1/places:searchText'),
+            Uri.parse('$_placesProxyBase?action=searchText'),
             headers: {
               'Content-Type': 'application/json',
-              'X-Goog-Api-Key': apiKey,
-              'X-Goog-FieldMask':
-                  'places.id,places.displayName,places.formattedAddress,places.rating,places.priceLevel,places.photos,places.primaryType',
+              ..._proxyAuth,
             },
             body: jsonEncode(body),
           )
@@ -279,11 +294,9 @@ class TripPlacesService {
     try {
       final response = await _client
           .get(
-            Uri.parse('https://places.googleapis.com/v1/places/$placeId'),
-            headers: {
-              'X-Goog-Api-Key': apiKey,
-              'X-Goog-FieldMask': 'rating,priceLevel,photos',
-            },
+            Uri.parse('$_placesProxyBase?action=restaurantDetails'
+                '&placeId=${Uri.encodeComponent(placeId)}'),
+            headers: _proxyAuth,
           )
           .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;

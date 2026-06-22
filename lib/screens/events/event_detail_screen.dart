@@ -2506,10 +2506,8 @@ class _RestaurantPollOptionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final meta = option.placeMetadata;
     final photoRef = meta?['photo_ref'] as String?;
-    final photoUrl = photoRef != null
-        ? 'https://places.googleapis.com/v1/$photoRef/media'
-            '?maxWidthPx=200&key=$kGooglePlacesApiKey'
-        : null;
+    final photoUrl =
+        photoRef != null ? placesPhotoUrl(photoRef, maxWidth: 200) : null;
     final address = meta?['address'] as String?;
     final primaryType = meta?['primary_type'] as String?;
     final foodEmoji = _foodEmojiFor(primaryType, option.text);
@@ -3147,12 +3145,18 @@ class _CravingsTabState extends State<_CravingsTab> {
 
   Future<String> _reverseGeocode(double lat, double lng) async {
     try {
-      final uri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
-        'latlng': '$lat,$lng',
-        'result_type': 'locality|sublocality|neighborhood',
-        'key': kGooglePlacesApiKey,
-      });
-      final resp = await http.get(uri).timeout(const Duration(seconds: 5));
+      final uri =
+          Uri.parse('$kSupabaseUrl/functions/v1/places-proxy').replace(
+        queryParameters: {
+          'action': 'geocode',
+          'latlng': '$lat,$lng',
+          'result_type': 'locality|sublocality|neighborhood',
+        },
+      );
+      final resp = await http.get(uri, headers: {
+        'apikey': kSupabaseAnonKey,
+        'Authorization': 'Bearer $kSupabaseAnonKey',
+      }).timeout(const Duration(seconds: 5));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final results = data['results'] as List? ?? [];
@@ -3189,11 +3193,17 @@ class _CravingsTabState extends State<_CravingsTab> {
 
   Future<(double, double)?> _forwardGeocode(String address) async {
     try {
-      final uri = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
-        'address': address,
-        'key': kGooglePlacesApiKey,
-      });
-      final resp = await http.get(uri).timeout(const Duration(seconds: 5));
+      final uri =
+          Uri.parse('$kSupabaseUrl/functions/v1/places-proxy').replace(
+        queryParameters: {
+          'action': 'geocode',
+          'address': address,
+        },
+      );
+      final resp = await http.get(uri, headers: {
+        'apikey': kSupabaseAnonKey,
+        'Authorization': 'Bearer $kSupabaseAnonKey',
+      }).timeout(const Duration(seconds: 5));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final results = data['results'] as List? ?? [];
@@ -3461,10 +3471,8 @@ class _CravingResultCardState extends State<_CravingResultCard> {
   @override
   Widget build(BuildContext context) {
     final r = widget.restaurant;
-    final photoUrl = r.photoRef != null
-        ? 'https://places.googleapis.com/v1/${r.photoRef}/media'
-            '?maxWidthPx=600&key=$kGooglePlacesApiKey'
-        : null;
+    final photoUrl =
+        r.photoRef != null ? placesPhotoUrl(r.photoRef!, maxWidth: 600) : null;
 
     return AppTappable(
       onTap: () => _showRestaurantDetail(
@@ -3756,9 +3764,7 @@ class _RestaurantDetailSheetState extends State<_RestaurantDetailSheet> {
     }
   }
 
-  String _photoUrl(String ref) =>
-      'https://places.googleapis.com/v1/$ref/media'
-      '?maxWidthPx=800&key=$kGooglePlacesApiKey';
+  String _photoUrl(String ref) => placesPhotoUrl(ref, maxWidth: 800);
 
   String _priceLabel(int? level) =>
       level != null ? '\$' * level : '';
