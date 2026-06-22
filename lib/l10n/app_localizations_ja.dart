@@ -1814,4 +1814,34 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get customizeQueues => 'キューをカスタマイズ';
+
+  @override
+  String get pollSpinButton => '回す';
+
+  @override
+  String get pollWheelTitle => 'ルーレットを回す';
+
+  @override
+  String get pollWheelResult => 'ルーレットが選びました！';
+
+  @override
+  String get pollWheelSpin => '回す';
+
+  @override
+  String get pollWheelSpinAgain => 'もう一度回す';
+
+  @override
+  String get pollsDeleteConfirmTitle => '投票を削除しますか？';
+
+  @override
+  String get pollsDeleteConfirmBody => '投票とすべての票が削除されます。元に戻せません。';
+
+  @override
+  String get pollWheelHeadline => 'ルーレットにおまかせ！';
+
+  @override
+  String get pollWheelHeadlineFood => 'いただきます！';
+
+  @override
+  String get pollWheelSpinning => '回転中…';
 }

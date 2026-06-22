@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "Raus damit!",
   "allowDuplicates": "Mehrere Warteschlangen erlauben",
   "allowDuplicatesSubtitle": "Mitglieder können in mehreren Warteschlangen gleichzeitig sein",
-  "customizeQueues": "Warteschlangen anpassen"
+  "customizeQueues": "Warteschlangen anpassen",
+  "pollSpinButton": "Drehen",
+  "pollWheelTitle": "Dreh das Rad",
+  "pollWheelResult": "Das Rad hat gewählt!",
+  "pollWheelSpin": "Drehen",
+  "pollWheelSpinAgain": "Nochmal drehen",
+  "pollsDeleteConfirmTitle": "Umfrage löschen?",
+  "pollsDeleteConfirmBody": "Damit werden die Umfrage und alle Stimmen gelöscht. Das kann nicht rückgängig gemacht werden.",
+  "pollWheelHeadline": "Lass das Rad entscheiden!",
+  "pollWheelHeadlineFood": "Zeit zum Schlemmen!",
+  "pollWheelSpinning": "Dreht sich…"
 }

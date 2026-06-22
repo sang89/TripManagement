@@ -1837,4 +1837,35 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get customizeQueues => 'Tùy chỉnh hàng đợi';
+
+  @override
+  String get pollSpinButton => 'Quay';
+
+  @override
+  String get pollWheelTitle => 'Quay bánh xe';
+
+  @override
+  String get pollWheelResult => 'Bánh xe đã chọn!';
+
+  @override
+  String get pollWheelSpin => 'Quay';
+
+  @override
+  String get pollWheelSpinAgain => 'Quay lại';
+
+  @override
+  String get pollsDeleteConfirmTitle => 'Xóa cuộc bình chọn?';
+
+  @override
+  String get pollsDeleteConfirmBody =>
+      'Thao tác này sẽ xóa cuộc bình chọn và mọi lượt bình chọn. Không thể hoàn tác.';
+
+  @override
+  String get pollWheelHeadline => 'Để bánh xe quyết định!';
+
+  @override
+  String get pollWheelHeadlineFood => 'Đến giờ ăn rồi!';
+
+  @override
+  String get pollWheelSpinning => 'Đang quay…';
 }

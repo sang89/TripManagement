@@ -1850,4 +1850,35 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get customizeQueues => 'Personnaliser les files';
+
+  @override
+  String get pollSpinButton => 'Tourner';
+
+  @override
+  String get pollWheelTitle => 'Tournez la roue';
+
+  @override
+  String get pollWheelResult => 'La roue a choisi !';
+
+  @override
+  String get pollWheelSpin => 'Tourner';
+
+  @override
+  String get pollWheelSpinAgain => 'Tourner encore';
+
+  @override
+  String get pollsDeleteConfirmTitle => 'Supprimer le sondage ?';
+
+  @override
+  String get pollsDeleteConfirmBody =>
+      'Cela supprime le sondage et tous les votes. Action irréversible.';
+
+  @override
+  String get pollWheelHeadline => 'Laisse la roue décider !';
+
+  @override
+  String get pollWheelHeadlineFood => 'À table !';
+
+  @override
+  String get pollWheelSpinning => 'Ça tourne…';
 }

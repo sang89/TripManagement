@@ -1842,4 +1842,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get customizeQueues => 'Personalizar colas';
+
+  @override
+  String get pollSpinButton => 'Girar';
+
+  @override
+  String get pollWheelTitle => 'Gira la ruleta';
+
+  @override
+  String get pollWheelResult => '¡La ruleta eligió!';
+
+  @override
+  String get pollWheelSpin => 'Girar';
+
+  @override
+  String get pollWheelSpinAgain => 'Girar de nuevo';
+
+  @override
+  String get pollsDeleteConfirmTitle => '¿Eliminar la encuesta?';
+
+  @override
+  String get pollsDeleteConfirmBody =>
+      'Esto elimina la encuesta y todos los votos. No se puede deshacer.';
+
+  @override
+  String get pollWheelHeadline => '¡Que decida la ruleta!';
+
+  @override
+  String get pollWheelHeadlineFood => '¡Hora de comer!';
+
+  @override
+  String get pollWheelSpinning => 'Girando…';
 }

@@ -1014,5 +1014,15 @@
   "kickFromSlotConfirm": "Boot out!",
   "allowDuplicates": "Allow joining multiple queues",
   "allowDuplicatesSubtitle": "Members can be in more than one queue at a time",
-  "customizeQueues": "Customize queues"
+  "customizeQueues": "Customize queues",
+  "pollSpinButton": "Spin",
+  "pollWheelTitle": "Spin the wheel",
+  "pollWheelResult": "The wheel chose!",
+  "pollWheelSpin": "Spin",
+  "pollWheelSpinAgain": "Spin again",
+  "pollsDeleteConfirmTitle": "Delete poll?",
+  "pollsDeleteConfirmBody": "This removes the poll and everyone's votes. This can't be undone.",
+  "pollWheelHeadline": "Let the wheel decide!",
+  "pollWheelHeadlineFood": "Time to feast!",
+  "pollWheelSpinning": "Spinning…"
 }

@@ -1816,4 +1816,34 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get customizeQueues => '대기열 커스터마이즈';
+
+  @override
+  String get pollSpinButton => '돌리기';
+
+  @override
+  String get pollWheelTitle => '룰렛 돌리기';
+
+  @override
+  String get pollWheelResult => '룰렛이 선택했어요!';
+
+  @override
+  String get pollWheelSpin => '돌리기';
+
+  @override
+  String get pollWheelSpinAgain => '다시 돌리기';
+
+  @override
+  String get pollsDeleteConfirmTitle => '투표를 삭제할까요?';
+
+  @override
+  String get pollsDeleteConfirmBody => '투표와 모든 표가 삭제됩니다. 되돌릴 수 없습니다.';
+
+  @override
+  String get pollWheelHeadline => '룰렛에게 맡겨요!';
+
+  @override
+  String get pollWheelHeadlineFood => '먹으러 가요!';
+
+  @override
+  String get pollWheelSpinning => '돌리는 중…';
 }

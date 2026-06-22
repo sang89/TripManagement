@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "踢出！",
   "allowDuplicates": "允许加入多个队列",
   "allowDuplicatesSubtitle": "成员可以同时在多个队列中",
-  "customizeQueues": "自定义队列"
+  "customizeQueues": "自定义队列",
+  "pollSpinButton": "转动",
+  "pollWheelTitle": "转动转盘",
+  "pollWheelResult": "转盘选好了！",
+  "pollWheelSpin": "转动",
+  "pollWheelSpinAgain": "再转一次",
+  "pollsDeleteConfirmTitle": "删除投票？",
+  "pollsDeleteConfirmBody": "这将删除该投票及所有人的票数，且无法撤销。",
+  "pollWheelHeadline": "让转盘来决定！",
+  "pollWheelHeadlineFood": "开饭啦！",
+  "pollWheelSpinning": "转动中…"
 }

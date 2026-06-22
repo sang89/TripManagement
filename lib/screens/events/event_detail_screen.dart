@@ -66,6 +66,8 @@ import '../../widgets/ai_itinerary_sheet.dart';
 import '../../widgets/event_map_widget.dart';
 import '../../widgets/event_stop_form_sheet.dart';
 import '../../widgets/supabase_image.dart';
+import '../../widgets/poll_wheel_sheet.dart';
+import '../../widgets/wheel_math.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -1888,11 +1890,14 @@ class _PollCard extends StatelessWidget {
                         fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                 ),
+                if (poll.options.length >= 2)
+                  _SpinWheelButton(
+                    isRestaurant: isRestaurant,
+                    onTap: () => _openSpinWheel(context),
+                  ),
                 if (isOrganizer)
                   AppTappable(
-                    onTap: () => context
-                        .read<EventProvider>()
-                        .deletePoll(poll.id, eventId),
+                    onTap: () => _confirmDeletePoll(context),
                     child: const Padding(
                       padding: EdgeInsets.only(left: 8),
                       child: Icon(Icons.delete_outline,
@@ -1986,6 +1991,141 @@ class _PollCard extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeletePoll(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.pollsDeleteConfirmTitle),
+        content: Text(l10n.pollsDeleteConfirmBody),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete,
+                style: const TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<EventProvider>().deletePoll(poll.id, eventId);
+    }
+  }
+
+  void _openSpinWheel(BuildContext context) {
+    final isRestaurant = poll.isRestaurantPoll;
+    final segments = buildSegments(
+      options: poll.options
+          .map((o) => (
+                id: o.id,
+                text: o.text,
+                emoji: isRestaurant
+                    ? _foodEmojiFor(
+                        o.placeMetadata?['primary_type'] as String?, o.text)
+                    : null,
+              ))
+          .toList(),
+      votesFor: poll.votesFor,
+    );
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PollWheelSheet(
+        question: poll.question,
+        segments: segments,
+        l10n: l10n,
+        isRestaurant: isRestaurant,
+      ),
+    );
+  }
+}
+
+/// Gradient dice icon in a poll's header that periodically tumbles like a real
+/// die, hinting that tapping it rolls (opens the spin wheel).
+class _SpinWheelButton extends StatefulWidget {
+  final bool isRestaurant;
+  final VoidCallback onTap;
+
+  const _SpinWheelButton({required this.isRestaurant, required this.onTap});
+
+  @override
+  State<_SpinWheelButton> createState() => _SpinWheelButtonState();
+}
+
+class _SpinWheelButtonState extends State<_SpinWheelButton>
+    with SingleTickerProviderStateMixin {
+  // One cycle = a quick tumble (first ~32%) then a rest, looping forever.
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2800),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.isRestaurant
+        ? const [Color(0xFF667EEA), Color(0xFF764BA2)]
+        : const [Color(0xFF00B09B), Color(0xFF96C93D)];
+    return Tooltip(
+      message: AppLocalizations.of(context).pollWheelTitle,
+      child: AppTappable(
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8, right: 10),
+          child: AnimatedBuilder(
+            animation: _ctrl,
+            builder: (context, child) {
+              const tossSpan = 0.42; // fraction of the cycle spent in the air
+              final t = _ctrl.value;
+              var dy = 0.0, angle = 0.0, sx = 1.0, sy = 1.0;
+
+              if (t < tossSpan) {
+                final v = t / tossSpan;
+                final lift = sin(v * pi); // 0 → 1 → 0 parabolic arc
+                dy = -22 * lift; // leaps up, then falls back down
+                // Three tumbles that decelerate as it comes down.
+                angle = Curves.easeOut.transform(v) * 6 * pi;
+                final puff = 1 + 0.12 * lift; // slightly larger mid-air
+                // Squash & stretch over the last stretch as it hits the ground.
+                final landP = ((v - 0.82) / 0.18).clamp(0.0, 1.0);
+                final squash = sin(landP * pi);
+                sx = puff * (1 + 0.24 * squash);
+                sy = puff * (1 - 0.24 * squash);
+              } else {
+                // Tiny settle bounce right after landing.
+                final r = (t - tossSpan) / (1 - tossSpan);
+                if (r < 0.16) dy = -3 * sin(r / 0.16 * pi);
+              }
+
+              return Transform.translate(
+                offset: Offset(0, dy),
+                child: Transform.rotate(
+                  angle: angle,
+                  child: Transform.scale(scaleX: sx, scaleY: sy, child: child),
+                ),
+              );
+            },
+            child: ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (bounds) =>
+                  LinearGradient(colors: colors).createShader(bounds),
+              child: const Icon(Icons.casino_rounded, size: 30),
+            ),
+          ),
         ),
       ),
     );

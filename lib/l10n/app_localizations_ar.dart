@@ -1829,4 +1829,35 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get customizeQueues => 'تخصيص الطوابير';
+
+  @override
+  String get pollSpinButton => 'أدِر';
+
+  @override
+  String get pollWheelTitle => 'أدِر العجلة';
+
+  @override
+  String get pollWheelResult => 'لقد اختارت العجلة!';
+
+  @override
+  String get pollWheelSpin => 'أدِر';
+
+  @override
+  String get pollWheelSpinAgain => 'أدِر مرة أخرى';
+
+  @override
+  String get pollsDeleteConfirmTitle => 'حذف الاستطلاع؟';
+
+  @override
+  String get pollsDeleteConfirmBody =>
+      'سيؤدي ذلك إلى حذف الاستطلاع وجميع الأصوات. لا يمكن التراجع عن هذا.';
+
+  @override
+  String get pollWheelHeadline => 'دع العجلة تقرر!';
+
+  @override
+  String get pollWheelHeadlineFood => 'حان وقت الوليمة!';
+
+  @override
+  String get pollWheelSpinning => 'يدور…';
 }

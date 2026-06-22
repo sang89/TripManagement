@@ -1832,4 +1832,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customizeQueues => 'Customize queues';
+
+  @override
+  String get pollSpinButton => 'Spin';
+
+  @override
+  String get pollWheelTitle => 'Spin the wheel';
+
+  @override
+  String get pollWheelResult => 'The wheel chose!';
+
+  @override
+  String get pollWheelSpin => 'Spin';
+
+  @override
+  String get pollWheelSpinAgain => 'Spin again';
+
+  @override
+  String get pollsDeleteConfirmTitle => 'Delete poll?';
+
+  @override
+  String get pollsDeleteConfirmBody =>
+      'This removes the poll and everyone\'s votes. This can\'t be undone.';
+
+  @override
+  String get pollWheelHeadline => 'Let the wheel decide!';
+
+  @override
+  String get pollWheelHeadlineFood => 'Time to feast!';
+
+  @override
+  String get pollWheelSpinning => 'Spinning…';
 }

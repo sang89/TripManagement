@@ -753,5 +753,15 @@
   "kickFromSlotConfirm": "¡Fuera!",
   "allowDuplicates": "Permitir varias colas",
   "allowDuplicatesSubtitle": "Los miembros pueden estar en más de una cola a la vez",
-  "customizeQueues": "Personalizar colas"
+  "customizeQueues": "Personalizar colas",
+  "pollSpinButton": "Girar",
+  "pollWheelTitle": "Gira la ruleta",
+  "pollWheelResult": "¡La ruleta eligió!",
+  "pollWheelSpin": "Girar",
+  "pollWheelSpinAgain": "Girar de nuevo",
+  "pollsDeleteConfirmTitle": "¿Eliminar la encuesta?",
+  "pollsDeleteConfirmBody": "Esto elimina la encuesta y todos los votos. No se puede deshacer.",
+  "pollWheelHeadline": "¡Que decida la ruleta!",
+  "pollWheelHeadlineFood": "¡Hora de comer!",
+  "pollWheelSpinning": "Girando…"
 }
