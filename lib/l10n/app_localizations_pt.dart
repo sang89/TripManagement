@@ -499,6 +499,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get navProfile => 'Perfil';
 
   @override
+  String get navLive => 'Ao vivo';
+
+  @override
+  String get liveNoneNow => 'Nenhum evento ao vivo agora';
+
+  @override
   String get journalComingSoon => 'Diário em breve';
 
   @override

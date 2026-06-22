@@ -235,6 +235,14 @@ Powered by affiliate APIs from Viator, GetYourGuide, and Klook. **No per-call AP
 | Open a trip with 3 stops | 1 directions call | **$0.005** |
 | Add/move one stop | 1 directions call | **$0.005** |
 
+#### Live button (bottom-nav center button)
+
+| Scenario | Calls | Cost |
+|---|---|---|
+| App launch / resume / Live tap | 1 Supabase `event_sessions` SELECT (`fetchLiveSessions`, indexed on `start_at`/`end_at`, no external API) | **$0.000** |
+
+Negligible — a single small indexed read against the existing Supabase DB, counted within the free-tier DB/bandwidth budget (no Google/Gemini calls).
+
 ---
 
 ### Monthly cost estimates

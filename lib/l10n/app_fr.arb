@@ -163,6 +163,8 @@
   "navTrips": "Voyages",
   "navJournal": "Journal",
   "navProfile": "Profil",
+  "navLive": "En direct",
+  "liveNoneNow": "Aucun événement en direct pour le moment",
   "journalComingSoon": "Journal bientôt disponible",
   "memberSearching": "Recherche en cours…",
   "memberAccountFound": "Compte trouvé",

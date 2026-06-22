@@ -151,6 +151,8 @@
   "navTrips": "行程",
   "navJournal": "日记",
   "navProfile": "资料",
+  "navLive": "直播",
+  "liveNoneNow": "当前没有正在进行的活动",
   "journalComingSoon": "日记即将推出",
   "memberSearching": "搜索中…",
   "memberAccountFound": "找到账户",

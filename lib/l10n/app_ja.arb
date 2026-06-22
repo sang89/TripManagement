@@ -151,6 +151,8 @@
   "navTrips": "旅行",
   "navJournal": "日記",
   "navProfile": "プロフィール",
+  "navLive": "ライブ",
+  "liveNoneNow": "現在ライブ中のイベントはありません",
   "journalComingSoon": "日記機能は近日公開",
   "memberSearching": "検索中…",
   "memberAccountFound": "アカウントが見つかりました",

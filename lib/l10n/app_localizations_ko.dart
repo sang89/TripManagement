@@ -495,6 +495,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navProfile => '프로필';
 
   @override
+  String get navLive => '라이브';
+
+  @override
+  String get liveNoneNow => '현재 진행 중인 이벤트가 없습니다';
+
+  @override
   String get journalComingSoon => '일지 기능 출시 예정';
 
   @override

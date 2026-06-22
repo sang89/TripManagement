@@ -273,20 +273,36 @@ class _TripManagementAppState extends State<TripManagementApp> {
               ),
               GoRoute(
                 path: '/event/:id',
-                builder: (context, state) {
+                // pageBuilder (not builder) with a key that includes the tab +
+                // sessionId: otherwise go_router reuses the existing page when
+                // navigating to the SAME /event/:id path with a different query
+                // (e.g. the Live button deep-linking to the Session tab while the
+                // event is already open), so initState never re-runs and the tab
+                // never switches. A distinct key forces a fresh screen per target.
+                pageBuilder: (context, state) {
                   final eventId = state.pathParameters['id']!;
                   final userId =
                       context.read<AuthProvider>().userId ?? '';
                   final tabParam = state.uri.queryParameters['tab'];
                   final initialTab = tabParam == 'session' ? 3 : 0;
-                  return ChangeNotifierProvider(
-                    create: (_) {
-                      final p = EventChatProvider(
-                          eventId: eventId, userId: userId);
-                      p.init();
-                      return p;
-                    },
-                    child: EventDetailScreen(eventId: eventId, initialTab: initialTab),
+                  final initialSessionId =
+                      state.uri.queryParameters['sessionId'];
+                  return MaterialPage(
+                    key: ValueKey(
+                        'event-$eventId-$initialTab-$initialSessionId'),
+                    child: ChangeNotifierProvider(
+                      create: (_) {
+                        final p = EventChatProvider(
+                            eventId: eventId, userId: userId);
+                        p.init();
+                        return p;
+                      },
+                      child: EventDetailScreen(
+                        eventId: eventId,
+                        initialTab: initialTab,
+                        initialSessionId: initialSessionId,
+                      ),
+                    ),
                   );
                 },
               ),

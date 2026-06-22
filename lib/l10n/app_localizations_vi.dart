@@ -498,6 +498,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get navProfile => 'Hồ sơ';
 
   @override
+  String get navLive => 'Trực tiếp';
+
+  @override
+  String get liveNoneNow => 'Hiện không có sự kiện nào đang diễn ra';
+
+  @override
   String get journalComingSoon => 'Nhật ký sắp ra mắt';
 
   @override

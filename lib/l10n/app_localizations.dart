@@ -1050,6 +1050,18 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get navProfile;
 
+  /// No description provided for @navLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get navLive;
+
+  /// No description provided for @liveNoneNow.
+  ///
+  /// In en, this message translates to:
+  /// **'No live events right now'**
+  String get liveNoneNow;
+
   /// No description provided for @journalComingSoon.
   ///
   /// In en, this message translates to:
