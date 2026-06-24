@@ -59,7 +59,7 @@ class EventCard extends StatelessWidget {
       EventType.trip => Icons.luggage_outlined,
       EventType.birthday => Icons.cake_outlined,
       EventType.wedding => Icons.favorite_outline,
-      EventType.social => Icons.celebration_outlined,
+      EventType.tournament => Icons.emoji_events_outlined,
       EventType.quickBites => Icons.restaurant_outlined,
       EventType.signup => Icons.how_to_reg_outlined,
     };

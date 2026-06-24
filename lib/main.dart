@@ -250,9 +250,9 @@ class _TripManagementAppState extends State<TripManagementApp> {
                     const EventTypeListScreen(eventType: EventType.wedding),
               ),
               GoRoute(
-                path: '/events/social',
+                path: '/events/tournament',
                 builder: (_, _) =>
-                    const EventTypeListScreen(eventType: EventType.social),
+                    const EventTypeListScreen(eventType: EventType.tournament),
               ),
               GoRoute(
                 path: '/events/quick_bites',

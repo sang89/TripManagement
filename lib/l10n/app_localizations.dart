@@ -2370,11 +2370,35 @@ abstract class AppLocalizations {
   /// **'Wedding'**
   String get eventTypeWedding;
 
-  /// No description provided for @eventTypeSocial.
+  /// No description provided for @eventTypeTournament.
   ///
   /// In en, this message translates to:
-  /// **'Social'**
-  String get eventTypeSocial;
+  /// **'Tournament'**
+  String get eventTypeTournament;
+
+  /// No description provided for @tournamentDivisionsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Divisions'**
+  String get tournamentDivisionsTab;
+
+  /// No description provided for @tournamentEntrantsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Teams'**
+  String get tournamentEntrantsTab;
+
+  /// No description provided for @tournamentBracketTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Bracket'**
+  String get tournamentBracketTab;
+
+  /// No description provided for @tournamentCourtsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Courts'**
+  String get tournamentCourtsTab;
 
   /// No description provided for @eventTypeQuickBites.
   ///

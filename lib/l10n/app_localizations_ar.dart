@@ -1221,7 +1221,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get eventTypeWedding => 'زفاف';
 
   @override
-  String get eventTypeSocial => 'اجتماعي';
+  String get eventTypeTournament => 'بطولة';
+
+  @override
+  String get tournamentDivisionsTab => 'الأقسام';
+
+  @override
+  String get tournamentEntrantsTab => 'الفرق';
+
+  @override
+  String get tournamentBracketTab => 'المخطط';
+
+  @override
+  String get tournamentCourtsTab => 'الملاعب';
 
   @override
   String get eventTypeQuickBites => 'لقمات سريعة';

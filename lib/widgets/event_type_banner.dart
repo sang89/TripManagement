@@ -66,17 +66,17 @@ const eventTypeWeddingBannerTheme = EventTypeBannerTheme(
   ],
 );
 
-const eventTypeSocialBannerTheme = EventTypeBannerTheme(
-  gradientColors: [Color(0xFF00695C), Color(0xFF00897B), Color(0xFF4DB6AC)],
+const eventTypeTournamentBannerTheme = EventTypeBannerTheme(
+  gradientColors: [Color(0xFF004D40), Color(0xFF00897B), Color(0xFF64DD17)],
   icons: [
-    Icons.celebration_rounded,
-    Icons.people_rounded,
-    Icons.sports_bar_rounded,
-    Icons.emoji_emotions_rounded,
-    Icons.music_note_rounded,
-    Icons.chat_bubble_rounded,
-    Icons.local_activity_rounded,
-    Icons.nightlife_rounded,
+    Icons.emoji_events_rounded,
+    Icons.sports_tennis_rounded,
+    Icons.account_tree_rounded,
+    Icons.leaderboard_rounded,
+    Icons.military_tech_rounded,
+    Icons.scoreboard_rounded,
+    Icons.workspace_premium_rounded,
+    Icons.stadium_rounded,
   ],
 );
 
@@ -99,7 +99,7 @@ EventTypeBannerTheme bannerThemeFor(EventType type) => switch (type) {
       EventType.quickBites => eventTypeQuickBitesBannerTheme,
       EventType.birthday => eventTypeBirthdayBannerTheme,
       EventType.wedding => eventTypeWeddingBannerTheme,
-      EventType.social => eventTypeSocialBannerTheme,
+      EventType.tournament => eventTypeTournamentBannerTheme,
       EventType.signup => eventTypeSignupBannerTheme,
     };
 

@@ -1212,7 +1212,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eventTypeWedding => '結婚式';
 
   @override
-  String get eventTypeSocial => 'ソーシャル';
+  String get eventTypeTournament => 'トーナメント';
+
+  @override
+  String get tournamentDivisionsTab => '部門';
+
+  @override
+  String get tournamentEntrantsTab => 'チーム';
+
+  @override
+  String get tournamentBracketTab => '対戦表';
+
+  @override
+  String get tournamentCourtsTab => 'コート';
 
   @override
   String get eventTypeQuickBites => 'クイックバイツ';

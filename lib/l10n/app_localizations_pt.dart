@@ -1231,7 +1231,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get eventTypeWedding => 'Casamento';
 
   @override
-  String get eventTypeSocial => 'Social';
+  String get eventTypeTournament => 'Torneio';
+
+  @override
+  String get tournamentDivisionsTab => 'Divisões';
+
+  @override
+  String get tournamentEntrantsTab => 'Equipes';
+
+  @override
+  String get tournamentBracketTab => 'Chave';
+
+  @override
+  String get tournamentCourtsTab => 'Quadras';
 
   @override
   String get eventTypeQuickBites => 'Petiscos Rápidos';

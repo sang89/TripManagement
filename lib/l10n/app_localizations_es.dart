@@ -1230,7 +1230,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get eventTypeWedding => 'Boda';
 
   @override
-  String get eventTypeSocial => 'Social';
+  String get eventTypeTournament => 'Torneo';
+
+  @override
+  String get tournamentDivisionsTab => 'Divisiones';
+
+  @override
+  String get tournamentEntrantsTab => 'Equipos';
+
+  @override
+  String get tournamentBracketTab => 'Cuadro';
+
+  @override
+  String get tournamentCourtsTab => 'Pistas';
 
   @override
   String get eventTypeQuickBites => 'Bocados Rápidos';

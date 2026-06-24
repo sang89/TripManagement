@@ -1213,7 +1213,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get eventTypeWedding => '결혼식';
 
   @override
-  String get eventTypeSocial => '소셜';
+  String get eventTypeTournament => '토너먼트';
+
+  @override
+  String get tournamentDivisionsTab => '부문';
+
+  @override
+  String get tournamentEntrantsTab => '팀';
+
+  @override
+  String get tournamentBracketTab => '대진표';
+
+  @override
+  String get tournamentCourtsTab => '코트';
 
   @override
   String get eventTypeQuickBites => '퀵 바이츠';

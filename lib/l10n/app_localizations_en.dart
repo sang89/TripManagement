@@ -1221,7 +1221,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventTypeWedding => 'Wedding';
 
   @override
-  String get eventTypeSocial => 'Social';
+  String get eventTypeTournament => 'Tournament';
+
+  @override
+  String get tournamentDivisionsTab => 'Divisions';
+
+  @override
+  String get tournamentEntrantsTab => 'Teams';
+
+  @override
+  String get tournamentBracketTab => 'Bracket';
+
+  @override
+  String get tournamentCourtsTab => 'Courts';
 
   @override
   String get eventTypeQuickBites => 'Quick Bites';

@@ -264,13 +264,16 @@ void main() {
       expect(EventType.fromString('wedding'), EventType.wedding);
       expect(EventType.fromString('quick_bites'), EventType.quickBites);
       expect(EventType.fromString('signup'), EventType.signup);
-      expect(EventType.fromString('social'), EventType.social);
+      expect(EventType.fromString('tournament'), EventType.tournament);
     });
 
-    test('defaults unknown or null values to social', () {
-      expect(EventType.fromString(null), EventType.social);
-      expect(EventType.fromString(''), EventType.social);
-      expect(EventType.fromString('unknown'), EventType.social);
+    test('defaults unknown or null values to trip', () {
+      expect(EventType.fromString(null), EventType.trip);
+      expect(EventType.fromString(''), EventType.trip);
+      expect(EventType.fromString('unknown'), EventType.trip);
+      // 'social' was removed and replaced by 'tournament'; legacy value falls
+      // through to the default.
+      expect(EventType.fromString('social'), EventType.trip);
     });
 
     test('dbValue round-trips back to fromString', () {

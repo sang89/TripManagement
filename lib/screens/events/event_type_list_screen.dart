@@ -22,7 +22,7 @@ class EventTypeListScreen extends StatelessWidget {
       EventType.trip => l10n.eventTypeTrip,
       EventType.birthday => l10n.eventTypeBirthday,
       EventType.wedding => l10n.eventTypeWedding,
-      EventType.social => l10n.eventTypeSocial,
+      EventType.tournament => l10n.eventTypeTournament,
       EventType.quickBites => l10n.eventTypeQuickBites,
       EventType.signup => l10n.eventTypeSignup,
     };
@@ -141,7 +141,7 @@ class _EventCard extends StatelessWidget {
       EventType.trip => Icons.luggage_outlined,
       EventType.birthday => Icons.cake_outlined,
       EventType.wedding => Icons.favorite_outline,
-      EventType.social => Icons.celebration_outlined,
+      EventType.tournament => Icons.emoji_events_outlined,
       EventType.quickBites => Icons.restaurant_outlined,
       EventType.signup => Icons.how_to_reg_outlined,
     };
