@@ -5,7 +5,7 @@ enum EventType {
   trip,
   birthday,
   wedding,
-  social,
+  tournament,
   quickBites,
   signup;
 
@@ -15,7 +15,8 @@ enum EventType {
         'wedding'     => EventType.wedding,
         'quick_bites' => EventType.quickBites,
         'signup'      => EventType.signup,
-        _             => EventType.social,
+        'tournament'  => EventType.tournament,
+        _             => EventType.trip,
       };
 
   String get dbValue => switch (this) {
@@ -84,7 +85,7 @@ class Event {
     required this.inviteCode,
     required this.createdAt,
     required this.updatedAt,
-    this.eventType = EventType.social,
+    this.eventType = EventType.trip,
     this.startLocation,
     this.startLat,
     this.startLng,
@@ -108,6 +109,7 @@ class Event {
   bool get isQuickBites => eventType == EventType.quickBites;
   bool get isBirthday => eventType == EventType.birthday;
   bool get isSignup => eventType == EventType.signup;
+  bool get isTournament => eventType == EventType.tournament;
   bool get isSignupLocked =>
       isSignup &&
       signupLockHours != null &&

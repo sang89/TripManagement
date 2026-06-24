@@ -61,6 +61,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   bool get _isQuickBites => _eventType == EventType.quickBites;
   bool get _isBirthday => _eventType == EventType.birthday;
   bool get _isSignup => _eventType == EventType.signup;
+  bool get _isTournament => _eventType == EventType.tournament;
 
   static const _kCuisineTags = [
     'Asian', 'Italian', 'Mexican', 'Japanese', 'Chinese',
@@ -298,7 +299,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         EventType.trip => l10n.eventTypeTrip,
         EventType.birthday => l10n.eventTypeBirthday,
         EventType.wedding => l10n.eventTypeWedding,
-        EventType.social => l10n.eventTypeSocial,
+        EventType.tournament => l10n.eventTypeTournament,
         EventType.quickBites => l10n.eventTypeQuickBites,
         EventType.signup => l10n.eventTypeSignup,
       };
@@ -307,7 +308,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         EventType.trip => Icons.luggage_outlined,
         EventType.birthday => Icons.cake_outlined,
         EventType.wedding => Icons.favorite_outline,
-        EventType.social => Icons.celebration_outlined,
+        EventType.tournament => Icons.emoji_events_outlined,
         EventType.quickBites => Icons.restaurant_outlined,
         EventType.signup => Icons.how_to_reg_outlined,
       };
@@ -594,6 +595,33 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     ),
                   ],
 
+                  // ── Tournament-only hint ─────────────────────────────────
+                  if (_isTournament) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00897B).withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF00897B).withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('🏆', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Divisions (singles/doubles by skill level), formats, scoring, and courts are configured after you create the tournament — add them from the Organize tab.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600], height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // ── Signup-only hint ─────────────────────────────────────
                   if (_isSignup) ...[
                     const SizedBox(height: 16),
@@ -697,7 +725,7 @@ class _SingleTypeChip extends StatelessWidget {
     EventType.trip: Icons.luggage_rounded,
     EventType.birthday: Icons.cake_rounded,
     EventType.wedding: Icons.favorite_rounded,
-    EventType.social: Icons.celebration_rounded,
+    EventType.tournament: Icons.emoji_events_rounded,
     EventType.quickBites: Icons.restaurant_rounded,
     EventType.signup: Icons.how_to_reg_rounded,
   };
@@ -753,7 +781,7 @@ class _EventTypePicker extends StatelessWidget {
     EventType.trip: Icons.luggage_rounded,
     EventType.birthday: Icons.cake_rounded,
     EventType.wedding: Icons.favorite_rounded,
-    EventType.social: Icons.celebration_rounded,
+    EventType.tournament: Icons.emoji_events_rounded,
     EventType.quickBites: Icons.restaurant_rounded,
     EventType.signup: Icons.how_to_reg_rounded,
   };

@@ -6,6 +6,114 @@
 
 ---
 
+## Tournament events
+
+Tournament events (replaced the old `social` type) span four nested levels — Event → Division →
+Match → Game — plus event-level Courts. The bracket/scoring/standings logic is the subtle part.
+
+### Architecture invariants
+
+- **Sport & skill level are free-form strings, not enums.** Organizers can run any sport ("Tennis", "Squash") and any rating scheme ("B", "DUPR 3.5", "Open"); `ScoringConfig` carries a free-form `sport` label and **fully editable rules** (system/pointsToWin/winByTwo/cap/bestOf) entered in the Add-Division form. `ScoringConfig.defaultFor(String)` only prefills known sports (badminton/pickleball); everything else gets a generic rally-to-21 default the user then edits. Only `discipline` (team size) and `format` (bracket algorithm) remain enums — the engine depends on them. DB CHECK constraints on `sport`/`skill_level` were dropped (migration `20260623000000`); don't reintroduce them.
+- **`social` is gone.** The `event_type` enum value `social` was renamed to `tournament` in place
+  (`ALTER TYPE ... RENAME VALUE`, migration `20260622000100`) — existing social rows became
+  tournament. `EventType.fromString` now defaults to `trip`, not social. Never reintroduce a
+  `social` case.
+- **Pure logic is extracted and unit-tested — keep it that way.** `lib/utils/bracket_math.dart`
+  (seeding/pairings/byes/next-match wiring/playoff-from-pools), `lib/utils/scoring_rules.dart`
+  (game/match winner + best-of/win-by-2/cap), `lib/utils/tournament_standings.dart`, and
+  `lib/utils/court_logic.dart` are pure and have tests under `test/utils/`. Logic changes belong in
+  these files (with tests), not inline in widgets or only in SQL.
+- **Server is the source of truth for winners & advancement.** Dart computes the bracket *plan*
+  (deterministic, testable) but `generate_division_bracket` / `record_match_score` /
+  `seed_division_playoffs` do the transactional inserts and derive winners server-side. Do not let a
+  client write `winner_entrant_id` directly.
+- **Byes only exist in round 1** of a single-elim bracket (byes < bracketSize/2). Round-2+ matches
+  are never byes; a bye winner is pre-advanced into the next match in the Dart plan, and a next match
+  with both slots filled is promoted `pending → scheduled`.
+- **Auto-advance mutates a second row.** `record_match_score` writes the winner into the *next*
+  match's slot, so the provider must **refetch the whole division's matches** after scoring (not
+  patch one row). Same for `generateBracket`/`seedPlayoffs`.
+- **Denormalized counts via trigger = the reliable Realtime signal**, exactly like signup sessions.
+  `tournament_divisions.{entrant_count, match_count, completed_match_count}` are maintained by O(1)
+  delta triggers; the division UPDATE is what every member can SELECT. Realtime handlers for
+  divisions/entrants/courts reconstruct via `fromJson`; match/game changes refetch the division
+  (nested games aren't in the payload).
+- **copyWith clear flags.** Tournament models follow the project tristate rule — `clearEntrantCap`,
+  `clearBracketGeneratedAt`, `clearSeed`, `clearPoolId`, `clearPlayer2`, `clearWinner`,
+  `clearCourt`, etc. Use them; never rely on passing `null`.
+
+### Invariants to verify on every tournament change
+
+- Every `switch (event.eventType)` / `EventType.values` site handles `tournament` (compiler-enforced
+  for exhaustive switches; check `.values` iterations and icon/color/label maps too).
+- `_OrganizeTabGroup` shows the 4 tournament tabs (Divisions/Teams/Bracket/Courts), uses the **plural**
+  `TickerProviderStateMixin`, and lists `isTournament` in its `didUpdateWidget` controller-recreation
+  check and the parent `ValueKey`.
+- Scoring respects the division's `ScoringConfig` (best-of, points-to-win, win-by-2, cap). Badminton
+  and pickleball have different defaults (`ScoringConfig.defaultFor`).
+- Registration is blocked once `bracket_generated_at` is set; the Generate-Playoffs action only
+  appears once all pool matches are completed.
+
+### Customization invariants (rosters / ties / manual / templates)
+
+- **Free-form everything that's a label, structured everything the engine needs.** `sport` and
+  `skill_level` are free-form text (no CHECK); `discipline` (team size) and `format` (algorithm)
+  stay enums. `entrant_kind` (individual|team) and `format='custom'` gate behaviour.
+- **Team rosters**: team entrants carry `tournament_entrant_players` (ranked by `sort_order`). The
+  roster is fetched nested (`tournament_entrants?select=*,tournament_entrant_players(*)`); a roster
+  Realtime change refetches the division's entrants.
+- **Ties auto-advance like any match** but the winner is derived from **sub-matches**, not top-level
+  games. `_ensure_tie_submatches` is the single place that builds a tie's sub-matches (idempotent —
+  no-op if they exist or a team is unknown); it's called at generation AND on auto-advance, so a
+  later-round tie gets its sub-matches only once both teams arrive. `record_submatch_score` mutates
+  the sub-match, the parent tie, the *next* tie's slot, and the next tie's sub-matches — so the
+  provider must **refetch the whole division's matches** (which carry nested sub-matches), never
+  patch one row.
+- **same_rank vs manual pairing**: `same_rank` joins the two rosters by position up to
+  `submatch_count`; `manual` creates empty positioned slots filled via `set_submatch_player`. Mirror
+  logic lives in Dart `pairSubmatches` (preview/tests) and SQL `_ensure_tie_submatches` (source of
+  truth) — keep them consistent.
+- **Manual (`custom`) divisions** have no `bracket_generated_at` gate — the Bracket tab shows the
+  builder directly; standings still compute from completed matches.
+- **Templates** upsert by `(user_id, name)` (re-saving updates, no duplicate); built-in presets are
+  client-only (synthetic `builtin:` ids) and never hit the DB.
+
+### Scale invariants (thousands of candidates) — post-audit
+
+- **Bracket size is hard-capped at `kMaxBracketMatches` (4096)** in BOTH Dart (`bracket_math.dart`
+  `buildBracketPlan` → throws `TooManyMatchesError`) and SQL (`generate_division_bracket` →
+  `bracket_too_large`). Round-robin is O(N²); large fields MUST use pools→playoff. Never remove either
+  guard, and keep `estimateMatchCount` in sync with the builders.
+- **Realtime is debounced + scoped.** Match/game/sub-match changes don't full-refetch per event —
+  they go through `_scheduleMatchRefetch` (350ms debounce, coalesces the burst from one score) and
+  early-return when the change isn't for `_watchedEventId`. All tournament cache mutations use
+  **copy-then-swap** (never in-place `removeWhere`/`list[i]=` on a cached list) to avoid
+  ConcurrentModification under Realtime. When adding a handler, follow this pattern.
+- **Standings** (`tournament_standings.dart`) precompute head-to-head into a map before sorting —
+  the comparator must stay O(1) (no per-comparison match rescans), or large round-robins regress to
+  O(n²·matches).
+- **Rendering is virtualized/capped**: the elimination tree uses nested `ListView.builder` (lazy per
+  round); the standings `DataTable` is capped (top 100 + summary). Keep large lists lazy.
+- **`generate_division_bracket`** uses a set-based seed UPDATE and only calls `_ensure_tie_submatches`
+  for ties that already have both teams. **Tie resolution** clinches early / decides by majority once
+  all sub-matches are done, so short/uneven rosters can never deadlock a tie.
+- Indexes that must exist: `tournament_matches(next_match_id)` and `(court_id, scheduled_order)`,
+  `events(created_by)` (RLS organizer checks).
+
+**Known follow-ups (not yet done):** `fetchEntrants`/`fetchMatches` are still unpaginated (bounded by
+the 4096 match cap + optional `entrant_cap`, but a registration list of thousands loads all rows —
+paginate if that becomes a problem); Realtime subscriptions are unfiltered (scoping limits *work*,
+not *delivery*); re-recording a score that *flips* a tie's winner doesn't rebuild the next tie's
+already-created sub-matches.
+
+### Test files for tournament
+
+`test/models/tournament_test.dart` (incl. rosters/ties/templates), `test/utils/bracket_math_test.dart`
+(incl. `pairSubmatches`, team-plan ties), `test/utils/tournament_standings_test.dart`,
+`test/utils/scoring_rules_test.dart` (incl. `tieWinner`), `test/utils/court_logic_test.dart`.
+
+---
+
 ## Signup events
 
 Signup events are the most complex event type — sessions, rosters, attendance, QR signup, and

@@ -1210,7 +1210,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eventTypeWedding => '婚礼';
 
   @override
-  String get eventTypeSocial => '社交';
+  String get eventTypeTournament => '锦标赛';
+
+  @override
+  String get tournamentDivisionsTab => '分组';
+
+  @override
+  String get tournamentEntrantsTab => '队伍';
+
+  @override
+  String get tournamentBracketTab => '对阵表';
+
+  @override
+  String get tournamentCourtsTab => '球场';
 
   @override
   String get eventTypeQuickBites => '快捷美食';

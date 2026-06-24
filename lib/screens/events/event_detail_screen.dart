@@ -68,6 +68,7 @@ import '../../widgets/event_stop_form_sheet.dart';
 import '../../widgets/supabase_image.dart';
 import '../../widgets/poll_wheel_sheet.dart';
 import '../../widgets/wheel_math.dart';
+import '../../widgets/tournament/tournament_tabs.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -645,7 +646,13 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
     with TickerProviderStateMixin {
   late TabController _ctrl;
 
-  int get _tabCount => widget.event.isTrip ? 3 : widget.event.isSignup ? 3 : 2;
+  int get _tabCount => widget.event.isTrip
+      ? 3
+      : widget.event.isSignup
+          ? 3
+          : widget.event.isTournament
+              ? 3
+              : 2;
 
   @override
   void initState() {
@@ -657,7 +664,8 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
   void didUpdateWidget(_InfoTabGroup old) {
     super.didUpdateWidget(old);
     if (old.event.isTrip != widget.event.isTrip ||
-        old.event.isSignup != widget.event.isSignup) {
+        old.event.isSignup != widget.event.isSignup ||
+        old.event.isTournament != widget.event.isTournament) {
       _ctrl.dispose();
       _ctrl = TabController(length: _tabCount, vsync: this);
     }
@@ -699,7 +707,8 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
               Tab(icon: const Icon(Icons.info_outline_rounded, size: 18), text: l10n.detailsTab),
               if (event.isTrip) Tab(icon: const Icon(Icons.route_outlined, size: 18), text: l10n.routeTab),
               Tab(icon: const Icon(Icons.people_outline, size: 18), text: l10n.guestsTab),
-              if (event.isSignup) const Tab(icon: Icon(Icons.help_outline_rounded, size: 18), text: 'Guide'),
+              if (event.isSignup || event.isTournament)
+                const Tab(icon: Icon(Icons.help_outline_rounded, size: 18), text: 'Guide'),
             ],
           ),
         ),
@@ -717,7 +726,9 @@ class _InfoTabGroupState extends State<_InfoTabGroup>
                 authUid: widget.authUid,
               ),
               if (event.isSignup)
-                _SignupGuideTab(isOrganizer: widget.isOrganizer),
+                _SignupGuideTab(isOrganizer: widget.isOrganizer)
+              else if (event.isTournament)
+                _TournamentGuideTab(isOrganizer: widget.isOrganizer),
             ],
           ),
         ),
@@ -758,15 +769,17 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
     with TickerProviderStateMixin {
   late TabController _ctrl;
 
-  int get _tabCount => widget.event.isSignup
+  int get _tabCount => widget.event.isTournament
       ? 4
-      : widget.event.isQuickBites
+      : widget.event.isSignup
           ? 4
-          : widget.event.isBirthday
-              ? 5
-              : widget.event.isTrip
-                  ? 4
-                  : 3;
+          : widget.event.isQuickBites
+              ? 4
+              : widget.event.isBirthday
+                  ? 5
+                  : widget.event.isTrip
+                      ? 4
+                      : 3;
 
   // Inner tab order for signup events: Roster(0), Activity(1), Polls(2), Invite(3).
   static const _signupActivityTabIndex = 1;
@@ -794,6 +807,7 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
     if (old.event.isSignup != widget.event.isSignup ||
         old.event.isQuickBites != widget.event.isQuickBites ||
         old.event.isBirthday != widget.event.isBirthday ||
+        old.event.isTournament != widget.event.isTournament ||
         old.event.isTrip != widget.event.isTrip) {
       _ctrl.dispose();
       _ctrl = TabController(
@@ -845,13 +859,21 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
             unselectedLabelColor: colorScheme.onSurfaceVariant,
             indicatorColor: AppTheme.primary,
             dividerColor: colorScheme.outlineVariant,
-            // Slightly smaller text when 5 tabs to avoid crowding.
+            // Smaller text from 4 tabs up (incl. tournament) to avoid clipping,
+            // especially with longer localized labels.
             labelStyle: TextStyle(
-                fontSize: _tabCount > 4 ? 11 : 13,
+                fontSize: _tabCount >= 4 ? 11 : 13,
                 fontWeight: FontWeight.w600),
             unselectedLabelStyle: TextStyle(
-                fontSize: _tabCount > 4 ? 11 : 13),
-            tabs: [
+                fontSize: _tabCount >= 4 ? 11 : 13),
+            tabs: widget.event.isTournament
+                ? [
+                    Tab(icon: const Icon(Icons.account_tree_outlined, size: 18), text: l10n.tournamentDivisionsTab),
+                    Tab(icon: const Icon(Icons.groups_outlined, size: 18), text: l10n.tournamentEntrantsTab),
+                    Tab(icon: const Icon(Icons.emoji_events_outlined, size: 18), text: l10n.tournamentBracketTab),
+                    Tab(icon: const Icon(Icons.stadium_outlined, size: 18), text: l10n.tournamentCourtsTab),
+                  ]
+                : [
               if (widget.event.isSignup)
                 Tab(icon: const Icon(Icons.format_list_numbered_outlined, size: 18), text: l10n.signupRosterTab)
               else
@@ -877,7 +899,30 @@ class _OrganizeTabGroupState extends State<_OrganizeTabGroup>
         Expanded(
           child: TabBarView(
             controller: _ctrl,
-            children: [
+            children: widget.event.isTournament
+                ? [
+                    TournamentDivisionsTab(
+                      event: widget.event,
+                      authUid: widget.authUid,
+                      isOrganizer: widget.isOrganizer,
+                    ),
+                    TournamentEntrantsTab(
+                      event: widget.event,
+                      authUid: widget.authUid,
+                      isOrganizer: widget.isOrganizer,
+                    ),
+                    TournamentBracketTab(
+                      event: widget.event,
+                      authUid: widget.authUid,
+                      isOrganizer: widget.isOrganizer,
+                    ),
+                    TournamentCourtsTab(
+                      event: widget.event,
+                      authUid: widget.authUid,
+                      isOrganizer: widget.isOrganizer,
+                    ),
+                  ]
+                : [
               if (widget.event.isSignup)
                 _SignupRosterTab(
                   event: widget.event,
@@ -1081,6 +1126,185 @@ class _SignupGuideTab extends StatelessWidget {
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+// ── Tournament Guide tab ──────────────────────────────────────────────────────
+
+class _TournamentGuideTab extends StatelessWidget {
+  final bool isOrganizer;
+  const _TournamentGuideTab({required this.isOrganizer});
+
+  static const _green = Color(0xFF00897B);
+  static const _amber = Color(0xFFEA580C);
+  static const _purple = Color(0xFF7C3AED);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      children: [
+        const Text('How tournaments work',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Text(
+          isOrganizer
+              ? 'A tournament holds one or more divisions (draws). Set each up, add teams, generate the bracket, then record scores.'
+              : 'Here\'s how this tournament is run and how to follow your matches.',
+          style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.4),
+        ),
+        const SizedBox(height: 20),
+
+        if (isOrganizer) ...[
+          _GuideSectionExpansion(
+            title: 'Quick start',
+            color: _green,
+            icon: Icons.flag_rounded,
+            steps: const [
+              _GuideStep(
+                emoji: '➕',
+                title: '1. Add a division',
+                body: 'Open Organize → Divisions → "Add Division". A division is one draw, e.g. "Men\'s Doubles · Level B". Pick the sport, entrants (individuals or teams), format, and scoring — or start from a saved template.',
+                color: _green,
+              ),
+              _GuideStep(
+                emoji: '👥',
+                title: '2. Register teams',
+                body: 'Go to the Teams tab, choose your division, and add each entry. For team divisions you enter a ranked roster (rank 1 first); for singles/doubles you enter the player name(s).',
+                color: _green,
+              ),
+              _GuideStep(
+                emoji: '🗂️',
+                title: '3. Generate the bracket',
+                body: 'Open the Bracket tab, pick the division, and tap "Generate Bracket". This seeds the draw and creates the matches (with byes for the top seeds when needed). Registration locks once generated.',
+                color: _green,
+              ),
+              _GuideStep(
+                emoji: '🎾',
+                title: '4. Record scores',
+                body: 'Tap a match to enter game scores. The winner advances automatically to the next round. Round-robin and pool standings update live.',
+                color: _green,
+                isLast: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          _GuideSectionExpansion(
+            title: 'Formats',
+            color: _amber,
+            icon: Icons.account_tree_rounded,
+            initiallyExpanded: false,
+            steps: const [
+              _GuideStep(
+                emoji: '🏆',
+                title: 'Single elimination',
+                body: 'Knockout bracket — lose once and you\'re out. Top seeds get byes when the count isn\'t a power of two.',
+                color: _amber,
+              ),
+              _GuideStep(
+                emoji: '🔁',
+                title: 'Round robin',
+                body: 'Everyone plays everyone; a standings table ranks by wins, then head-to-head, then game/point differential.',
+                color: _amber,
+              ),
+              _GuideStep(
+                emoji: '🧩',
+                title: 'Pools → playoffs',
+                body: 'Round-robin pools first, then the top finishers cross over into a knockout. Tap "Generate Playoffs" once all pool matches are done.',
+                color: _amber,
+              ),
+              _GuideStep(
+                emoji: '🛠️',
+                title: 'Custom (manual)',
+                body: 'Total freedom: build rounds and matches by hand in the Bracket tab — pick the two sides yourself. Great for unusual rules.',
+                color: _amber,
+                isLast: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          _GuideSectionExpansion(
+            title: 'Team ties',
+            color: _purple,
+            icon: Icons.groups_rounded,
+            initiallyExpanded: false,
+            steps: const [
+              _GuideStep(
+                emoji: '🤝',
+                title: 'What a tie is',
+                body: 'In a team division, a match between two teams is a "tie" made of several sub-matches (e.g. rank 1 vs rank 1). The team that wins enough sub-matches wins the tie.',
+                color: _purple,
+              ),
+              _GuideStep(
+                emoji: '🎯',
+                title: 'Pairing',
+                body: '"By rank" pairs each team\'s players by roster position automatically. "Manual" lets you assign who plays whom in each sub-match. Set this when you create the division.',
+                color: _purple,
+              ),
+              _GuideStep(
+                emoji: '📊',
+                title: 'Scoring a tie',
+                body: 'Tap the tie, then score each sub-match. Once a team reaches the win threshold, the tie is decided and the winner advances.',
+                color: _purple,
+                isLast: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          _GuideSectionExpansion(
+            title: 'Courts & templates',
+            color: _green,
+            icon: Icons.stadium_rounded,
+            initiallyExpanded: false,
+            steps: const [
+              _GuideStep(
+                emoji: '🏟️',
+                title: 'Courts',
+                body: 'Add your venue\'s courts in the Courts tab, then assign a ready match to a court from the bracket. Each court shows what\'s "on court now" and what\'s next; you\'ll be warned if a player is double-booked.',
+                color: _green,
+              ),
+              _GuideStep(
+                emoji: '🔖',
+                title: 'Save a template',
+                body: 'Configured a division you\'ll reuse? Tap "Save as template" in the Add Division sheet, then pick it from "Start from template" next time — even in other tournaments.',
+                color: _green,
+                isLast: true,
+              ),
+            ],
+          ),
+        ] else ...[
+          _GuideSectionExpansion(
+            title: 'Following the tournament',
+            color: _green,
+            icon: Icons.visibility_rounded,
+            steps: const [
+              _GuideStep(
+                emoji: '🗂️',
+                title: 'Find your division',
+                body: 'Open the Bracket tab and pick your division to see the draw, the schedule, and live standings.',
+                color: _green,
+              ),
+              _GuideStep(
+                emoji: '🎾',
+                title: 'Your matches',
+                body: 'Your matchups appear in the bracket. The organizer records scores — winners advance automatically, so check back to see who you play next.',
+                color: _green,
+              ),
+              _GuideStep(
+                emoji: '🏟️',
+                title: 'Where to play',
+                body: 'The Courts tab shows which court each match is on and what\'s up next.',
+                color: _green,
+                isLast: true,
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

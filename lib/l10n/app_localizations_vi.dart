@@ -1227,7 +1227,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String get eventTypeWedding => 'Đám cưới';
 
   @override
-  String get eventTypeSocial => 'Xã hội';
+  String get eventTypeTournament => 'Giải đấu';
+
+  @override
+  String get tournamentDivisionsTab => 'Hạng đấu';
+
+  @override
+  String get tournamentEntrantsTab => 'Đội';
+
+  @override
+  String get tournamentBracketTab => 'Nhánh đấu';
+
+  @override
+  String get tournamentCourtsTab => 'Sân';
 
   @override
   String get eventTypeQuickBites => 'Bữa Ăn Nhanh';

@@ -23,7 +23,7 @@ implementing any feature in its domain:
 
 **Rule:** After any session that adds a feature, changes the DB schema, adds a new provider/widget/screen, or changes a behaviour described in these docs — **update `architecture.md` and any relevant domain doc (`invite_flow.md`, etc.) before finishing**. These files must always reflect the current state of the codebase so future Claude sessions start with accurate context.
 
-**Rule:** When fixing a bug or adding a feature for one event type, **audit all other event types for the same issue**. The six event types (social, birthday, trip, quickBites, signup, and any future types) share large swaths of UI and provider code. A bug in one is usually present in all. Check every `switch`/`if` on `event.eventType`, every shared widget, and every shared DB column or RLS policy — do not mark a fix complete until you have verified each event type is unaffected or fixed.
+**Rule:** When fixing a bug or adding a feature for one event type, **audit all other event types for the same issue**. The six event types (tournament, birthday, trip, quickBites, signup, wedding, and any future types) share large swaths of UI and provider code. A bug in one is usually present in all. Check every `switch`/`if` on `event.eventType`, every shared widget, and every shared DB column or RLS policy — do not mark a fix complete until you have verified each event type is unaffected or fixed.
 
 **Rule:** Before touching signup event code, read `bugs.md` — it contains the full audit checklist, all previously fixed bugs with their root causes, and the invariants that must hold. Update `bugs.md` whenever a new non-obvious bug is fixed or a new invariant is identified.
 

@@ -17,6 +17,9 @@ import '../models/event_stop.dart';
 import '../models/event_toast.dart';
 import '../models/event_wish.dart';
 import '../models/event_wishlist_item.dart';
+import '../models/tournament.dart';
+import '../utils/bracket_math.dart';
+import '../utils/court_logic.dart';
 import '../services/connectivity_service.dart';
 import '../services/local_cache.dart';
 import '../services/offline_queue.dart';
@@ -76,6 +79,12 @@ class EventProvider extends ChangeNotifier {
   // across ALL of the user's events. Populated by fetchLiveSessions() — used by
   // the bottom-nav "Live" button to cycle through currently-live sessions.
   List<EventSession> _liveSessions = [];
+
+  // Tournament caches (fetched on demand for tournament events only).
+  final Map<String, List<TournamentDivision>> _divisions = {}; // by eventId
+  final Map<String, List<TournamentEntrant>> _entrants = {};   // by divisionId
+  final Map<String, List<TournamentMatch>> _matches = {};      // by divisionId
+  final Map<String, List<Court>> _courts = {};                 // by eventId
 
   // Birthday-specific caches (fetched on demand for birthday events only).
   final Map<String, List<EventWishlistItem>> _wishlistItems = {};
@@ -345,6 +354,14 @@ class EventProvider extends ChangeNotifier {
       t.cancel();
     }
     _chatBgTimers.clear();
+    for (final t in _divRefetchTimers.values) {
+      t.cancel();
+    }
+    _divRefetchTimers.clear();
+    for (final t in _entrantRefetchTimers.values) {
+      t.cancel();
+    }
+    _entrantRefetchTimers.clear();
     _chatBgCommitted.clear();
     _events = [];
     _photos.clear();
@@ -1299,7 +1316,291 @@ class EventProvider extends ChangeNotifier {
           callback: (p) => handleQueueEntryDelete(p.oldRecord),
         )
 
+        // ── tournament_divisions (INSERT/UPDATE/DELETE) ─────────────────────
+        // The count triggers fire an UPDATE on the division row after every
+        // entrant/match change — the reliable signal all members can SELECT.
+        // Reconstruct the full object via fromJson (never partial-patch).
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_divisions',
+          callback: (p) => _handleDivisionUpsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_divisions',
+          callback: (p) => _handleDivisionUpsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'tournament_divisions',
+          callback: (p) {
+            final id = p.oldRecord['id'] as String?;
+            final eventId = p.oldRecord['event_id'] as String?;
+            if (id == null || eventId == null) return;
+            final l = _divisions[eventId];
+            if (l != null) _divisions[eventId] = l.where((d) => d.id != id).toList();
+            _entrants.remove(id);
+            _matches.remove(id);
+            notifyListeners();
+          },
+        )
+
+        // ── tournament_entrants (INSERT/UPDATE/DELETE) ──────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_entrants',
+          callback: (p) => _handleEntrantUpsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_entrants',
+          callback: (p) => _handleEntrantUpsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'tournament_entrants',
+          callback: (p) {
+            final id = p.oldRecord['id'] as String?;
+            final divisionId = p.oldRecord['division_id'] as String?;
+            if (id == null || divisionId == null) return;
+            final l = _entrants[divisionId];
+            if (l != null) _entrants[divisionId] = l.where((e) => e.id != id).toList();
+            notifyListeners();
+          },
+        )
+
+        // ── tournament_entrant_players (roster changes) ─────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_entrant_players',
+          callback: (p) =>
+              _handleEntrantPlayerChange(p.newRecord['entrant_id'] as String?),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_entrant_players',
+          callback: (p) =>
+              _handleEntrantPlayerChange(p.newRecord['entrant_id'] as String?),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'tournament_entrant_players',
+          callback: (p) =>
+              _handleEntrantPlayerChange(p.oldRecord['entrant_id'] as String?),
+        )
+
+        // ── tournament_tie_submatches (a tie's sub-matches) ─────────────────
+        // A sub-match score recomputes the parent tie + auto-advances; refetch
+        // the owning division's matches (which carry nested sub-matches).
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_tie_submatches',
+          callback: (p) =>
+              _handleSubmatchChange(p.newRecord['tie_match_id'] as String?),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_tie_submatches',
+          callback: (p) =>
+              _handleSubmatchChange(p.newRecord['tie_match_id'] as String?),
+        )
+
+        // ── tournament_matches (INSERT/UPDATE/DELETE) ───────────────────────
+        // A score record / auto-advance mutates entrant + winner across rows;
+        // refetch the division's matches (with nested games) when cached.
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_matches',
+          callback: (p) => _handleMatchChange(p.newRecord['division_id'] as String?),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_matches',
+          callback: (p) => _handleMatchChange(p.newRecord['division_id'] as String?),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'tournament_matches',
+          callback: (p) => _handleMatchChange(p.oldRecord['division_id'] as String?),
+        )
+
+        // ── tournament_match_games (INSERT/UPDATE/DELETE) ───────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_match_games',
+          callback: (p) => _handleGameChange(p.newRecord['match_id'] as String?),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_match_games',
+          callback: (p) => _handleGameChange(p.newRecord['match_id'] as String?),
+        )
+
+        // ── tournament_courts (INSERT/UPDATE/DELETE) ────────────────────────
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'tournament_courts',
+          callback: (p) => _handleCourtUpsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'tournament_courts',
+          callback: (p) => _handleCourtUpsert(p.newRecord),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'tournament_courts',
+          callback: (p) {
+            final id = p.oldRecord['id'] as String?;
+            final eventId = p.oldRecord['event_id'] as String?;
+            if (id == null || eventId == null) return;
+            final l = _courts[eventId];
+            if (l != null) _courts[eventId] = l.where((c) => c.id != id).toList();
+            notifyListeners();
+          },
+        )
+
         .subscribe();
+  }
+
+  // ── Tournament Realtime handlers ────────────────────────────────────────────
+
+  void _handleDivisionUpsert(Map<String, dynamic> row) {
+    final eventId = row['event_id'] as String?;
+    if (eventId == null) return;
+    // Only patch caches we already hold (event has been opened).
+    if (!_divisions.containsKey(eventId)) return;
+    // Skip events not currently on screen (refreshed on open).
+    if (_watchedEventId != null && _watchedEventId != eventId) return;
+    final division = TournamentDivision.fromJson(row);
+    final list = List<TournamentDivision>.from(_divisions[eventId]!);
+    final idx = list.indexWhere((d) => d.id == division.id);
+    if (idx >= 0) {
+      list[idx] = division;
+    } else {
+      list.add(division);
+    }
+    _divisions[eventId] = list;
+    notifyListeners();
+  }
+
+  void _handleEntrantUpsert(Map<String, dynamic> row) {
+    final divisionId = row['division_id'] as String?;
+    if (divisionId == null || !_entrants.containsKey(divisionId)) return;
+    if (!_divisionIsWatched(divisionId)) return;
+    final entrant = TournamentEntrant.fromJson(row);
+    final list = List<TournamentEntrant>.from(_entrants[divisionId]!);
+    final idx = list.indexWhere((e) => e.id == entrant.id);
+    if (idx >= 0) {
+      list[idx] = entrant;
+    } else {
+      list.add(entrant);
+    }
+    _entrants[divisionId] = list;
+    notifyListeners();
+  }
+
+  // Debounce timers so a burst of match + game + sub-match + division Realtime
+  // events from a single score entry collapses into ONE refetch per division
+  // — critical at thousands of matches with many connected clients.
+  final Map<String, Timer> _divRefetchTimers = {};
+  final Map<String, Timer> _entrantRefetchTimers = {};
+  static const _kTournamentRefetchDebounce = Duration(milliseconds: 350);
+
+  /// True when the change for [divisionId] is for the tournament the user is
+  /// currently viewing. Skips work for events not on screen (mirrors the
+  /// session `_watchedEventId` scoping).
+  bool _divisionIsWatched(String divisionId) {
+    if (_watchedEventId == null) return true; // nothing scoped → allow
+    final eventId = _eventIdForDivision(divisionId);
+    // If we can't resolve the event (division not cached), fall back to the
+    // cache-presence guard at the call site.
+    return eventId == null || eventId == _watchedEventId;
+  }
+
+  void _scheduleMatchRefetch(String divisionId) {
+    if (!_matches.containsKey(divisionId)) return; // only cached divisions
+    if (!_divisionIsWatched(divisionId)) return;
+    _divRefetchTimers[divisionId]?.cancel();
+    _divRefetchTimers[divisionId] =
+        Timer(_kTournamentRefetchDebounce, () => unawaited(fetchMatches(divisionId)));
+  }
+
+  void _scheduleEntrantRefetch(String divisionId) {
+    if (!_entrants.containsKey(divisionId)) return;
+    if (!_divisionIsWatched(divisionId)) return;
+    _entrantRefetchTimers[divisionId]?.cancel();
+    _entrantRefetchTimers[divisionId] =
+        Timer(_kTournamentRefetchDebounce, () => unawaited(fetchEntrants(divisionId)));
+  }
+
+  String? _divisionIdForMatch(String matchId) {
+    for (final entry in _matches.entries) {
+      if (entry.value.any((m) => m.id == matchId)) return entry.key;
+    }
+    return null;
+  }
+
+  void _handleMatchChange(String? divisionId) {
+    if (divisionId == null) return;
+    _scheduleMatchRefetch(divisionId);
+  }
+
+  void _handleEntrantPlayerChange(String? entrantId) {
+    if (entrantId == null) return;
+    for (final entry in _entrants.entries) {
+      if (entry.value.any((e) => e.id == entrantId)) {
+        _scheduleEntrantRefetch(entry.key);
+        return;
+      }
+    }
+  }
+
+  void _handleSubmatchChange(String? tieMatchId) {
+    if (tieMatchId == null) return;
+    final divisionId = _divisionIdForMatch(tieMatchId);
+    if (divisionId != null) _scheduleMatchRefetch(divisionId);
+  }
+
+  void _handleGameChange(String? matchId) {
+    if (matchId == null) return;
+    final divisionId = _divisionIdForMatch(matchId);
+    if (divisionId != null) _scheduleMatchRefetch(divisionId);
+  }
+
+  void _handleCourtUpsert(Map<String, dynamic> row) {
+    final eventId = row['event_id'] as String?;
+    if (eventId == null || !_courts.containsKey(eventId)) return;
+    if (_watchedEventId != null && _watchedEventId != eventId) return;
+    final court = Court.fromJson(row);
+    final list = List<Court>.from(_courts[eventId]!);
+    final idx = list.indexWhere((c) => c.id == court.id);
+    if (idx >= 0) {
+      list[idx] = court;
+    } else {
+      list.add(court);
+    }
+    _courts[eventId] = list;
+    notifyListeners();
   }
 
   Future<void> _reloadEvent(String eventId) async {
@@ -1334,7 +1635,7 @@ class EventProvider extends ChangeNotifier {
     required DateTime startAt,
     DateTime? endAt,
     int? capacity,
-    EventType eventType = EventType.social,
+    EventType eventType = EventType.trip,
     String? startLocation,
     double? startLat,
     double? startLng,
@@ -1668,6 +1969,565 @@ class EventProvider extends ChangeNotifier {
   // B9: Call from event detail screen initState/dispose to scope Realtime
   // notifyListeners() to the currently viewed event.
   void watchEvent(String? eventId) => _watchedEventId = eventId;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Tournament (divisions / entrants / matches / courts)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── Accessors ─────────────────────────────────────────────────────────────
+  List<TournamentDivision> divisionsFor(String eventId) =>
+      _divisions[eventId] ?? const [];
+
+  List<TournamentEntrant> entrantsFor(String divisionId) =>
+      _entrants[divisionId] ?? const [];
+
+  /// Active (non-withdrawn) entrants for a division.
+  List<TournamentEntrant> activeEntrantsFor(String divisionId) =>
+      entrantsFor(divisionId).where((e) => !e.isWithdrawn).toList();
+
+  List<TournamentMatch> matchesFor(String divisionId) =>
+      _matches[divisionId] ?? const [];
+
+  List<Court> courtsFor(String eventId) => _courts[eventId] ?? const [];
+
+  // ── Fetching ──────────────────────────────────────────────────────────────
+
+  /// Loads divisions + courts for a tournament event. Call when the Organize
+  /// tab opens (lazy, like signup session queues).
+  Future<void> fetchTournament(String eventId) async {
+    await Future.wait([fetchDivisions(eventId), fetchCourts(eventId)]);
+  }
+
+  Future<void> fetchDivisions(String eventId) async {
+    final rows = await _db
+        .from('tournament_divisions')
+        .select()
+        .eq('event_id', eventId)
+        .order('created_at', ascending: true) as List<dynamic>;
+    _divisions[eventId] = rows
+        .map((r) => TournamentDivision.fromJson(r as Map<String, dynamic>))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> fetchEntrants(String divisionId) async {
+    final rows = await _db
+        .from('tournament_entrants')
+        .select('*, tournament_entrant_players(*)')
+        .eq('division_id', divisionId)
+        .order('seed', ascending: true, nullsFirst: false)
+        .order('registered_at', ascending: true) as List<dynamic>;
+    _entrants[divisionId] = rows
+        .map((r) => TournamentEntrant.fromJson(r as Map<String, dynamic>))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> fetchMatches(String divisionId) async {
+    final rows = await _db
+        .from('tournament_matches')
+        .select('*, tournament_match_games(*), tournament_tie_submatches(*)')
+        .eq('division_id', divisionId)
+        .order('round_number', ascending: true)
+        .order('match_number', ascending: true) as List<dynamic>;
+    _matches[divisionId] = rows
+        .map((r) => TournamentMatch.fromJson(r as Map<String, dynamic>))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> fetchCourts(String eventId) async {
+    final rows = await _db
+        .from('tournament_courts')
+        .select()
+        .eq('event_id', eventId)
+        .order('sort_order', ascending: true) as List<dynamic>;
+    _courts[eventId] = rows
+        .map((r) => Court.fromJson(r as Map<String, dynamic>))
+        .toList();
+    notifyListeners();
+  }
+
+  // ── Division mutations ──────────────────────────────────────────────────────
+
+  Future<TournamentDivision> createDivision({
+    required String eventId,
+    required String name,
+    required String sport,
+    required Discipline discipline,
+    required String skillLevel,
+    required DivisionFormat format,
+    required ScoringConfig scoringConfig,
+    int? entrantCap,
+    int? poolCount,
+    int? advancePerPool,
+    EntrantKind entrantKind = EntrantKind.individual,
+    int? rosterSize,
+    TieConfig? tieConfig,
+  }) async {
+    final rows = await _db.rpc('create_tournament_division', params: {
+      'p_event_id': eventId,
+      'p_name': name,
+      'p_sport': sport,
+      'p_discipline': discipline.dbValue,
+      'p_skill_level': skillLevel,
+      'p_format': format.dbValue,
+      'p_scoring_config': scoringConfig.toJson(),
+      'p_entrant_cap': entrantCap,
+      'p_pool_count': poolCount,
+      'p_advance_per_pool': advancePerPool,
+      'p_entrant_kind': entrantKind.dbValue,
+      'p_roster_size': rosterSize,
+      'p_tie_config': tieConfig?.toJson(),
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to create division');
+    final division =
+        TournamentDivision.fromJson(rows.first as Map<String, dynamic>);
+    final list = List<TournamentDivision>.from(_divisions[eventId] ?? const []);
+    list.add(division);
+    _divisions[eventId] = list;
+    notifyListeners();
+    return division;
+  }
+
+  Future<TournamentDivision> updateDivision({
+    required String divisionId,
+    required String eventId,
+    String? name,
+    ScoringConfig? scoringConfig,
+    int? entrantCap,
+    bool clearEntrantCap = false,
+    int? poolCount,
+    int? advancePerPool,
+  }) async {
+    final rows = await _db.rpc('update_tournament_division', params: {
+      'p_division_id': divisionId,
+      'p_name': name,
+      'p_scoring_config': scoringConfig?.toJson(),
+      'p_entrant_cap': entrantCap,
+      'p_clear_entrant_cap': clearEntrantCap,
+      'p_pool_count': poolCount,
+      'p_advance_per_pool': advancePerPool,
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to update division');
+    final division =
+        TournamentDivision.fromJson(rows.first as Map<String, dynamic>);
+    _replaceDivision(eventId, division);
+    notifyListeners();
+    return division;
+  }
+
+  /// Generates the bracket/schedule for a division. The plan (seeding,
+  /// pairings, byes, next-match wiring) is computed in Dart and inserted by the
+  /// generate_division_bracket RPC. Refetches matches + division afterwards.
+  Future<void> generateBracket(TournamentDivision division) async {
+    final entrants = activeEntrantsFor(division.id);
+    if (entrants.length < 2) {
+      throw Exception('Need at least 2 teams to generate a bracket');
+    }
+    // Seed by current order (seed then registration order from fetchEntrants).
+    final seededIds = entrants.map((e) => e.id).toList();
+    final plan = buildBracketPlan(division, seededIds);
+    await _db.rpc('generate_division_bracket', params: {
+      'p_division_id': division.id,
+      'p_plan': plan.matches.map((m) => m.toJson()).toList(),
+      'p_seeds': plan.seeds.map((k, v) => MapEntry(k, v)),
+    });
+    await Future.wait([
+      fetchMatches(division.id),
+      fetchDivisions(division.eventId),
+      fetchEntrants(division.id),
+    ]);
+  }
+
+  /// Records per-game scores for a match. The RPC derives winners, completes
+  /// the match, auto-advances the winner into the next match, and frees the
+  /// court. Refetches the division's matches (auto-advance mutates a second row)
+  /// + the division (status/counts).
+  Future<void> recordMatchScore(
+    TournamentMatch match,
+    List<(int score1, int score2)> games,
+  ) async {
+    final payload = [
+      for (var i = 0; i < games.length; i++)
+        {
+          'game_number': i + 1,
+          'entrant1_score': games[i].$1,
+          'entrant2_score': games[i].$2,
+        },
+    ];
+    await _db.rpc('record_match_score', params: {
+      'p_match_id': match.id,
+      'p_games': payload,
+    });
+    await fetchMatches(match.divisionId);
+    final eventId = _eventIdForDivision(match.divisionId);
+    if (eventId != null) await fetchDivisions(eventId);
+  }
+
+  /// Seeds the single-elimination playoff for a pools→playoff division from the
+  /// completed pool standings. The plan is computed in Dart.
+  Future<void> seedPlayoffs(TournamentDivision division) async {
+    final entrants = activeEntrantsFor(division.id);
+    final poolMatches = matchesFor(division.id)
+        .where((m) => m.bracketType == BracketType.pool)
+        .toList();
+    final plan = buildPlayoffFromPools(
+        entrants, poolMatches, division.advancePerPool ?? 2);
+    await _db.rpc('seed_division_playoffs', params: {
+      'p_division_id': division.id,
+      'p_plan': plan.matches.map((m) => m.toJson()).toList(),
+    });
+    await fetchMatches(division.id);
+    final eventId = _eventIdForDivision(division.id);
+    if (eventId != null) await fetchDivisions(eventId);
+  }
+
+  /// Records the games of one tie sub-match. The RPC derives the sub-match
+  /// winner, recomputes the tie, and auto-advances the tie winner — so refetch
+  /// the whole division's matches.
+  Future<void> recordSubmatchScore(
+    String submatchId,
+    String divisionId,
+    List<(int side1, int side2)> games,
+  ) async {
+    final payload = [
+      for (final g in games) {'side1_score': g.$1, 'side2_score': g.$2},
+    ];
+    await _db.rpc('record_submatch_score', params: {
+      'p_submatch_id': submatchId,
+      'p_games': payload,
+    });
+    await fetchMatches(divisionId);
+  }
+
+  /// Assigns a roster player to a manual-pairing sub-match slot ([side] 1 or 2).
+  Future<void> setSubmatchPlayer(
+    String submatchId,
+    String divisionId,
+    int side,
+    String playerId,
+  ) async {
+    await _db.rpc('set_submatch_player', params: {
+      'p_submatch_id': submatchId,
+      'p_side': side,
+      'p_player_id': playerId,
+    });
+    await fetchMatches(divisionId);
+  }
+
+  String? _eventIdForDivision(String divisionId) {
+    for (final entry in _divisions.entries) {
+      if (entry.value.any((d) => d.id == divisionId)) return entry.key;
+    }
+    return null;
+  }
+
+  // ── Rule templates (per-user, reusable division configs) ────────────────────
+
+  List<TournamentTemplate> _templates = [];
+  List<TournamentTemplate> get templates => _templates;
+
+  Future<void> fetchTemplates() async {
+    final rows = await _db
+        .from('tournament_templates')
+        .select()
+        .order('created_at', ascending: true) as List<dynamic>;
+    _templates = rows
+        .map((r) => TournamentTemplate.fromJson(r as Map<String, dynamic>))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> saveTemplate(String name, Map<String, dynamic> config) async {
+    final rows = await _db.rpc('save_tournament_template', params: {
+      'p_name': name,
+      'p_config': config,
+    }) as List<dynamic>;
+    if (rows.isNotEmpty) {
+      final t = TournamentTemplate.fromJson(rows.first as Map<String, dynamic>);
+      final list = List<TournamentTemplate>.from(_templates)
+        ..removeWhere((x) => x.id == t.id || x.name == t.name);
+      list.add(t);
+      _templates = list;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTemplate(String id) async {
+    await _db.rpc('delete_tournament_template', params: {'p_id': id});
+    _templates = _templates.where((t) => t.id != id).toList();
+    notifyListeners();
+  }
+
+  // ── Manual builder (custom-format divisions) ────────────────────────────────
+
+  Future<void> addManualMatch({
+    required String divisionId,
+    required int roundNumber,
+    String? entrant1Id,
+    String? entrant2Id,
+    bool isTie = false,
+  }) async {
+    await _db.rpc('add_tournament_match', params: {
+      'p_division_id': divisionId,
+      'p_round_number': roundNumber,
+      'p_entrant1_id': entrant1Id,
+      'p_entrant2_id': entrant2Id,
+      'p_is_tie': isTie,
+    });
+    await fetchMatches(divisionId);
+    final eventId = _eventIdForDivision(divisionId);
+    if (eventId != null) await fetchDivisions(eventId);
+  }
+
+  Future<void> updateManualMatch({
+    required String matchId,
+    required String divisionId,
+    String? entrant1Id,
+    String? entrant2Id,
+    bool clear1 = false,
+    bool clear2 = false,
+  }) async {
+    await _db.rpc('update_tournament_match', params: {
+      'p_match_id': matchId,
+      'p_entrant1_id': entrant1Id,
+      'p_entrant2_id': entrant2Id,
+      'p_clear1': clear1,
+      'p_clear2': clear2,
+    });
+    await fetchMatches(divisionId);
+  }
+
+  Future<void> deleteManualMatch(String matchId, String divisionId) async {
+    await _db.rpc('delete_tournament_match', params: {'p_match_id': matchId});
+    await fetchMatches(divisionId);
+  }
+
+  Future<void> deleteDivision(String divisionId, String eventId) async {
+    await _db.rpc('delete_tournament_division', params: {
+      'p_division_id': divisionId,
+    });
+    final dl = _divisions[eventId];
+    if (dl != null) _divisions[eventId] = dl.where((d) => d.id != divisionId).toList();
+    _entrants.remove(divisionId);
+    _matches.remove(divisionId);
+    notifyListeners();
+  }
+
+  // ── Entrant mutations ───────────────────────────────────────────────────────
+
+  Future<TournamentEntrant> registerEntrant({
+    required String divisionId,
+    required String teamName,
+    required String player1Name,
+    String? player1UserId,
+    String? player2Name,
+    String? player2UserId,
+  }) async {
+    final rows = await _db.rpc('register_tournament_entrant', params: {
+      'p_division_id': divisionId,
+      'p_team_name': teamName,
+      'p_player1_name': player1Name,
+      'p_player1_user_id': player1UserId,
+      'p_player2_name': player2Name,
+      'p_player2_user_id': player2UserId,
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to register entrant');
+    final entrant =
+        TournamentEntrant.fromJson(rows.first as Map<String, dynamic>);
+    final list = List<TournamentEntrant>.from(_entrants[divisionId] ?? const []);
+    list.add(entrant);
+    _entrants[divisionId] = list;
+    notifyListeners();
+    return entrant;
+  }
+
+  /// Registers a team entrant with a ranked roster. [players] is an ordered
+  /// list of (name, rank) — order is the team's ranking.
+  Future<TournamentEntrant> registerTeam({
+    required String divisionId,
+    required String teamName,
+    required List<({String name, int rank, String? userId})> players,
+  }) async {
+    final payload = [
+      for (final p in players)
+        {'name': p.name, 'rank': p.rank, if (p.userId != null) 'user_id': p.userId},
+    ];
+    final rows = await _db.rpc('register_tournament_team', params: {
+      'p_division_id': divisionId,
+      'p_team_name': teamName,
+      'p_players': payload,
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to register team');
+    // The RPC returns the entrant row without the nested roster; refetch so the
+    // cache has the players.
+    await fetchEntrants(divisionId);
+    return TournamentEntrant.fromJson(rows.first as Map<String, dynamic>);
+  }
+
+  Future<void> withdrawEntrant(String entrantId, String divisionId) async {
+    await _db.rpc('withdraw_tournament_entrant', params: {
+      'p_entrant_id': entrantId,
+    });
+    final list = _entrants[divisionId];
+    if (list != null) {
+      final idx = list.indexWhere((e) => e.id == entrantId);
+      if (idx >= 0) {
+        final copy = List<TournamentEntrant>.from(list);
+        copy[idx] = copy[idx].copyWith(status: EntrantStatus.withdrawn);
+        _entrants[divisionId] = copy;
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> removeEntrant(String entrantId, String divisionId) async {
+    await _db.rpc('remove_tournament_entrant', params: {
+      'p_entrant_id': entrantId,
+    });
+    final list = _entrants[divisionId];
+    if (list != null) {
+      _entrants[divisionId] =
+          list.where((e) => e.id != entrantId).toList();
+    }
+    notifyListeners();
+  }
+
+  // ── Court mutations ─────────────────────────────────────────────────────────
+
+  Future<Court> addCourt(String eventId, String name) async {
+    final rows = await _db.rpc('add_tournament_court', params: {
+      'p_event_id': eventId,
+      'p_name': name,
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to add court');
+    final court = Court.fromJson(rows.first as Map<String, dynamic>);
+    final list = List<Court>.from(_courts[eventId] ?? const []);
+    list.add(court);
+    _courts[eventId] = list;
+    notifyListeners();
+    return court;
+  }
+
+  Future<Court> updateCourt(
+    String courtId,
+    String eventId, {
+    String? name,
+    CourtStatus? status,
+  }) async {
+    final rows = await _db.rpc('update_tournament_court', params: {
+      'p_court_id': courtId,
+      'p_name': name,
+      'p_status': status?.dbValue,
+    }) as List<dynamic>;
+    if (rows.isEmpty) throw Exception('Failed to update court');
+    final court = Court.fromJson(rows.first as Map<String, dynamic>);
+    final list = _courts[eventId];
+    if (list != null) {
+      final idx = list.indexWhere((c) => c.id == courtId);
+      if (idx >= 0) {
+        final copy = List<Court>.from(list);
+        copy[idx] = court;
+        _courts[eventId] = copy;
+      }
+    }
+    notifyListeners();
+    return court;
+  }
+
+  Future<void> deleteCourt(String courtId, String eventId) async {
+    await _db.rpc('delete_tournament_court', params: {
+      'p_court_id': courtId,
+    });
+    final list = _courts[eventId];
+    if (list != null) _courts[eventId] = list.where((c) => c.id != courtId).toList();
+    notifyListeners();
+  }
+
+  // ── Court assignment (M5) ───────────────────────────────────────────────────
+
+  /// All cached matches across every division of [eventId].
+  List<TournamentMatch> _allMatchesForEvent(String eventId) => [
+        for (final d in divisionsFor(eventId)) ...matchesFor(d.id),
+      ];
+
+  /// Loads divisions + every division's matches and entrants for an event (used
+  /// by the Courts tab, which spans all divisions and needs team names).
+  Future<void> fetchAllMatchesForEvent(String eventId) async {
+    await fetchDivisions(eventId);
+    await Future.wait([
+      for (final d in divisionsFor(eventId)) ...[
+        fetchMatches(d.id),
+        fetchEntrants(d.id),
+      ],
+    ]);
+  }
+
+  /// Looks up an entrant across all cached divisions of an event.
+  TournamentEntrant? entrantById(String eventId, String? entrantId) {
+    if (entrantId == null) return null;
+    for (final d in divisionsFor(eventId)) {
+      for (final e in entrantsFor(d.id)) {
+        if (e.id == entrantId) return e;
+      }
+    }
+    return null;
+  }
+
+  /// Active (non-completed) matches assigned to [courtId], ordered by queue
+  /// position — the first is "on court now".
+  List<TournamentMatch> assignedMatchesForCourt(String eventId, String courtId) =>
+      courtQueue(_allMatchesForEvent(eventId), courtId);
+
+  /// Ready matches (both teams known, not a bye/completed) with no court yet —
+  /// candidates to assign to a court.
+  List<TournamentMatch> unassignedReadyMatches(String eventId) =>
+      unassignedReady(_allMatchesForEvent(eventId));
+
+  /// Entrant ids double-booked across more than one active court-assigned match.
+  Set<String> doubleBookedEntrantIds(String eventId) =>
+      doubleBookedEntrants(_allMatchesForEvent(eventId));
+
+  Future<void> assignMatchToCourt(
+      TournamentMatch match, String courtId, String eventId) async {
+    await _db.rpc('assign_match_to_court', params: {
+      'p_match_id': match.id,
+      'p_court_id': courtId,
+    });
+    await fetchMatches(match.divisionId);
+    await fetchCourts(eventId);
+  }
+
+  Future<void> unassignMatchFromCourt(
+      TournamentMatch match, String eventId) async {
+    await _db.rpc('unassign_match_from_court', params: {
+      'p_match_id': match.id,
+    });
+    await fetchMatches(match.divisionId);
+    await fetchCourts(eventId);
+  }
+
+  Future<void> reorderCourtQueue(
+      String courtId, List<String> matchIds, String eventId) async {
+    await _db.rpc('reorder_court_queue', params: {
+      'p_court_id': courtId,
+      'p_match_ids': matchIds,
+    });
+    await fetchAllMatchesForEvent(eventId);
+    await fetchCourts(eventId);
+  }
+
+  void _replaceDivision(String eventId, TournamentDivision division) {
+    final list = _divisions[eventId];
+    if (list == null) return;
+    final idx = list.indexWhere((d) => d.id == division.id);
+    if (idx >= 0) {
+      final copy = List<TournamentDivision>.from(list);
+      copy[idx] = division;
+      _divisions[eventId] = copy;
+    }
+  }
 
   // ── Session list fetching ───────────────────────────────────────────────
 

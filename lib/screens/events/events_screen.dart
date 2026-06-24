@@ -86,7 +86,7 @@ Color _dotColorFor(EventType type) => switch (type) {
       EventType.trip => const Color(0xFF1565C0),
       EventType.birthday => const Color(0xFFE91E63),
       EventType.wedding => const Color(0xFF7B1FA2),
-      EventType.social => const Color(0xFF00897B),
+      EventType.tournament => const Color(0xFF00897B),
       EventType.quickBites => const Color(0xFFE64A19),
       EventType.signup => const Color(0xFF2E7D32),
     };
@@ -388,7 +388,7 @@ class _TypeFilterRow extends StatelessWidget {
             EventType.trip => l10n.eventTypeTrip,
             EventType.birthday => l10n.eventTypeBirthday,
             EventType.wedding => l10n.eventTypeWedding,
-            EventType.social => l10n.eventTypeSocial,
+            EventType.tournament => l10n.eventTypeTournament,
             EventType.quickBites => l10n.eventTypeQuickBites,
             EventType.signup => l10n.eventTypeSignup,
           };
@@ -885,7 +885,7 @@ class _EventTypePickerSheet extends StatelessWidget {
     EventType.trip: Icons.luggage_rounded,
     EventType.birthday: Icons.cake_rounded,
     EventType.wedding: Icons.favorite_rounded,
-    EventType.social: Icons.celebration_rounded,
+    EventType.tournament: Icons.emoji_events_rounded,
     EventType.quickBites: Icons.restaurant_rounded,
     EventType.signup: Icons.how_to_reg_rounded,
   };
@@ -894,7 +894,7 @@ class _EventTypePickerSheet extends StatelessWidget {
         EventType.trip => l10n.eventTypeTrip,
         EventType.birthday => l10n.eventTypeBirthday,
         EventType.wedding => l10n.eventTypeWedding,
-        EventType.social => l10n.eventTypeSocial,
+        EventType.tournament => l10n.eventTypeTournament,
         EventType.quickBites => l10n.eventTypeQuickBites,
         EventType.signup => l10n.eventTypeSignup,
       };

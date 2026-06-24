@@ -4,7 +4,7 @@ import 'package:trip_management/models/event_session.dart';
 import 'package:trip_management/providers/event_provider.dart';
 
 // Minimal Event builder — only fills required fields.
-Event _makeEvent(String id, {EventType type = EventType.social}) => Event(
+Event _makeEvent(String id, {EventType type = EventType.trip}) => Event(
       id: id,
       createdBy: 'u1',
       title: 'Event $id',
