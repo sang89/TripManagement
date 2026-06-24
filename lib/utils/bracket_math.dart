@@ -78,6 +78,13 @@ class BracketMatchSpec {
       };
 }
 
+/// Vertical centre of match [index] in [round] (0-based) for the bracket-tree
+/// renderer, in "slot" units (1 slot = one first-round match's height). Each
+/// round's match is centred between its two feeders so the tree lines up:
+/// `bracketCenterSlots(r+1, i)` is the midpoint of `bracketCenterSlots(r, 2i)`
+/// and `bracketCenterSlots(r, 2i+1)`.
+double bracketCenterSlots(int round, int index) => (index + 0.5) * (1 << round);
+
 /// Smallest power of two >= n (minimum 2).
 int nextPowerOfTwo(int n) {
   var p = 1;

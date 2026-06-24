@@ -853,6 +853,74 @@ class TieSubmatch {
   bool get isReady => side1PlayerId != null && side2PlayerId != null;
 }
 
+// ── BracketSegmentConfig (builder-only, not persisted) ──────────────────────
+
+/// Represents one division lane in the multi-division bracket builder.
+/// Created transiently in the UI; converted to real divisions on "Generate All".
+class BracketSegmentConfig {
+  final String localId;
+  final String name;
+  final List<DraftEntrant> entrants;
+  final DivisionFormat format;
+  final ScoringConfig scoringConfig;
+  final int? poolCount;
+  final int? advancePerPool;
+
+  const BracketSegmentConfig({
+    required this.localId,
+    required this.name,
+    required this.entrants,
+    required this.format,
+    required this.scoringConfig,
+    this.poolCount,
+    this.advancePerPool,
+  });
+
+  BracketSegmentConfig copyWith({
+    String? name,
+    List<DraftEntrant>? entrants,
+    DivisionFormat? format,
+    ScoringConfig? scoringConfig,
+    int? poolCount,
+    bool clearPoolCount = false,
+    int? advancePerPool,
+    bool clearAdvancePerPool = false,
+  }) =>
+      BracketSegmentConfig(
+        localId: localId,
+        name: name ?? this.name,
+        entrants: entrants ?? this.entrants,
+        format: format ?? this.format,
+        scoringConfig: scoringConfig ?? this.scoringConfig,
+        poolCount: clearPoolCount ? null : (poolCount ?? this.poolCount),
+        advancePerPool:
+            clearAdvancePerPool ? null : (advancePerPool ?? this.advancePerPool),
+      );
+}
+
+/// A not-yet-registered entrant typed in the bracket builder pool.
+class DraftEntrant {
+  final String localId;
+  final String teamName;
+  final String player1Name;
+  final String? player2Name;
+
+  const DraftEntrant({
+    required this.localId,
+    required this.teamName,
+    required this.player1Name,
+    this.player2Name,
+  });
+
+  DraftEntrant copyWith({String? teamName, String? player1Name, String? player2Name}) =>
+      DraftEntrant(
+        localId: localId,
+        teamName: teamName ?? this.teamName,
+        player1Name: player1Name ?? this.player1Name,
+        player2Name: player2Name ?? this.player2Name,
+      );
+}
+
 // ── Court ───────────────────────────────────────────────────────────────────
 
 class Court {

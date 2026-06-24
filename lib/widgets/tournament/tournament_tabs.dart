@@ -6,6 +6,7 @@ import '../../models/event.dart';
 import '../../models/event_guest.dart';
 import '../../models/tournament.dart';
 import '../../providers/event_provider.dart';
+import 'bracket_builder_screen.dart';
 import 'tournament_bracket_view.dart';
 import 'tournament_labels.dart';
 
@@ -51,20 +52,31 @@ class _TournamentDivisionsTabState extends State<TournamentDivisionsTab> {
     );
   }
 
+  Future<void> _openBuilder() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => BracketBuilderScreen(eventId: widget.event.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final divisions = context.watch<EventProvider>().divisionsFor(widget.event.id);
     return Scaffold(
       body: divisions.isEmpty
           ? (widget.isOrganizer
-              ? _DivisionsFirstRunHint(onAdd: _addDivision)
+              ? _DivisionsFirstRunHint(
+                  onAdd: _addDivision,
+                  onBuildStructure: _openBuilder,
+                )
               : const _EmptyState(
                   icon: Icons.account_tree_outlined,
                   message:
                       'No divisions yet.\nThe organizer hasn\'t set up any draws for this tournament.',
                 ))
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
               itemCount: divisions.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) => _DivisionCard(
@@ -72,13 +84,26 @@ class _TournamentDivisionsTabState extends State<TournamentDivisionsTab> {
                 isOrganizer: widget.isOrganizer,
               ),
             ),
-      // Empty state uses the inline "Add Division" button; the FAB only appears
-      // once there are divisions (to add more) — avoids two add buttons.
+      // Empty state uses the inline buttons; FABs appear once there are divisions.
       floatingActionButton: widget.isOrganizer && divisions.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _addDivision,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Division'),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'fab_builder',
+                  onPressed: _openBuilder,
+                  tooltip: 'Build structure',
+                  child: const Icon(Icons.account_tree_rounded),
+                ),
+                const SizedBox(height: 10),
+                FloatingActionButton.extended(
+                  heroTag: 'fab_add',
+                  onPressed: _addDivision,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Division'),
+                ),
+              ],
             )
           : null,
     );
@@ -86,10 +111,14 @@ class _TournamentDivisionsTabState extends State<TournamentDivisionsTab> {
 }
 
 /// First-run guidance shown to organizers when a tournament has no divisions
-/// yet — explains the concept and offers the primary "Add Division" action.
+/// yet — explains the concept and offers two setup paths.
 class _DivisionsFirstRunHint extends StatelessWidget {
   final VoidCallback onAdd;
-  const _DivisionsFirstRunHint({required this.onAdd});
+  final VoidCallback onBuildStructure;
+  const _DivisionsFirstRunHint({
+    required this.onAdd,
+    required this.onBuildStructure,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -112,31 +141,31 @@ class _DivisionsFirstRunHint extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Start with a division',
+              'Set up your draws',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'A division is one draw — a discipline + skill level with its own '
-              'format and bracket (e.g. "Men\'s Doubles · Level B"). A tournament '
-              'can have several. Add your first one to get started.',
+              'A division is one draw with its own format and bracket. '
+              'Add divisions one at a time, or use Build Structure to create '
+              'multiple draws at once by dragging entrants into groups.',
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant, height: 1.45),
             ),
-            const SizedBox(height: 20),
-            // Numbered next-steps so the whole flow is clear up front.
-            const _MiniStep(n: '1', text: 'Add a division'),
-            const _MiniStep(n: '2', text: 'Register teams / players'),
-            const _MiniStep(n: '3', text: 'Generate the bracket'),
-            const _MiniStep(n: '4', text: 'Record scores'),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Division'),
+              onPressed: onBuildStructure,
+              icon: const Icon(Icons.account_tree_rounded),
+              label: const Text('Build Structure'),
             ),
             const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Single Division'),
+            ),
+            const SizedBox(height: 16),
             Text(
               'See Info → Guide for the full walkthrough.',
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
@@ -148,34 +177,6 @@ class _DivisionsFirstRunHint extends StatelessWidget {
   }
 }
 
-class _MiniStep extends StatelessWidget {
-  final String n;
-  final String text;
-  const _MiniStep({required this.n, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 11,
-            backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-            child: Text(n,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primary)),
-          ),
-          const SizedBox(width: 10),
-          Text(text, style: const TextStyle(fontSize: 13)),
-        ],
-      ),
-    );
-  }
-}
 
 class _DivisionCard extends StatelessWidget {
   final TournamentDivision division;

@@ -100,6 +100,23 @@ Match → Game — plus event-level Courts. The bracket/scoring/standings logic 
 - Indexes that must exist: `tournament_matches(next_match_id)` and `(court_id, scheduled_order)`,
   `events(created_by)` (RLS organizer checks).
 
+### Registration & UI invariants
+
+- **One entry per player per division.** A player can't be in two active entrants of the same
+  division, and can't partner themselves. Enforced in `register_tournament_entrant` /
+  `register_tournament_team` (migration `20260623001000`) by linked `user_id` AND case-insensitive
+  name (names cover guest/seeded members with null `user_id`). The same player CAN enter *other*
+  divisions — the check is scoped to `division_id`. Surface errors via `friendlyRegisterError`
+  (`duplicate_player_in_team`, `player_already_registered`).
+- **Member picker links accounts.** `_PlayerNameField` fills a player name and stores the chosen
+  member's `user_id`; typing manually clears it. Picked seeded/guest members have null `user_id`, so
+  dedup falls back to name — keep both match paths.
+- **Bracket-tree geometry is unit-tested** via `bracketCenterSlots` (`bracket_math.dart`): a match is
+  the midpoint of its two feeders. If you change card/slot sizing, the centering must still hold
+  (`test/utils/bracket_math_test.dart`). The tree is non-lazy (absolute-positioned Stack) — fine
+  within the 4096 cap; very large single-elim draws are heavy (pools is the scale path).
+- **Bracket uses two-axis scroll**, not InteractiveViewer pan (users expect to scroll, not pan).
+
 **Known follow-ups (not yet done):** `fetchEntrants`/`fetchMatches` are still unpaginated (bounded by
 the 4096 match cap + optional `entrant_cap`, but a registration list of thousands loads all rows —
 paginate if that becomes a problem); Realtime subscriptions are unfiltered (scoping limits *work*,

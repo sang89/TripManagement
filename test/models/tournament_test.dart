@@ -359,6 +359,78 @@ void main() {
     });
   });
 
+  group('TieSubmatch + tie match (M7)', () {
+    test('TieSubmatch parses games, winner side, readiness', () {
+      final s = TieSubmatch.fromJson({
+        'id': 's1',
+        'tie_match_id': 'm1',
+        'position': 2,
+        'side1_player_id': 'p1',
+        'side2_player_id': 'p2',
+        'games': [
+          {'side1_score': 21, 'side2_score': 15},
+          {'side1_score': 19, 'side2_score': 21},
+          {'side1_score': 21, 'side2_score': 10},
+        ],
+        'winner_side': 1,
+        'status': 'completed',
+      });
+      expect(s.position, 2);
+      expect(s.games.length, 3);
+      expect(s.games.first.side1, 21);
+      expect(s.games.first.side2, 15);
+      expect(s.winnerSide, 1);
+      expect(s.isCompleted, isTrue);
+      expect(s.isReady, isTrue);
+    });
+
+    test('unassigned manual sub-match is not ready', () {
+      final s = TieSubmatch.fromJson({
+        'id': 's2',
+        'tie_match_id': 'm1',
+        'position': 1,
+        'status': 'scheduled',
+      });
+      expect(s.isReady, isFalse);
+      expect(s.isCompleted, isFalse);
+      expect(s.games, isEmpty);
+    });
+
+    test('match parses is_tie + nested sub-matches (sorted by position)', () {
+      final m = TournamentMatch.fromJson({
+        'id': 'm1',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'entrant1_id': 'A',
+        'entrant2_id': 'B',
+        'status': 'scheduled',
+        'is_tie': true,
+        'created_at': '2026-06-23T10:00:00Z',
+        'tournament_tie_submatches': [
+          {'id': 's2', 'tie_match_id': 'm1', 'position': 2, 'status': 'scheduled'},
+          {'id': 's1', 'tie_match_id': 'm1', 'position': 1, 'status': 'scheduled'},
+        ],
+      });
+      expect(m.isTie, isTrue);
+      expect(m.submatches.length, 2);
+      expect(m.submatches.map((s) => s.position), [1, 2]); // sorted
+    });
+
+    test('non-tie match defaults isTie=false with no sub-matches', () {
+      final m = TournamentMatch.fromJson({
+        'id': 'm2',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'scheduled',
+        'created_at': '2026-06-23T10:00:00Z',
+      });
+      expect(m.isTie, isFalse);
+      expect(m.submatches, isEmpty);
+    });
+  });
+
   group('Court', () {
     final court = Court.fromJson({
       'id': 'c1',
@@ -379,6 +451,67 @@ void main() {
     test('copyWith clearCurrentMatch', () {
       expect(court.copyWith(clearCurrentMatch: true).currentMatchId, isNull);
       expect(court.copyWith(status: CourtStatus.available).isAvailable, isTrue);
+    });
+  });
+
+  // ── DraftEntrant ─────────────────────────────────────────────────────────────
+  group('DraftEntrant', () {
+    const draft = DraftEntrant(
+      localId: 'local-1',
+      teamName: 'Team Alpha',
+      player1Name: 'Alice',
+      player2Name: 'Bob',
+    );
+
+    test('copyWith updates fields', () {
+      final updated = draft.copyWith(teamName: 'Team Beta');
+      expect(updated.teamName, 'Team Beta');
+      expect(updated.player1Name, 'Alice');
+      expect(updated.player2Name, 'Bob');
+      expect(updated.localId, 'local-1');
+    });
+
+    test('copyWith preserves localId', () {
+      expect(draft.copyWith(player2Name: null).localId, 'local-1');
+    });
+  });
+
+  // ── BracketSegmentConfig ──────────────────────────────────────────────────────
+  group('BracketSegmentConfig', () {
+    final scoring = ScoringConfig.defaultFor('Badminton');
+    final seg = BracketSegmentConfig(
+      localId: 'seg-1',
+      name: 'Elite',
+      entrants: const [],
+      format: DivisionFormat.singleElimination,
+      scoringConfig: scoring,
+      poolCount: null,
+      advancePerPool: null,
+    );
+
+    test('copyWith name', () {
+      expect(seg.copyWith(name: 'Open').name, 'Open');
+      expect(seg.copyWith(name: 'Open').localId, 'seg-1');
+    });
+
+    test('copyWith format', () {
+      final updated = seg.copyWith(format: DivisionFormat.roundRobin);
+      expect(updated.format, DivisionFormat.roundRobin);
+    });
+
+    test('copyWith clearPoolCount sets null', () {
+      final withPool = seg.copyWith(poolCount: 4, advancePerPool: 2);
+      expect(withPool.poolCount, 4);
+      final cleared = withPool.copyWith(clearPoolCount: true);
+      expect(cleared.poolCount, isNull);
+    });
+
+    test('copyWith entrants', () {
+      const e = DraftEntrant(
+          localId: 'e1', teamName: 'A', player1Name: 'A');
+      final updated = seg.copyWith(entrants: [e]);
+      expect(updated.entrants.length, 1);
+      expect(updated.entrants.first.localId, 'e1');
     });
   });
 }

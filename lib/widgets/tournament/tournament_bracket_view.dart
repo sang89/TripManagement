@@ -484,17 +484,18 @@ class _RoundRobinView extends StatelessWidget {
 // canvas is pinch-zoom/pannable (InteractiveViewer), like Challonge/Toornament.
 
 const double _kCardW = 190;
-const double _kCardH = 58;
+const double _kCardH = 66;
 const double _kColGap = 46; // horizontal room for connector elbows
 const double _kRowGap = 30;
-const double _kLabelH = 30;
+const double _kLabelH = 38;
 double get _kColW => _kCardW + _kColGap;
 double get _kSlotH => _kCardH + _kRowGap;
 
 /// Vertical centre of match [i] in round [r] (rounds halve each step, so a
-/// match is centred between the pair of feeders below it).
+/// match is centred between the pair of feeders below it). Geometry comes from
+/// the unit-tested [bracketCenterSlots].
 double _bracketCenterY(int r, int i) =>
-    _kLabelH + (i + 0.5) * (1 << r) * _kSlotH;
+    _kLabelH + bracketCenterSlots(r, i) * _kSlotH;
 
 String _roundName(int r, int total) {
   final fromEnd = total - r - 1;
@@ -544,7 +545,7 @@ class _EliminationTree extends StatelessWidget {
         child: CustomPaint(
           painter: _BracketLinesPainter(
             counts: [for (final r in roundNums) rounds[r]!.length],
-            lineColor: cs.outlineVariant,
+            lineColor: cs.primary.withValues(alpha: 0.28),
           ),
         ),
       ),
@@ -552,19 +553,43 @@ class _EliminationTree extends StatelessWidget {
 
     for (var ri = 0; ri < nRounds; ri++) {
       final list = rounds[roundNums[ri]]!;
-      // Round label.
+      // Round label pill.
+      final isFinal = nRounds - ri - 1 == 0;
       children.add(Positioned(
         left: ri * _kColW,
-        top: 4,
+        top: 6,
         width: _kCardW,
-        child: Text(
-          _roundName(ri, nRounds),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: cs.onSurfaceVariant,
-              letterSpacing: 0.3),
+        child: Align(
+          alignment: Alignment.center,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: isFinal
+                  ? AppTheme.primary.withValues(alpha: 0.13)
+                  : cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isFinal)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(Icons.emoji_events_rounded,
+                        size: 12, color: AppTheme.primary),
+                  ),
+                Text(
+                  _roundName(ri, nRounds),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: isFinal ? AppTheme.primary : cs.onSurfaceVariant,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ));
       for (var i = 0; i < list.length; i++) {
@@ -611,7 +636,8 @@ class _BracketLinesPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = lineColor
-      ..strokeWidth = 1.5
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
     for (var r = 0; r < counts.length - 1; r++) {
       for (var i = 0; i < counts[r]; i++) {
@@ -676,50 +702,94 @@ class _TreeMatchCard extends StatelessWidget {
       }
     }
 
-    Widget row(String name, int gw, bool win, bool top) => Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+    final win1 = winner != null && winner == match.entrant1Id;
+    final win2 = winner != null && winner == match.entrant2Id;
+    final isLive = match.status == MatchStatus.inProgress;
+
+    final borderColor = match.isCompleted
+        ? AppTheme.primary.withValues(alpha: 0.55)
+        : isLive
+            ? Colors.orange.shade300
+            : cs.outlineVariant;
+    final borderWidth = (match.isCompleted || isLive) ? 1.5 : 1.0;
+
+    Widget playerRow(String name, int gw, bool isWin) {
+      final isMuted = name == 'TBD' || name == 'Bye';
+      return Expanded(
+        child: Container(
+          color: isWin ? AppTheme.primary.withValues(alpha: 0.08) : null,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
             child: Row(
               children: [
+                if (isWin && match.isCompleted) ...[
+                  Icon(Icons.emoji_events_rounded,
+                      size: 12, color: AppTheme.primary),
+                  const SizedBox(width: 4),
+                ],
                 Expanded(
-                  child: Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: win ? FontWeight.w700 : FontWeight.w400,
-                        color: win
-                            ? AppTheme.primary
-                            : (name == 'TBD' || name == 'Bye'
-                                ? cs.onSurfaceVariant
-                                : null),
-                      )),
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: isWin ? FontWeight.w700 : FontWeight.w400,
+                      color: isMuted
+                          ? cs.onSurfaceVariant
+                          : isWin
+                              ? AppTheme.primary
+                              : cs.onSurface,
+                      fontStyle: isMuted ? FontStyle.italic : null,
+                    ),
+                  ),
                 ),
-                if (showScore)
-                  Text('$gw',
+                if (showScore) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 22),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: isWin
+                          ? AppTheme.primary
+                          : cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      '$gw',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight:
-                              win ? FontWeight.w700 : FontWeight.w400)),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isWin ? Colors.white : cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-        );
+        ),
+      );
+    }
 
     final card = Material(
-      elevation: 0.5,
-      borderRadius: BorderRadius.circular(8),
+      elevation: isLive ? 3 : 1.5,
+      shadowColor: AppTheme.primary.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(10),
       color: cs.surface,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cs.outlineVariant),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
         child: Column(
           children: [
-            row(e1, g1, winner != null && winner == match.entrant1Id, true),
+            playerRow(e1, g1, win1),
             Divider(height: 1, thickness: 1, color: cs.outlineVariant),
-            row(e2, g2, winner != null && winner == match.entrant2Id, false),
+            playerRow(e2, g2, win2),
           ],
         ),
       ),
@@ -731,23 +801,29 @@ class _TreeMatchCard extends StatelessWidget {
               ? _openTieSheet(context, match, division, byId)
               : _openScoreSheet(context, match, division, byId)
           : null,
-      onLongPress: canScore
-          ? () => _showMatchActions(context, court)
-          : null,
+      onLongPress: canScore ? () => _showMatchActions(context, court) : null,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           card,
           if (court != null)
             Positioned(
-              left: -4,
-              top: 0,
-              bottom: 0,
+              right: 4,
+              top: -5,
               child: Container(
-                width: 3,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  court.name,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -1068,24 +1144,96 @@ class _MatchCard extends StatelessWidget {
     }
     final canAssign = canScore && !match.isCompleted && courts.isNotEmpty;
 
+    final win1 = winner != null && winner == match.entrant1Id;
+    final win2 = winner != null && winner == match.entrant2Id;
+    final isLive = match.status == MatchStatus.inProgress;
+    final borderColor = match.isCompleted
+        ? AppTheme.primary.withValues(alpha: 0.5)
+        : isLive
+            ? Colors.orange.shade300
+            : cs.outlineVariant;
+
+    Widget playerRow(String name, String? score, bool isWin) {
+      final isMuted = name == 'TBD' || name == 'Bye';
+      return Container(
+        color: isWin ? AppTheme.primary.withValues(alpha: 0.07) : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            if (isWin && match.isCompleted) ...[
+              Icon(Icons.emoji_events_rounded,
+                  size: 14, color: AppTheme.primary),
+              const SizedBox(width: 5),
+            ],
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: isWin ? FontWeight.w700 : FontWeight.w400,
+                  color: isMuted
+                      ? cs.onSurfaceVariant
+                      : isWin
+                          ? AppTheme.primary
+                          : null,
+                  fontStyle: isMuted ? FontStyle.italic : null,
+                ),
+              ),
+            ),
+            if (score != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                constraints: const BoxConstraints(minWidth: 26),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isWin ? AppTheme.primary : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  score,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isWin ? Colors.white : cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     final card = Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          children: [
-            _row(context, e1, showScore ? '$g1' : null,
-                highlight: winner != null && winner == match.entrant1Id),
-            Divider(height: 10, color: cs.outlineVariant),
-            _row(context, e2, showScore ? '$g2' : null,
-                highlight: winner != null && winner == match.entrant2Id),
-            if (assignedCourt != null || canAssign || canScore) ...[
-              const SizedBox(height: 4),
-              Row(
+      elevation: isLive ? 3 : 1,
+      shadowColor: AppTheme.primary.withValues(alpha: 0.10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: borderColor,
+          width: (match.isCompleted || isLive) ? 1.5 : 1.0,
+        ),
+      ),
+      child: Column(
+        children: [
+          playerRow(e1, showScore ? '$g1' : null, win1),
+          Divider(height: 1, color: cs.outlineVariant),
+          playerRow(e2, showScore ? '$g2' : null, win2),
+          if (assignedCourt != null || canAssign || canScore) ...[
+            Divider(height: 1, color: cs.outlineVariant),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
                 children: [
                   if (assignedCourt != null) ...[
-                    Icon(Icons.place, size: 13, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 2),
+                    Icon(Icons.place_rounded,
+                        size: 12, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 3),
                     Text(assignedCourt.name,
                         style: TextStyle(
                             fontSize: 11, color: cs.onSurfaceVariant)),
@@ -1093,24 +1241,38 @@ class _MatchCard extends StatelessWidget {
                     AppTappable(
                       onTap: () => _assignCourt(context, courts),
                       child: Text('Assign court',
-                          style:
-                              TextStyle(fontSize: 11, color: AppTheme.primary)),
+                          style: TextStyle(
+                              fontSize: 11, color: AppTheme.primary)),
                     ),
                   const Spacer(),
                   if (canScore)
-                    Text(
-                      match.isTie
-                          ? 'Sub-matches'
-                          : (match.isCompleted ? 'Edit score' : 'Enter score'),
-                      style: TextStyle(fontSize: 11, color: AppTheme.primary),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: match.isCompleted
+                            ? cs.surfaceContainerHighest
+                            : AppTheme.primary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        match.isTie
+                            ? 'Sub-matches'
+                            : (match.isCompleted ? 'Edit score' : 'Enter score'),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
                     ),
                 ],
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
+
     if (!canScore) return card;
     return AppTappable(
       onTap: () => match.isTie
@@ -1163,29 +1325,6 @@ class _MatchCard extends StatelessWidget {
       }
     }
   }
-
-  Widget _row(BuildContext context, String name, String? score,
-      {required bool highlight}) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: highlight ? FontWeight.w700 : FontWeight.w400,
-              color: highlight ? AppTheme.primary : null,
-            ),
-          ),
-        ),
-        if (score != null)
-          Text(score,
-              style: TextStyle(
-                  fontWeight: highlight ? FontWeight.w700 : FontWeight.w400)),
-      ],
-    );
-  }
 }
 
 class _StandingsTable extends StatelessWidget {
@@ -1222,16 +1361,41 @@ class _StandingsTable extends StatelessWidget {
               DataColumn(label: Text('Game±'), numeric: true),
               DataColumn(label: Text('Pt±'), numeric: true),
             ],
-            rows: shown
-                .map((s) => DataRow(cells: [
-                      DataCell(Text('${s.rank}')),
-                      DataCell(Text(byId[s.entrantId]?.teamName ?? '—')),
-                      DataCell(Text('${s.won}')),
+            rows: shown.map((s) {
+                  final medal = s.rank == 1
+                      ? '🥇'
+                      : s.rank == 2
+                          ? '🥈'
+                          : s.rank == 3
+                              ? '🥉'
+                              : null;
+                  final isTop = s.rank <= 3;
+                  return DataRow(
+                    color: WidgetStateProperty.resolveWith((_) => s.rank == 1
+                        ? Colors.amber.withValues(alpha: 0.06)
+                        : null),
+                    cells: [
+                      DataCell(medal != null
+                          ? Text(medal,
+                              style: const TextStyle(fontSize: 16))
+                          : Text('${s.rank}',
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant))),
+                      DataCell(Text(byId[s.entrantId]?.teamName ?? '—',
+                          style: TextStyle(
+                              fontWeight: isTop ? FontWeight.w700 : null))),
+                      DataCell(Text('${s.won}',
+                          style: TextStyle(
+                              fontWeight: isTop ? FontWeight.w700 : null,
+                              color: isTop ? Colors.green.shade700 : null))),
                       DataCell(Text('${s.lost}')),
                       DataCell(Text(_signed(s.gameDiff))),
                       DataCell(Text(_signed(s.pointDiff))),
-                    ]))
-                .toList(),
+                    ],
+                  );
+                }).toList(),
           ),
         ),
         if (standings.length > _maxRows)
@@ -1841,13 +2005,29 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-        letterSpacing: 0.3,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 3,
+            height: 14,
+            margin: const EdgeInsets.only(right: 7),
+            decoration: BoxDecoration(
+              color: AppTheme.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }

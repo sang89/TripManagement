@@ -2090,6 +2090,50 @@ class EventProvider extends ChangeNotifier {
     return division;
   }
 
+  /// Creates multiple linked divisions in one shot from the bracket builder.
+  ///
+  /// For each segment: creates the division, registers its entrants, then
+  /// generates the bracket. [sharedFields] provides sport/discipline/etc. shared
+  /// across all lanes. Returns the list of created divisions.
+  Future<List<TournamentDivision>> createDivisionBundle({
+    required String eventId,
+    required List<BracketSegmentConfig> segments,
+    required String sport,
+    required Discipline discipline,
+    required String skillLevel,
+    EntrantKind entrantKind = EntrantKind.individual,
+  }) async {
+    final created = <TournamentDivision>[];
+    for (final seg in segments) {
+      final division = await createDivision(
+        eventId: eventId,
+        name: seg.name,
+        sport: sport,
+        discipline: discipline,
+        skillLevel: skillLevel,
+        format: seg.format,
+        scoringConfig: seg.scoringConfig,
+        poolCount: seg.poolCount,
+        advancePerPool: seg.advancePerPool,
+        entrantKind: entrantKind,
+      );
+      for (final draft in seg.entrants) {
+        await registerEntrant(
+          divisionId: division.id,
+          teamName: draft.teamName,
+          player1Name: draft.player1Name,
+          player2Name: draft.player2Name,
+        );
+      }
+      // Only auto-generate if the format is not custom (custom = manual build).
+      if (seg.format != DivisionFormat.custom) {
+        await generateBracket(division);
+      }
+      created.add(division);
+    }
+    return created;
+  }
+
   Future<TournamentDivision> updateDivision({
     required String divisionId,
     required String eventId,

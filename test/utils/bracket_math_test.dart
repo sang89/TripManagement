@@ -16,6 +16,32 @@ void main() {
     });
   });
 
+  group('bracketCenterSlots (tree layout)', () {
+    test('first round is evenly spaced at half-slot offsets', () {
+      expect(bracketCenterSlots(0, 0), 0.5);
+      expect(bracketCenterSlots(0, 1), 1.5);
+      expect(bracketCenterSlots(0, 3), 3.5);
+    });
+
+    test('each later match is centred between its two feeders', () {
+      // round r+1 match i sits at the midpoint of round r matches 2i and 2i+1.
+      for (var r = 0; r < 5; r++) {
+        for (var i = 0; i < 4; i++) {
+          final mid =
+              (bracketCenterSlots(r, 2 * i) + bracketCenterSlots(r, 2 * i + 1)) /
+                  2;
+          expect(bracketCenterSlots(r + 1, i), mid,
+              reason: 'round ${r + 1} match $i not centred');
+        }
+      }
+    });
+
+    test('the single final is centred on the whole bracket height', () {
+      // 8-team bracket: 4 first-round slots → final centre at slot 2.0.
+      expect(bracketCenterSlots(2, 0), 2.0);
+    });
+  });
+
   group('seedOrder', () {
     test('size 2 and 4', () {
       expect(seedOrder(2), [1, 2]);
