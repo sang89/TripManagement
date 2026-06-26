@@ -38,7 +38,7 @@ List<StandingRow> computeStandings(
 }) {
   final relevant = matches
       .where((m) =>
-          m.status == MatchStatus.completed &&
+          m.isDecided &&
           m.winnerEntrantId != null &&
           (poolId == null || m.poolId == poolId))
       .toList();

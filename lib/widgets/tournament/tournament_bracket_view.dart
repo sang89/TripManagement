@@ -8,6 +8,7 @@ import '../../providers/event_provider.dart';
 import '../../utils/bracket_math.dart';
 import '../../utils/scoring_rules.dart';
 import '../../utils/tournament_standings.dart';
+import 'live_elapsed_timer.dart';
 import 'tournament_labels.dart';
 
 /// Bracket / standings view for a tournament division. Picks a division, then
@@ -692,7 +693,8 @@ class _TreeMatchCard extends StatelessWidget {
     final canScore = isOrganizer &&
         match.entrant1Id != null &&
         match.entrant2Id != null &&
-        !match.isBye;
+        !match.isBye &&
+        !match.isWalkover;
 
     Court? court;
     for (final c in context.watch<EventProvider>().courtsFor(division.eventId)) {
@@ -706,12 +708,14 @@ class _TreeMatchCard extends StatelessWidget {
     final win2 = winner != null && winner == match.entrant2Id;
     final isLive = match.status == MatchStatus.inProgress;
 
-    final borderColor = match.isCompleted
-        ? AppTheme.primary.withValues(alpha: 0.55)
-        : isLive
-            ? Colors.orange.shade300
-            : cs.outlineVariant;
-    final borderWidth = (match.isCompleted || isLive) ? 1.5 : 1.0;
+    final borderColor = match.isWalkover
+        ? Colors.grey.withValues(alpha: 0.6)
+        : match.isCompleted
+            ? AppTheme.primary.withValues(alpha: 0.55)
+            : isLive
+                ? Colors.orange.shade300
+                : cs.outlineVariant;
+    final borderWidth = (match.isCompleted || match.isWalkover || isLive) ? 1.5 : 1.0;
 
     Widget playerRow(String name, int gw, bool isWin) {
       final isMuted = name == 'TBD' || name == 'Bye';
@@ -723,7 +727,7 @@ class _TreeMatchCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                if (isWin && match.isCompleted) ...[
+                if (isWin && match.isDecided) ...[
                   Icon(Icons.emoji_events_rounded,
                       size: 12, color: AppTheme.primary),
                   const SizedBox(width: 4),
@@ -795,6 +799,10 @@ class _TreeMatchCard extends StatelessWidget {
       ),
     );
 
+    // Label row above the card: court name (left) + status/time (right).
+    final hasLabel = court != null || match.scheduledAt != null ||
+        match.isLive || match.isWalkover;
+
     return AppTappable(
       onTap: canScore
           ? () => match.isTie
@@ -806,25 +814,46 @@ class _TreeMatchCard extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           card,
-          if (court != null)
+          if (hasLabel)
             Positioned(
-              right: 4,
-              top: -5,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  court.name,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              left: 0,
+              right: 0,
+              top: -16,
+              child: Row(
+                children: [
+                  if (court != null)
+                    Text(
+                      court.name,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  const Spacer(),
+                  if (match.isWalkover)
+                    const Text(
+                      'W/O',
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w700),
+                    )
+                  else if (match.isLive)
+                    LiveElapsedTimer(
+                      startedAt: match.startedAt!,
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.green.shade600,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                  else if (match.scheduledAt != null)
+                    Text(
+                      '🕐 ${TimeOfDay.fromDateTime(match.scheduledAt!.toLocal()).format(context)}',
+                      style: const TextStyle(fontSize: 9, color: Colors.orange),
+                    ),
+                ],
               ),
             ),
         ],
@@ -846,6 +875,34 @@ class _TreeMatchCard extends StatelessWidget {
                   : (match.isCompleted ? 'Edit score' : 'Enter score')),
               onTap: () => Navigator.pop(sheet, 'score'),
             ),
+            if (match.isReady && match.startedAt == null) ...[
+              ListTile(
+                leading: const Icon(Icons.schedule_outlined),
+                title: Text(match.scheduledAt != null
+                    ? 'Edit schedule'
+                    : 'Set schedule'),
+                subtitle: match.scheduledAt != null
+                    ? Text(TimeOfDay.fromDateTime(
+                            match.scheduledAt!.toLocal())
+                        .format(sheet))
+                    : null,
+                onTap: () => Navigator.pop(sheet, 'schedule'),
+              ),
+              // Ties are scored via sub-matches; status is managed by the RPC.
+              if (!match.isTie)
+                ListTile(
+                  leading: const Icon(Icons.play_circle_outline_rounded),
+                  title: const Text('Start match'),
+                  onTap: () => Navigator.pop(sheet, 'start'),
+                ),
+            ],
+            if (match.isReady && !match.isDecided)
+              ListTile(
+                leading: const Icon(Icons.person_off_outlined),
+                title: const Text('Declare walkover'),
+                subtitle: const Text('No-show or forfeit'),
+                onTap: () => Navigator.pop(sheet, 'walkover'),
+              ),
             if (court == null)
               ListTile(
                 leading: const Icon(Icons.stadium_outlined),
@@ -873,7 +930,146 @@ class _TreeMatchCard extends StatelessWidget {
       await context
           .read<EventProvider>()
           .unassignMatchFromCourt(match, division.eventId);
+    } else if (action == 'schedule') {
+      await _showScheduleSheet(context);
+    } else if (action == 'start') {
+      try {
+        await context.read<EventProvider>().startMatch(match);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().contains('match_already_started')
+                ? 'Match is already in progress.'
+                : 'Could not start the match.'),
+          ));
+        }
+      }
+    } else if (action == 'walkover') {
+      await _showWalkovers(context);
     }
+  }
+
+  Future<void> _showWalkovers(BuildContext context) =>
+      _showWalkoversForMatch(context, match, byId);
+
+  Future<void> _showScheduleSheet(BuildContext context) async {
+    final localNow = DateTime.now().toLocal();
+    DateTime? pickedDate = match.scheduledAt?.toLocal();
+    TimeOfDay? pickedTime = match.scheduledAt != null
+        ? TimeOfDay.fromDateTime(match.scheduledAt!.toLocal())
+        : null;
+    int? pickedMinutes = match.estimatedDurationMinutes;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheet) => StatefulBuilder(
+        builder: (ctx, setSS) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Schedule Match',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today_rounded),
+                title: Text(pickedDate != null
+                    ? '${pickedDate!.month}/${pickedDate!.day}/${pickedDate!.year}'
+                    : 'Tap to set date'),
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: ctx,
+                    initialDate: pickedDate ?? localNow,
+                    firstDate: localNow.subtract(const Duration(days: 1)),
+                    lastDate: localNow.add(const Duration(days: 365)),
+                  );
+                  if (d != null) setSS(() => pickedDate = d);
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.access_time_rounded),
+                title: Text(pickedTime != null
+                    ? pickedTime!.format(ctx)
+                    : 'Tap to set start time'),
+                onTap: () async {
+                  final t = await showTimePicker(
+                    context: ctx,
+                    initialTime: pickedTime ?? TimeOfDay.now(),
+                  );
+                  if (t != null) setSS(() => pickedTime = t);
+                },
+              ),
+              const SizedBox(height: 8),
+              const Text('Estimated duration',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [15, 30, 45, 60, 90].map((min) {
+                  final selected = pickedMinutes == min;
+                  return ChoiceChip(
+                    label: Text('${min}m'),
+                    selected: selected,
+                    onSelected: (_) =>
+                        setSS(() => pickedMinutes = selected ? null : min),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  if (match.scheduledAt != null)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          Navigator.pop(sheet);
+                          if (!ctx.mounted) return;
+                          await ctx.read<EventProvider>().scheduleMatch(
+                                match,
+                                scheduledAt: null,
+                                estimatedDurationMinutes: null,
+                              );
+                        },
+                        child: const Text('Clear'),
+                      ),
+                    ),
+                  if (match.scheduledAt != null) const SizedBox(width: 8),
+                  Expanded(
+                    child: AppButton(
+                      label: 'Save',
+                      onPressed: (pickedDate == null || pickedTime == null)
+                          ? null
+                          : () async {
+                              Navigator.pop(sheet);
+                              if (!ctx.mounted) return;
+                              final d = pickedDate!;
+                              final dt = DateTime(
+                                d.year,
+                                d.month,
+                                d.day,
+                                pickedTime!.hour,
+                                pickedTime!.minute,
+                              );
+                              await ctx.read<EventProvider>().scheduleMatch(
+                                    match,
+                                    scheduledAt: dt,
+                                    estimatedDurationMinutes: pickedMinutes,
+                                  );
+                            },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1086,11 +1282,13 @@ Future<void> _pickAndAssignCourt(
     await context
         .read<EventProvider>()
         .assignMatchToCourt(match, court.id, division.eventId);
-  } catch (_) {
+  } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not assign the court.')),
-      );
+      final msg = e.toString().contains('match_not_ready')
+          ? 'Match isn\'t ready yet — both teams need to be known.'
+          : 'Could not assign the court.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 }
@@ -1099,6 +1297,47 @@ String _entrantLabel(String? id, Map<String, TournamentEntrant> byId,
     {required bool bye}) {
   if (id != null) return byId[id]?.teamName ?? 'Unknown';
   return bye ? 'Bye' : 'TBD';
+}
+
+Future<void> _showWalkoversForMatch(BuildContext context, TournamentMatch match,
+    Map<String, TournamentEntrant> byId) async {
+  final e1 = _entrantLabel(match.entrant1Id, byId, bye: false);
+  final e2 = _entrantLabel(match.entrant2Id, byId, bye: false);
+  final winnerId = await showModalBottomSheet<String>(
+    context: context,
+    builder: (sheet) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+            child: Text('Who wins by walkover?',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+                'The other team forfeits or did not show up.',
+                style: TextStyle(fontSize: 13)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.emoji_events_rounded, color: AppTheme.primary),
+            title: Text(e1),
+            subtitle: const Text('Wins by walkover'),
+            onTap: () => Navigator.pop(sheet, match.entrant1Id),
+          ),
+          ListTile(
+            leading: const Icon(Icons.emoji_events_rounded, color: AppTheme.primary),
+            title: Text(e2),
+            subtitle: const Text('Wins by walkover'),
+            onTap: () => Navigator.pop(sheet, match.entrant2Id),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (winnerId == null || !context.mounted) return;
+  await context.read<EventProvider>().awardWalkover(match, winnerId);
 }
 
 class _MatchCard extends StatelessWidget {
@@ -1129,11 +1368,12 @@ class _MatchCard extends StatelessWidget {
     final showScore = match.isTie
         ? match.submatches.any((s) => s.isCompleted)
         : match.games.isNotEmpty;
-    // Organizer can score a match once both teams are known and it's not a bye.
+    // Organizer can score a match once both teams are known and it's not a bye or walkover.
     final canScore = isOrganizer &&
         match.entrant1Id != null &&
         match.entrant2Id != null &&
-        !match.isBye;
+        !match.isBye &&
+        !match.isWalkover;
     final courts = context.watch<EventProvider>().courtsFor(division.eventId);
     Court? assignedCourt;
     for (final c in courts) {
@@ -1142,16 +1382,18 @@ class _MatchCard extends StatelessWidget {
         break;
       }
     }
-    final canAssign = canScore && !match.isCompleted && courts.isNotEmpty;
+    final canAssign = canScore && !match.isDecided && courts.isNotEmpty;
 
     final win1 = winner != null && winner == match.entrant1Id;
     final win2 = winner != null && winner == match.entrant2Id;
     final isLive = match.status == MatchStatus.inProgress;
-    final borderColor = match.isCompleted
-        ? AppTheme.primary.withValues(alpha: 0.5)
-        : isLive
-            ? Colors.orange.shade300
-            : cs.outlineVariant;
+    final borderColor = match.isWalkover
+        ? Colors.grey.withValues(alpha: 0.6)
+        : match.isCompleted
+            ? AppTheme.primary.withValues(alpha: 0.5)
+            : isLive
+                ? Colors.orange.shade300
+                : cs.outlineVariant;
 
     Widget playerRow(String name, String? score, bool isWin) {
       final isMuted = name == 'TBD' || name == 'Bye';
@@ -1160,7 +1402,7 @@ class _MatchCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            if (isWin && match.isCompleted) ...[
+            if (isWin && match.isDecided) ...[
               Icon(Icons.emoji_events_rounded,
                   size: 14, color: AppTheme.primary),
               const SizedBox(width: 5),
@@ -1215,7 +1457,7 @@ class _MatchCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(
           color: borderColor,
-          width: (match.isCompleted || isLive) ? 1.5 : 1.0,
+          width: (match.isDecided || isLive) ? 1.5 : 1.0,
         ),
       ),
       child: Column(
@@ -1223,13 +1465,35 @@ class _MatchCard extends StatelessWidget {
           playerRow(e1, showScore ? '$g1' : null, win1),
           Divider(height: 1, color: cs.outlineVariant),
           playerRow(e2, showScore ? '$g2' : null, win2),
-          if (assignedCourt != null || canAssign || canScore) ...[
+          if (assignedCourt != null || canAssign || canScore ||
+              match.scheduledAt != null || match.isLive || match.isWalkover) ...[
             Divider(height: 1, color: cs.outlineVariant),
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 children: [
+                  if (match.isLive) ...[
+                    LiveElapsedTimer(
+                      startedAt: match.startedAt!,
+                      style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 6),
+                  ] else if (match.scheduledAt != null && !match.isDecided) ...[
+                    const Icon(Icons.schedule_rounded, size: 12,
+                        color: Colors.orange),
+                    const SizedBox(width: 3),
+                    Text(
+                      TimeOfDay.fromDateTime(match.scheduledAt!.toLocal())
+                          .format(context),
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.orange),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   if (assignedCourt != null) ...[
                     Icon(Icons.place_rounded,
                         size: 12, color: cs.onSurfaceVariant),
@@ -1245,12 +1509,28 @@ class _MatchCard extends StatelessWidget {
                               fontSize: 11, color: AppTheme.primary)),
                     ),
                   const Spacer(),
-                  if (canScore)
+                  if (match.isWalkover)
+                    const Text('W/O',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w700)),
+                  if (canScore) ...[
+                    if (match.isReady) ...[
+                      AppTappable(
+                        onTap: () =>
+                            _showWalkoversForMatch(context, match, byId),
+                        child: const Text('Walkover',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.orange)),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: match.isCompleted
+                        color: match.isDecided
                             ? cs.surfaceContainerHighest
                             : AppTheme.primary.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(6),
@@ -1258,13 +1538,14 @@ class _MatchCard extends StatelessWidget {
                       child: Text(
                         match.isTie
                             ? 'Sub-matches'
-                            : (match.isCompleted ? 'Edit score' : 'Enter score'),
+                            : (match.isDecided ? 'Edit score' : 'Enter score'),
                         style: TextStyle(
                             fontSize: 11,
                             color: AppTheme.primary,
                             fontWeight: FontWeight.w600),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -1708,10 +1989,10 @@ class _TieSheet extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             'Tie score: $tally1 – $tally2'
-            '${tie.isCompleted ? "  ·  winner: ${byId[tie.winnerEntrantId]?.teamName ?? ""}" : ""}',
+            '${tie.isDecided ? "  ·  winner: ${byId[tie.winnerEntrantId]?.teamName ?? ""}" : ""}',
             style: TextStyle(
                 fontSize: 12,
-                color: tie.isCompleted ? AppTheme.primary : Theme.of(context).hintColor),
+                color: tie.isDecided ? AppTheme.primary : Theme.of(context).hintColor),
           ),
           const SizedBox(height: 12),
           Flexible(
@@ -1725,6 +2006,7 @@ class _TieSheet extends StatelessWidget {
                       side1Name: playerName(s.side1PlayerId),
                       side2Name: playerName(s.side2PlayerId),
                       isManual: isManual,
+                      tieIsDecided: tie.isDecided,
                       teamARoster: teamA?.players ?? const [],
                       teamBRoster: teamB?.players ?? const [],
                     ),
@@ -1744,6 +2026,7 @@ class _SubmatchRow extends StatelessWidget {
   final String side1Name;
   final String side2Name;
   final bool isManual;
+  final bool tieIsDecided;
   final List<EntrantPlayer> teamARoster;
   final List<EntrantPlayer> teamBRoster;
   const _SubmatchRow({
@@ -1752,6 +2035,7 @@ class _SubmatchRow extends StatelessWidget {
     required this.side1Name,
     required this.side2Name,
     required this.isManual,
+    required this.tieIsDecided,
     required this.teamARoster,
     required this.teamBRoster,
   });
@@ -1794,7 +2078,7 @@ class _SubmatchRow extends StatelessWidget {
     final w = submatch.winnerSide;
     final g1 = submatch.games.where((g) => g.side1 > g.side2).length;
     final g2 = submatch.games.where((g) => g.side2 > g.side1).length;
-    final canScore = submatch.isReady;
+    final canScore = submatch.isReady && !tieIsDecided;
 
     Widget side(int n, String name, int gw) {
       final isWinner = w == n;

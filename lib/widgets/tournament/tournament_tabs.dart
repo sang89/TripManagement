@@ -7,6 +7,7 @@ import '../../models/event_guest.dart';
 import '../../models/tournament.dart';
 import '../../providers/event_provider.dart';
 import 'bracket_builder_screen.dart';
+import 'live_elapsed_timer.dart';
 import 'tournament_bracket_view.dart';
 import 'tournament_labels.dart';
 
@@ -542,6 +543,20 @@ class _DivisionFormSheetState extends State<_DivisionFormSheet> {
       cap: int.tryParse(_capPointCtrl.text.trim()), // null if blank
       bestOf: _bestOf,
     );
+
+    if (_format == DivisionFormat.poolsPlayoff) {
+      final poolCount = int.tryParse(_poolCountCtrl.text.trim());
+      final cap = int.tryParse(_capCtrl.text.trim());
+      if (poolCount == null || poolCount < 2) {
+        setState(() => _error = 'Enter a pool count of at least 2.');
+        return;
+      }
+      if (cap != null && poolCount > cap) {
+        setState(() => _error = 'Pool count ($poolCount) cannot exceed the entrant cap ($cap).');
+        return;
+      }
+    }
+
     setState(() {
       _saving = true;
       _error = null;
@@ -1518,10 +1533,61 @@ class _TournamentCourtsTabState extends State<TournamentCourtsTab> {
     return '$e1  vs  $e2';
   }
 
+  Future<void> _assignToCourt(
+      BuildContext context, TournamentMatch m, List<Court> courts) async {
+    final court = await showModalBottomSheet<Court>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Assign to court',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: courts
+                    .map((c) => ListTile(
+                          leading: const Icon(Icons.sports_tennis_rounded),
+                          title: Text(c.name),
+                          subtitle: Text(c.status.label),
+                          onTap: () => Navigator.pop(sheet, c),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (court == null || !context.mounted) return;
+    try {
+      await context
+          .read<EventProvider>()
+          .assignMatchToCourt(m, court.id, widget.event.id);
+    } catch (e) {
+      if (context.mounted) {
+        final msg = e.toString().contains('match_not_ready')
+            ? 'Match isn\'t ready yet — both teams need to be known.'
+            : 'Could not assign the court.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.watch<EventProvider>();
     final courts = p.courtsFor(widget.event.id);
+    final unassigned = widget.isOrganizer
+        ? p.unassignedReadyMatches(widget.event.id)
+        : <TournamentMatch>[];
     final doubleBooked = p.doubleBookedEntrantIds(widget.event.id);
     final hasWarning = doubleBooked.isNotEmpty;
 
@@ -1558,6 +1624,61 @@ class _TournamentCourtsTabState extends State<TournamentCourtsTab> {
                       ],
                     ),
                   ),
+                if (unassigned.isNotEmpty) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.pending_actions_rounded,
+                                color: AppTheme.primary, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${unassigned.length} match${unassigned.length == 1 ? '' : 'es'} ready — no court yet',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...unassigned.map((m) => Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _matchLabel(p, m),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton(
+                                    onPressed: courts.isEmpty
+                                        ? null
+                                        : () =>
+                                            _assignToCourt(context, m, courts),
+                                    child: const Text('Assign'),
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
                 ...courts.map((c) => _CourtCard(
                       court: c,
                       event: widget.event,
@@ -1591,6 +1712,48 @@ class _CourtCard extends StatelessWidget {
     required this.matches,
     required this.matchLabel,
   });
+
+  Widget _matchSubtitle(BuildContext context, int index, TournamentMatch m) {
+    if (index == 0) {
+      if (m.startedAt != null) {
+        // Live: show elapsed timer + estimated finish if available.
+        final children = <Widget>[LiveElapsedTimer(startedAt: m.startedAt!)];
+        if (m.estimatedDurationMinutes != null) {
+          final finishAt =
+              m.startedAt!.add(Duration(minutes: m.estimatedDurationMinutes!));
+          children.add(Text(
+            ' · est. done ${TimeOfDay.fromDateTime(finishAt.toLocal()).format(context)}',
+            style: const TextStyle(fontSize: 11),
+          ));
+        }
+        return Row(mainAxisSize: MainAxisSize.min, children: children);
+      }
+      if (m.scheduledAt != null) {
+        final overdue = DateTime.now().isAfter(m.scheduledAt!);
+        final timeStr =
+            TimeOfDay.fromDateTime(m.scheduledAt!.toLocal()).format(context);
+        if (overdue) {
+          final mins =
+              DateTime.now().difference(m.scheduledAt!).inMinutes;
+          return Text(
+            'Overdue ${mins}m — was $timeStr',
+            style: const TextStyle(
+                fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+          );
+        }
+        return Text('Sch. $timeStr',
+            style: const TextStyle(fontSize: 12));
+      }
+      return const Text('On court now');
+    }
+    if (m.scheduledAt != null) {
+      return Text(
+        'Sch. ${TimeOfDay.fromDateTime(m.scheduledAt!.toLocal()).format(context)}',
+        style: const TextStyle(fontSize: 12),
+      );
+    }
+    return const Text('Next up');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1631,6 +1794,7 @@ class _CourtCard extends StatelessWidget {
               ...matches.asMap().entries.map((e) {
                 final i = e.key;
                 final m = e.value;
+                final subtitle = _matchSubtitle(context, i, m);
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
@@ -1641,7 +1805,7 @@ class _CourtCard extends StatelessWidget {
                               style: const TextStyle(fontSize: 11))),
                   title: Text(matchLabel(m),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(i == 0 ? 'On court now' : 'Next up'),
+                  subtitle: subtitle,
                   trailing: isOrganizer
                       ? IconButton(
                           icon: const Icon(Icons.remove_circle_outline, size: 20),

@@ -84,6 +84,11 @@ Computed: `isDoubles`, `isTeam`, `isWithdrawn`.
 - `games`: list of `MatchGame` (game-by-game scores)
 - `isTie` + `submatches`: team-vs-team tie (each sub-match is a player-vs-player game)
 - `scheduledOrder`: per-court queue position
+- `scheduledAt`: organizer-set estimated start time (`TIMESTAMPTZ`)
+- `startedAt`: actual start time — set when organizer taps "Start match"; makes `isLive = true`
+- `endedAt`: actual end time — auto-stamped by `record_match_score` RPC on completion
+- `estimatedDurationMinutes`: hint for queue wait estimation (15 / 30 / 45 / 60 / 90 min)
+- **Computed getters**: `isLive` (startedAt != null && endedAt == null); `elapsed` (Duration since startedAt)
 
 ### TieConfig (team-kind divisions)
 
@@ -228,10 +233,16 @@ For **team tie** matches:
 Organizer → **Courts** tab:
 - **Add Court** → dialog, enter name → `EventProvider.addCourt()`
 - Each court card shows its queue (first match = on court now; rest = next up)
+- Queue entry subtitles show: 🔴 Live elapsed timer (if `startedAt != null`), scheduled time (if `scheduledAt` set), or "On court now" / "Next up"
 - Assign a match from the Bracket view → court picker
 - Remove from queue: tap – icon on the queue entry → `unassignMatchFromCourt()`
 - Reorder queue: drag handles → `reorderCourtQueue()`
 - Delete court: trash icon → `deleteCourt()`
+
+**Match time scheduling** (organizer long-press a match card → action sheet):
+- **Set schedule**: `showTimePicker` + duration chip (15/30/45/60/90 min) → `scheduleMatch()`; shows `🕐 HH:mm` in court card subtitle and in bracket card
+- **Start match**: sets `started_at = now(), status = in_progress` → `startMatch()`; triggers Realtime refetch for all members within ~350ms; court card switches to live elapsed timer
+- **Record score**: auto-stamps `ended_at` via `record_match_score` RPC; live timer disappears
 
 Double-booking warning: if a player appears on two courts simultaneously, an orange banner appears at the top of the Courts tab. Detection via `EventProvider.doubleBookedEntrantIds()`.
 
@@ -342,6 +353,9 @@ All methods are on `EventProvider` (`lib/providers/event_provider.dart`).
 | `assignMatchToCourt(match, courtId, eventId)` | Appends match to court queue |
 | `unassignMatchFromCourt(match, eventId)` | Removes from queue |
 | `reorderCourtQueue(courtId, matchIds, eventId)` | Reorders the queue |
+| `startMatch(match)` | Calls `start_match` RPC — sets `started_at = now()`, `status = in_progress`, and syncs `tournament_courts.status = in_use` |
+| `scheduleMatch(match, {scheduledAt, estimatedDurationMinutes})` | Sets/clears scheduled time and estimated duration |
+| `awardWalkover(match, winnerEntrantId)` | Declares a no-show/forfeit winner via `award_walkover` RPC — sets `status = walkover`, advances winner to next match, frees court |
 | `saveTemplate(name, config)` | Saves a user template |
 | `deleteTemplate(id)` | |
 
@@ -354,7 +368,7 @@ All methods are on `EventProvider` (`lib/providers/event_provider.dart`).
 | `tournament_divisions` | `id`, `event_id`, `name`, `sport`, `discipline`, `skill_level`, `format`, `scoring_config` (jsonb), `tie_config` (jsonb), `entrant_kind`, `roster_size`, `entrant_cap`, `pool_count`, `advance_per_pool`, `status`, `bracket_generated_at`, `bundle_id` (uuid nullable), `entrant_count`, `match_count`, `completed_match_count` |
 | `tournament_entrants` | `id`, `division_id`, `team_name`, `player1_user_id`, `player1_name`, `player2_user_id`, `player2_name`, `seed`, `pool_id`, `status`, `registered_at` |
 | `tournament_entrant_players` | `id`, `entrant_id`, `user_id`, `name`, `player_rank`, `sort_order` (team-kind rosters) |
-| `tournament_matches` | `id`, `division_id`, `bracket_type`, `round_number`, `match_number`, `pool_id`, `entrant1_id`, `entrant2_id`, `winner_entrant_id`, `next_match_id`, `next_match_slot`, `court_id`, `status`, `scheduled_order`, `is_tie` |
+| `tournament_matches` | `id`, `division_id`, `bracket_type`, `round_number`, `match_number`, `pool_id`, `entrant1_id`, `entrant2_id`, `winner_entrant_id`, `next_match_id`, `next_match_slot`, `court_id`, `status`, `scheduled_order`, `is_tie`, `scheduled_at`, `started_at`, `ended_at`, `estimated_duration_minutes` |
 | `tournament_match_games` | `id`, `match_id`, `game_number`, `entrant1_score`, `entrant2_score`, `winner_entrant_id` |
 | `tournament_tie_submatches` | `id`, `tie_match_id`, `position`, `side1_player_id`, `side2_player_id`, `games` (jsonb), `winner_side`, `status` |
 | `tournament_templates` | `id`, `user_id`, `name`, `config` (jsonb) |
@@ -373,6 +387,7 @@ All methods are on `EventProvider` (`lib/providers/event_provider.dart`).
 | `lib/widgets/tournament/tournament_tabs.dart` | Divisions, Entrants, Bracket, Courts tabs; `_DivisionFormSheet`, `_EntrantFormSheet`, `_TeamFormSheet`, `_PlayerNameField`, `_MemberPickerSheet` |
 | `lib/widgets/tournament/bracket_builder_screen.dart` | Multi-division bracket builder (`BracketBuilderScreen`) |
 | `lib/widgets/tournament/tournament_bracket_view.dart` | Bracket visualization widget (used by Bracket tab) |
+| `lib/widgets/tournament/live_elapsed_timer.dart` | `LiveElapsedTimer` widget — ticking elapsed-time display for live matches |
 | `lib/widgets/tournament/tournament_labels.dart` | Display labels for enums (`DivisionFormat.label`, `Discipline.label`, `sportIcon()`) |
 | `lib/utils/tournament_standings.dart` | `computeStandings()` — client-side round-robin standings |
 
@@ -382,8 +397,34 @@ All methods are on `EventProvider` (`lib/providers/event_provider.dart`).
 
 - **Registration closes when a bracket is generated.** `bracketGeneratedAt != null` → `registrationOpen == false`. The Add Team FAB disappears. The Entrants list becomes read-only for organizers.
 - **Bracket builder entrants are fresh (not from DB).** Organizers type names directly in the builder pool. Those become `DraftEntrant` objects and are persisted only when "Generate All" is tapped.
-- **Pools → Playoffs requires two generation steps.** First `generateBracket()` creates pool phase. After all pool matches complete, `seedPlayoffs()` creates the elimination bracket. No UI access to playoffs until seeded.
+- **Pools → Playoffs requires two generation steps.** First `generateBracket()` creates pool phase. After all pool matches are decided (completed, walkover, or bye), `seedPlayoffs()` creates the elimination bracket. `poolsComplete()` uses `isDecided` — walkover pool matches count as done. `seedPlayoffs()` guards with `!m.isDecided` client-side and `status NOT IN ('completed','walkover','bye')` server-side.
 - **Custom format has no auto-generation.** Organizer must add matches manually via `addManualMatch()`.
 - **`bundle_id` is informational only.** Divisions sharing a `bundle_id` were created together in the builder. It is never used in RLS or bracket logic.
-- **Double-booking detection is client-side only.** `doubleBookedEntrantIds()` scans `assignedMatchesForCourt` in memory. It is a warning, not a hard block.
+- **Double-booking detection is client-side only.** `doubleBookedEntrantIds()` scans `assignedMatchesForCourt` in memory. It is a warning, not a hard block. Uses `isDecided` to exclude completed/walkover/bye matches from the scan.
 - **Team ties: winner threshold must be ≤ ceil(submatchCount / 2).** The UI does not enforce this — organizer is responsible.
+- **"Start match" is only available for non-tie matches.** Tie (team-kind) matches have their status managed by `record_submatch_score` via sub-matches; the "Start match" action is hidden for ties. The `start_match` RPC rejects tie matches with `tie_matches_start_via_submatches`.
+- **`startMatch()` uses the `start_match` RPC (not a direct UPDATE).** The RPC also sets `tournament_courts.status = in_use` and `current_match_id` so the Courts tab stays accurate. `scheduleMatch()` still uses a direct UPDATE (it only changes time fields, not court state). Double-tap protection: the call site catches `match_already_started` and shows a friendly snackbar.
+- **`award_walkover` RPC handles no-shows and forfeits.** It sets `status = walkover`, stamps `started_at`/`ended_at`, auto-advances the winner to the next match slot, frees/promotes the court queue, and (for tie matches) closes all open sub-matches by setting their `status = walkover`. Closing sub-matches prevents `record_submatch_score` from overwriting the walkover decision after the fact.
+- **`record_submatch_score` guards against a decided parent.** The RPC raises `parent_match_already_decided` if the parent tie match status is already `completed`, `walkover`, or `bye`. The Dart `_SubmatchRow.canScore` also checks `!tieIsDecided` as defense-in-depth.
+- **`isDecided` covers completed, walkover, and bye.** `isReady` uses `!isDecided`, so walked-over matches cannot be re-scored or re-started. The bracket shows a "W/O" badge and grey border for walkover matches. `computeStandings()` includes walkover matches in the W/L tally.
+- **Court assignment requires both entrant slots filled and match not decided.** `assign_match_to_court` rejects matches where entrant slots are NULL (`match_not_ready`) or the match is already decided (`match_not_assignable`, covers completed/walkover/bye). `courtQueue` and `doubleBookedEntrants` both use `!isDecided` to exclude finished matches.
+- **Court queue auto-promotes on match completion or walkover.** Both `record_match_score` and `award_walkover` RPCs find the next non-decided match in the court's queue and set it as `current_match_id` (court stays `in_use`). `record_submatch_score` also auto-promotes (same pattern). If the queue is empty, `current_match_id = NULL` and court goes `available`.
+- **Courts tab shows unassigned-ready matches.** A panel at the top of the Courts tab lists matches with both entrants known but no court assigned, with a one-tap "Assign" button. Only shown to organizers.
+- **Courts tab shows overdue and estimated finish time.** When the top-of-queue match has `scheduledAt` in the past and hasn't started, the subtitle shows "Overdue Nm — was HH:MM AM" in red. When a match is live and `estimatedDurationMinutes` is set, the subtitle shows elapsed time plus estimated finish time.
+- **Pool-playoff divisions for team-kind (ties) seed is_tie=true in playoffs.** `buildPlayoffFromPools` accepts `isTie: division.entrantKind == EntrantKind.team` and calls `.asTie()` on every match. `seed_division_playoffs` reads the `is_tie` field from the plan and calls `_ensure_tie_submatches` for ready matches.
+- **`record_match_score` auto-stamps `started_at` if not already set.** If a match is scored without having been explicitly started, `started_at = COALESCE(started_at, now())` ensures the time range is always consistent. DB CHECK constraint `started_at <= ended_at` is enforced.
+- **Schedule sheet requires both a date and a time.** The Save button is disabled until both are set. This ensures multi-day tournaments can schedule matches on any day of the event.
+- **`_MatchCard` (round-robin/pool) exposes walkover action inline.** A "Walkover" text button appears in the bottom row for any ready, non-decided match (alongside "Enter score"). Pool match cards are flat-list tiles; long-press is reserved for the bracket tree `_TreeMatchCard`. `_showWalkoversForMatch` is a top-level function shared by both card types.
+- **`createDivisionBundle()` is not atomic.** If one division creation fails mid-bundle, partial divisions may exist. The organizer must manually clean up orphan divisions. (Known limitation — no partial-transaction rollback in the current implementation.)
+
+---
+
+## Known Gaps / Technical Debt
+
+- `assign_entrants_to_division` RPC exists but is a no-op stub — not wired in the UI. Entrants are added individually via `registerEntrant()` / `registerTeam()`.
+- `entrantCount` on `TournamentDivision` is denormalized (maintained by DB trigger). It may lag by one after a `registerEntrant()` call until the next `fetchDivisions()`.
+- `DivisionStatus` transitions are not enforced at the DB level — the app updates them directly. This is intentional (flexible organizer control) but means invalid state sequences are theoretically possible.
+- Re-seeding pools is not supported — `generate_division_bracket` raises `bracket_already_generated` on second call. Organizer must delete the division and recreate it.
+- No drag-reorder UI for the court queue — `reorderCourtQueue` provider method and `reorder_court_queue` RPC exist but no `ReorderableListView` calls them yet.
+- The "Move to different court" action is two steps: unassign from current court (Courts tab), then reassign from Bracket tab. `scheduled_at` is preserved across both steps.
+- No per-event "schedule overview" or "ahead/behind schedule" dashboard — time comparisons (started vs scheduled) exist in the data model but no summary view is rendered.

@@ -1,3 +1,4 @@
+import 'package:cloudflare_turnstile/cloudflare_turnstile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -6,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:shared_ui/shared_ui.dart';
+
+const _kTurnstileSiteKey = '0x4AAAAAADrG088VHSiCgrru';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,16 +26,31 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  CloudflareTurnstile? _turnstile;
   bool _loading = false;
   bool _obscure = true;
   bool _rememberMe = false;
+  String? _captchaToken;
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    _turnstile = CloudflareTurnstile.invisible(
+      siteKey: _kTurnstileSiteKey,
+      onTokenReceived: (token) {
+        if (mounted) setState(() => _captchaToken = token);
+      },
+      onTokenExpired: () {
+        if (mounted) setState(() => _captchaToken = null);
+        _fetchToken();
+      },
+    );
+    _fetchToken();
   }
+
+  void _fetchToken() => _turnstile?.getToken();
 
   Future<void> _loadSavedCredentials() async {
     final remember = await _storage.read(key: _keyRemember);
@@ -64,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _turnstile?.dispose();
     super.dispose();
   }
 
@@ -104,19 +123,24 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
 
-    final error = await context
-        .read<AuthProvider>()
-        .login(_emailCtrl.text.trim(), _passwordCtrl.text);
+    final error = await context.read<AuthProvider>().login(
+          _emailCtrl.text.trim(),
+          _passwordCtrl.text,
+          captchaToken: _captchaToken,
+        );
     if (!mounted) return;
 
     if (error == null) {
       await _saveOrClearCredentials();
       // GoRouter redirect handles navigation to /trips.
     } else {
+      // Refresh Turnstile so the user can try again with a fresh token.
       setState(() {
+        _captchaToken = null;
         _loading = false;
         _error = error;
       });
+      _fetchToken();
     }
   }
 
@@ -295,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: AppButton(
                   label: l10n.signIn,
-                  onPressed: _login,
+                  onPressed: _captchaToken != null ? _login : null,
                   loading: _loading,
                 ),
               ),
