@@ -113,9 +113,9 @@ class EventProvider extends ChangeNotifier {
   List<Event> get invitedEvents =>
       _events.where((e) => e.createdBy != _userId).toList();
 
-  /// Count of pending invitations across all trip-type events.
+  /// Count of pending invitations — mirrors the Invited tab filter exactly.
   int get pendingInviteCount => _events
-      .where((e) => e.createdBy != _userId)
+      .where((e) => e.createdBy != _userId && !e.isPastFor(_userId))
       .expand((e) => e.guests)
       .where((g) => g.userId == _userId && g.isPending)
       .length;
