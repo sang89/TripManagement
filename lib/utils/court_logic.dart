@@ -9,7 +9,7 @@ const _farOrder = 1 << 30;
 /// position — the first element is "on court now".
 List<TournamentMatch> courtQueue(List<TournamentMatch> all, String courtId) {
   return all
-      .where((m) => m.courtId == courtId && !m.isCompleted)
+      .where((m) => m.courtId == courtId && !m.isDecided)
       .toList()
     ..sort((a, b) => (a.scheduledOrder ?? _farOrder)
         .compareTo(b.scheduledOrder ?? _farOrder));
@@ -20,7 +20,7 @@ List<TournamentMatch> courtQueue(List<TournamentMatch> all, String courtId) {
 Set<String> doubleBookedEntrants(List<TournamentMatch> all) {
   final counts = <String, int>{};
   for (final m in all) {
-    if (m.courtId == null || m.isCompleted) continue;
+    if (m.courtId == null || m.isDecided) continue;
     for (final id in [m.entrant1Id, m.entrant2Id].whereType<String>()) {
       counts[id] = (counts[id] ?? 0) + 1;
     }

@@ -357,6 +357,110 @@ void main() {
       expect(json['entrant1_score'], 19);
       expect(json['entrant2_score'], 21);
     });
+
+    test('time fields parse from JSON as UTC DateTimes', () {
+      final m = TournamentMatch.fromJson({
+        'id': 'm2',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'in_progress',
+        'created_at': '2026-06-24T09:00:00Z',
+        'scheduled_at': '2026-06-24T10:00:00Z',
+        'started_at': '2026-06-24T10:05:00Z',
+        'ended_at': null,
+        'estimated_duration_minutes': 45,
+      });
+      expect(m.scheduledAt, DateTime.utc(2026, 6, 24, 10, 0, 0));
+      expect(m.startedAt, DateTime.utc(2026, 6, 24, 10, 5, 0));
+      expect(m.endedAt, isNull);
+      expect(m.estimatedDurationMinutes, 45);
+    });
+
+    test('isWalkover and isDecided cover walkover matches', () {
+      TournamentMatch make(String status) => TournamentMatch.fromJson({
+            'id': 'mx',
+            'division_id': 'd1',
+            'round_number': 1,
+            'match_number': 1,
+            'status': status,
+            'entrant1_id': 'e1',
+            'entrant2_id': 'e2',
+            'created_at': '2026-06-24T09:00:00Z',
+          });
+      final wo = make('walkover');
+      expect(wo.isWalkover, isTrue);
+      expect(wo.isDecided, isTrue);
+      expect(wo.isReady, isFalse,
+          reason: 'walkover match should not be re-scoreable');
+
+      final comp = make('completed');
+      expect(comp.isWalkover, isFalse);
+      expect(comp.isDecided, isTrue);
+
+      final bye = make('bye');
+      expect(bye.isDecided, isTrue);
+
+      final pending = make('pending');
+      expect(pending.isDecided, isFalse);
+    });
+
+    test('isLive is true when started and not ended', () {
+      final started = TournamentMatch.fromJson({
+        'id': 'm3',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'in_progress',
+        'created_at': '2026-06-24T09:00:00Z',
+        'started_at': '2026-06-24T10:00:00Z',
+      });
+      expect(started.isLive, isTrue);
+      expect(started.elapsed, isNotNull);
+
+      final notStarted = TournamentMatch.fromJson({
+        'id': 'm4',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'pending',
+        'created_at': '2026-06-24T09:00:00Z',
+      });
+      expect(notStarted.isLive, isFalse);
+      expect(notStarted.elapsed, isNull);
+
+      final ended = TournamentMatch.fromJson({
+        'id': 'm5',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'completed',
+        'created_at': '2026-06-24T09:00:00Z',
+        'started_at': '2026-06-24T10:00:00Z',
+        'ended_at': '2026-06-24T10:30:00Z',
+      });
+      expect(ended.isLive, isFalse);
+    });
+
+    test('copyWith clears time fields', () {
+      final base = TournamentMatch.fromJson({
+        'id': 'm6',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'in_progress',
+        'created_at': '2026-06-24T09:00:00Z',
+        'scheduled_at': '2026-06-24T10:00:00Z',
+        'started_at': '2026-06-24T10:05:00Z',
+        'estimated_duration_minutes': 30,
+      });
+      expect(base.copyWith(clearScheduledAt: true).scheduledAt, isNull);
+      expect(base.copyWith(clearStartedAt: true).startedAt, isNull);
+      expect(base.copyWith(clearEstimatedDuration: true).estimatedDurationMinutes, isNull);
+      expect(
+          base.copyWith(estimatedDurationMinutes: 60).estimatedDurationMinutes,
+          60);
+    });
   });
 
   group('TieSubmatch + tie match (M7)', () {

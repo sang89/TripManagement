@@ -40,11 +40,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Returns null on success, error message on failure.
-  Future<String?> login(String email, String password) async {
+  Future<String?> login(String email, String password,
+      {String? captchaToken}) async {
     try {
       await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
+        captchaToken: captchaToken,
       );
       _biometricVerified = true; // fresh login bypasses biometric gate
       return null;
@@ -56,12 +58,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Returns null on success, error message on failure.
-  Future<String?> register(String name, String email, String password) async {
+  Future<String?> register(String name, String email, String password,
+      {String? captchaToken}) async {
     try {
       await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
         data: {'name': name},
+        captchaToken: captchaToken,
       );
       return null;
     } on AuthException catch (e) {

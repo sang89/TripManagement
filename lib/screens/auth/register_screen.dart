@@ -1,9 +1,12 @@
+import 'package:cloudflare_turnstile/cloudflare_turnstile.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'package:shared_ui/shared_ui.dart';
+
+const _kTurnstileSiteKey = '0x4AAAAAADrG088VHSiCgrru';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,9 +21,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  CloudflareTurnstile? _turnstile;
   bool _loading = false;
   bool _obscure = true;
+  String? _captchaToken;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _turnstile = CloudflareTurnstile.invisible(
+      siteKey: _kTurnstileSiteKey,
+      onTokenReceived: (token) {
+        if (mounted) setState(() => _captchaToken = token);
+      },
+      onTokenExpired: () {
+        if (mounted) setState(() => _captchaToken = null);
+        _fetchToken();
+      },
+    );
+    _fetchToken();
+  }
+
+  void _fetchToken() => _turnstile?.getToken();
 
   @override
   void dispose() {
@@ -28,6 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
+    _turnstile?.dispose();
     super.dispose();
   }
 
@@ -41,15 +65,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _nameCtrl.text.trim(),
           _emailCtrl.text.trim(),
           _passwordCtrl.text,
+          captchaToken: _captchaToken,
         );
     if (!mounted) return;
     if (error == null) {
       context.go('/home');
     } else {
       setState(() {
+        _captchaToken = null;
         _loading = false;
         _error = error;
       });
+      _fetchToken();
     }
   }
 
@@ -156,7 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   : null,
                             ),
                             if (_error != null) ...[
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 8),
                               SelectableText(
                                 _error!,
                                 style: const TextStyle(
@@ -193,7 +220,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 constraints: const BoxConstraints(maxWidth: 440),
                 child: AppButton(
                   label: l10n.createAccount,
-                  onPressed: _register,
+                  onPressed: _captchaToken != null ? _register : null,
                   loading: _loading,
                 ),
               ),

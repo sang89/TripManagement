@@ -343,8 +343,7 @@ BracketPlan buildPoolsStage(List<String> entrantIds, int poolCount) {
 /// Whether every pool match in [poolMatches] has been completed (so the
 /// playoff bracket can be seeded).
 bool poolsComplete(List<TournamentMatch> poolMatches) =>
-    poolMatches.isNotEmpty &&
-    poolMatches.every((m) => m.status == MatchStatus.completed);
+    poolMatches.isNotEmpty && poolMatches.every((m) => m.isDecided);
 
 /// After pool play completes, seed a single-elimination playoff from the pool
 /// standings. Qualifiers are the top [advancePerPool] of each pool, ordered by
@@ -354,8 +353,9 @@ bool poolsComplete(List<TournamentMatch> poolMatches) =>
 BracketPlan buildPlayoffFromPools(
   List<TournamentEntrant> entrants,
   List<TournamentMatch> poolMatches,
-  int advancePerPool,
-) {
+  int advancePerPool, {
+  bool isTie = false,
+}) {
   final poolIds = poolMatches
       .map((m) => m.poolId)
       .whereType<String>()
@@ -381,7 +381,12 @@ BracketPlan buildPlayoffFromPools(
   if (seeded.length < 2) {
     throw ArgumentError('Not enough qualifiers for a playoff');
   }
-  return buildSingleElimination(seeded, bracketType: BracketType.winners);
+  final plan = buildSingleElimination(seeded, bracketType: BracketType.winners);
+  if (!isTie) return plan;
+  return BracketPlan(
+    matches: plan.matches.map((m) => m.asTie()).toList(),
+    seeds: plan.seeds,
+  );
 }
 
 /// Hard ceiling on generated matches (mirrors the server guard). Prevents a

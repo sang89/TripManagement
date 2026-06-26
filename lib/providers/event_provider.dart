@@ -2216,8 +2216,17 @@ class EventProvider extends ChangeNotifier {
     final poolMatches = matchesFor(division.id)
         .where((m) => m.bracketType == BracketType.pool)
         .toList();
+
+    // Guard: all pool matches must be decided (completed, walkover, or bye).
+    final incomplete = poolMatches.where((m) => !m.isDecided);
+    if (incomplete.isNotEmpty) {
+      throw StateError(
+          '${incomplete.length} pool match(es) are not yet decided.');
+    }
+
     final plan = buildPlayoffFromPools(
-        entrants, poolMatches, division.advancePerPool ?? 2);
+        entrants, poolMatches, division.advancePerPool ?? 2,
+        isTie: division.entrantKind == EntrantKind.team);
     await _db.rpc('seed_division_playoffs', params: {
       'p_division_id': division.id,
       'p_plan': plan.matches.map((m) => m.toJson()).toList(),
@@ -2550,6 +2559,42 @@ class EventProvider extends ChangeNotifier {
     });
     await fetchMatches(match.divisionId);
     await fetchCourts(eventId);
+  }
+
+  /// Marks a match as started and syncs the court to in_use.
+  Future<void> startMatch(TournamentMatch match) async {
+    await _db.rpc('start_match', params: {'p_match_id': match.id});
+    await fetchMatches(match.divisionId);
+    final eventId = _eventIdForDivision(match.divisionId);
+    if (eventId != null) await fetchCourts(eventId);
+  }
+
+  /// Awards a walkover to [winnerEntrantId] — no scores entered, no-show/forfeit.
+  Future<void> awardWalkover(
+      TournamentMatch match, String winnerEntrantId) async {
+    await _db.rpc('award_walkover', params: {
+      'p_match_id': match.id,
+      'p_winner_entrant_id': winnerEntrantId,
+    });
+    await fetchMatches(match.divisionId);
+    final eventId = _eventIdForDivision(match.divisionId);
+    if (eventId != null) {
+      await fetchDivisions(eventId);
+      await fetchCourts(eventId);
+    }
+  }
+
+  /// Sets or clears the scheduled time and estimated duration for a match.
+  Future<void> scheduleMatch(
+    TournamentMatch match, {
+    DateTime? scheduledAt,
+    int? estimatedDurationMinutes,
+  }) async {
+    await _db.from('tournament_matches').update({
+      'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
+      'estimated_duration_minutes': estimatedDurationMinutes,
+    }).eq('id', match.id);
+    await fetchMatches(match.divisionId);
   }
 
   Future<void> reorderCourtQueue(

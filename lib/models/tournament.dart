@@ -677,6 +677,10 @@ class TournamentMatch {
   final List<MatchGame> games;
   final bool isTie; // team-vs-team match made of sub-matches
   final List<TieSubmatch> submatches;
+  final DateTime? scheduledAt;
+  final DateTime? startedAt;
+  final DateTime? endedAt;
+  final int? estimatedDurationMinutes;
 
   const TournamentMatch({
     required this.id,
@@ -697,6 +701,10 @@ class TournamentMatch {
     this.games = const [],
     this.isTie = false,
     this.submatches = const [],
+    this.scheduledAt,
+    this.startedAt,
+    this.endedAt,
+    this.estimatedDurationMinutes,
   });
 
   factory TournamentMatch.fromJson(Map<String, dynamic> json) {
@@ -735,13 +743,28 @@ class TournamentMatch {
       games: games,
       isTie: json['is_tie'] as bool? ?? false,
       submatches: submatches,
+      scheduledAt: json['scheduled_at'] != null
+          ? DateTime.parse(json['scheduled_at'] as String)
+          : null,
+      startedAt: json['started_at'] != null
+          ? DateTime.parse(json['started_at'] as String)
+          : null,
+      endedAt: json['ended_at'] != null
+          ? DateTime.parse(json['ended_at'] as String)
+          : null,
+      estimatedDurationMinutes: json['estimated_duration_minutes'] as int?,
     );
   }
 
   bool get isBye => status == MatchStatus.bye;
   bool get isCompleted => status == MatchStatus.completed;
+  bool get isWalkover => status == MatchStatus.walkover;
+  bool get isDecided => isCompleted || isWalkover || isBye;
   bool get isReady =>
-      entrant1Id != null && entrant2Id != null && !isCompleted && !isBye;
+      entrant1Id != null && entrant2Id != null && !isDecided;
+  bool get isLive => startedAt != null && endedAt == null;
+  Duration? get elapsed =>
+      startedAt != null ? DateTime.now().difference(startedAt!) : null;
 
   TournamentMatch copyWith({
     String? entrant1Id,
@@ -757,6 +780,14 @@ class TournamentMatch {
     bool clearScheduledOrder = false,
     List<MatchGame>? games,
     List<TieSubmatch>? submatches,
+    DateTime? scheduledAt,
+    bool clearScheduledAt = false,
+    DateTime? startedAt,
+    bool clearStartedAt = false,
+    DateTime? endedAt,
+    bool clearEndedAt = false,
+    int? estimatedDurationMinutes,
+    bool clearEstimatedDuration = false,
   }) =>
       TournamentMatch(
         id: id,
@@ -779,6 +810,12 @@ class TournamentMatch {
         games: games ?? this.games,
         isTie: isTie,
         submatches: submatches ?? this.submatches,
+        scheduledAt: clearScheduledAt ? null : (scheduledAt ?? this.scheduledAt),
+        startedAt: clearStartedAt ? null : (startedAt ?? this.startedAt),
+        endedAt: clearEndedAt ? null : (endedAt ?? this.endedAt),
+        estimatedDurationMinutes: clearEstimatedDuration
+            ? null
+            : (estimatedDurationMinutes ?? this.estimatedDurationMinutes),
       );
 }
 

@@ -502,7 +502,6 @@ class _InstructionsBannerState extends State<_InstructionsBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       color: AppTheme.primary.withValues(alpha: 0.07),
       child: Column(
@@ -532,13 +531,6 @@ class _InstructionsBannerState extends State<_InstructionsBanner> {
                     _expanded ? Icons.expand_less : Icons.expand_more,
                     color: AppTheme.primary,
                     size: 20,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: widget.onDismiss,
-                    tooltip: 'Dismiss',
-                    visualDensity: VisualDensity.compact,
-                    color: cs.onSurfaceVariant,
                   ),
                 ],
               ),

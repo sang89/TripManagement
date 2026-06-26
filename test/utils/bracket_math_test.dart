@@ -295,6 +295,25 @@ void main() {
             reason: 'round-1 match $teams is a same-pool rematch');
       }
     });
+
+    test('isTie=true marks all playoff matches as ties', () {
+      final pool = [poolMatch('a1', 'x', 'a1', 'A'), poolMatch('b1', 'y', 'b1', 'B')];
+      final plan = buildPlayoffFromPools(
+        [ent('a1'), ent('x'), ent('b1'), ent('y')],
+        pool,
+        1,
+        isTie: true,
+      );
+      expect(plan.matches.every((m) => m.isTie), isTrue,
+          reason: 'all playoff matches should be is_tie=true for team divisions');
+    });
+
+    test('isTie=false (default) leaves matches as non-ties', () {
+      final entrants = [ent('a1'), ent('b1'), ent('x'), ent('y')];
+      final pool = [poolMatch('a1', 'x', 'a1', 'A'), poolMatch('b1', 'y', 'b1', 'B')];
+      final plan = buildPlayoffFromPools(entrants, pool, 1);
+      expect(plan.matches.every((m) => !m.isTie), isTrue);
+    });
   });
 
   group('pairSubmatches (team ties)', () {
