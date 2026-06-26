@@ -94,7 +94,7 @@ class _ShellScaffoldState extends State<ShellScaffold>
           CustomPaint(
             painter: _NotchedBarPainter(
               color: Colors.white,
-              borderColor: Colors.grey.shade200,
+              borderColor: Colors.grey.shade300,
             ),
             child: SafeArea(
               top: false,
@@ -384,19 +384,42 @@ class _NotchedBarPainter extends CustomPainter {
   final Color color;
   final Color borderColor;
 
-  /// Radius of the carved notch. Slightly larger than the Live circle's outer
-  /// edge (28 + 3px ring) so a small gap shows around the button.
-  static const double _notchRadius = 39;
-
   const _NotchedBarPainter({required this.color, required this.borderColor});
 
+  // Smooth cubic-bezier notch — horizontal tangents at every transition point
+  // (entry, bottom, exit) so there are no visible kinks.
   Path _barPath(Size size) {
-    final host = Offset.zero & size;
-    final guest = Rect.fromCircle(
-      center: Offset(size.width / 2, 0),
-      radius: _notchRadius,
-    );
-    return const CircularNotchedRectangle().getOuterPath(host, guest);
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+
+    // Half-width from center where the flat bar starts curving down.
+    const spread = 62.0;
+    // Deepest point below the bar top edge.
+    const depth = 33.0;
+    // Bezier inner arm lengths — control how gradually the curve sweeps.
+    const arm1 = 38.0; // distance from entry/exit that the first cp stays flat
+    const arm2 = 20.0; // x-distance from center that the second cp sits
+
+    return Path()
+      ..moveTo(0, 0)
+      ..lineTo(cx - spread, 0)
+      // Left shoulder → notch bottom (arrives horizontal at the centre)
+      ..cubicTo(
+        cx - arm1, 0,      // cp1 – flat departure from the bar line
+        cx - arm2, depth,  // cp2 – settles near the deepest point
+        cx, depth,         // P3  – bottom centre; tangent is horizontal
+      )
+      // Notch bottom → right shoulder (departs horizontal from the centre)
+      ..cubicTo(
+        cx + arm2, depth,  // cp1 – flat departure from the bottom
+        cx + arm1, 0,      // cp2 – rising back to bar level
+        cx + spread, 0,    // P3  – back to the flat bar line
+      )
+      ..lineTo(w, 0)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
   }
 
   @override
@@ -423,7 +446,7 @@ class _NotchedBarPainter extends CustomPainter {
       Paint()
         ..color = borderColor
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.5,
+        ..strokeWidth = 1.5,
     );
   }
 
