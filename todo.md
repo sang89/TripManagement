@@ -78,3 +78,46 @@ Defer until Phases 1-5 are stable and you have a user base.
 - [ ] **7.2** Design a white-label config layer (custom branding, disabled tabs, custom event types)
 - [ ] **7.3** Build a simple agency admin dashboard (web-only) for managing multiple events
 - [ ] **7.4** Set pricing: ~$500-2000/month per agency depending on event volume
+
+---
+
+## Firebase migration (completed 2026-06-29)
+
+TripManagement moved from the shared PropertyManagement Firebase project to its own
+project `tripmanagement-5ec73`.
+
+- [x] Create new Firebase project `tripmanagement-5ec73`
+- [x] Register Android, iOS, and Web apps
+- [x] Replace `android/app/google-services.json` and `ios/Runner/GoogleService-Info.plist`
+- [x] Regenerate `lib/firebase_options.dart` via `flutterfire configure`
+- [x] Set `FCM_SERVICE_ACCOUNT_JSON` secret in Supabase
+- [x] Redeploy all 4 push notification edge functions
+
+### Remaining (do before next release)
+
+- [ ] Enable Cloud Messaging API V1 — Project Settings → Cloud Messaging → toggle on Firebase Cloud Messaging API (V1)
+- [ ] Enable Crashlytics — Build → Crashlytics → Enable
+- [x] Delete service account JSON from Downloads
+- [ ] Upload APNs key — do this **after Apple Developer account migration to LLC is complete** — Project Settings → Cloud Messaging → Apple app configuration (new `.p8` key, Key ID, new Team ID)
+- [ ] Remove TripManagement apps from old PropertyManagement Firebase project (after push confirmed working)
+
+---
+
+## Apple Developer account migration (personal → LLC)
+
+**Do not start until the LLC account is enrolled in Apple Developer Program.**
+
+See `apple_developer_migration.md` for full step-by-step instructions.
+
+- [ ] LLC account enrolled in Apple Developer Program
+- [ ] Transfer PropertyManagement app on App Store Connect
+- [ ] Transfer TripManagement app on App Store Connect
+- [ ] Generate new APNs `.p8` key under LLC account
+- [ ] Upload new APNs key to Firebase TripManagement project (`tripmanagement-5ec73`)
+- [ ] Upload new APNs key to Firebase PropertyManagement project (`propertymanagement-e49e3`)
+- [ ] Regenerate code signing certificates and provisioning profiles under LLC account
+- [ ] Update RevenueCat with LLC App Store Connect API key
+- [ ] Check and update keychain access group Team ID prefix in `.entitlements` files
+- [ ] Ship new builds signed with LLC certificates
+- [ ] Validate iOS push notifications on a real device via TestFlight
+- [ ] Revoke old personal account APNs key from both Firebase projects

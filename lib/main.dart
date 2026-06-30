@@ -60,7 +60,9 @@ void main() async {
     };
     return true;
   }());
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
   await AppLogger.init();
 
   await Supabase.initialize(url: kSupabaseUrl, anonKey: kSupabaseAnonKey);

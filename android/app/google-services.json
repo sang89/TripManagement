@@ -1,79 +1,26 @@
 {
   "project_info": {
-    "project_number": "824615270003",
-    "project_id": "propertymanagement-e49e3",
-    "storage_bucket": "propertymanagement-e49e3.firebasestorage.app"
+    "project_number": "161578457175",
+    "project_id": "tripmanagement-5ec73",
+    "storage_bucket": "tripmanagement-5ec73.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:824615270003:android:1000784ea19410790adc06",
-        "android_client_info": {
-          "package_name": "com.propertymanager.property_management"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "824615270003-i4tiv7a6i5amr11eefd7hseo954avocn.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD0EYLo-3FWLrp9J436K8JDwiTCEHpisbY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "824615270003-i4tiv7a6i5amr11eefd7hseo954avocn.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "824615270003-5714kre5m6si8t8st5e45aqn0sgi863e.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.sang89.tripManagement"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:824615270003:android:52ffababdcbf7f540adc06",
+        "mobilesdk_app_id": "1:161578457175:android:b798251cc2bd5161192b12",
         "android_client_info": {
           "package_name": "com.sang89.trip_management"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "824615270003-i4tiv7a6i5amr11eefd7hseo954avocn.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD0EYLo-3FWLrp9J436K8JDwiTCEHpisbY"
+          "current_key": "AIzaSyAg6UIpi8SmyUG_EBFew4Nk8rONHw1KxIk"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "824615270003-i4tiv7a6i5amr11eefd7hseo954avocn.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "824615270003-5714kre5m6si8t8st5e45aqn0sgi863e.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.sang89.tripManagement"
-              }
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
