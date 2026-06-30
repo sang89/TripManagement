@@ -442,6 +442,87 @@ void main() {
       expect(ended.isLive, isFalse);
     });
 
+    // Regression: isLive must be status-based, not timestamp-based.
+    //
+    // Before the fix, isLive was `startedAt != null && endedAt == null`.
+    // This meant a match that was stopped (started_at cleared → status back
+    // to 'scheduled') would still look live in the model if the raw update
+    // was stale, and a completed match with a missing ended_at would show
+    // the "Stop match" tile.
+    //
+    // Fix: isLive = status == MatchStatus.inProgress.
+    test('isLive is false for scheduled match even when started_at is set '
+        '(stop-match regression)', () {
+      final stopped = TournamentMatch.fromJson({
+        'id': 'ms',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'scheduled',
+        'created_at': '2026-06-24T09:00:00Z',
+        'started_at': '2026-06-24T10:00:00Z', // stale — stopMatch cleared it
+      });
+      expect(stopped.isLive, isFalse,
+          reason: 'stopped match (status=scheduled) must not show as live '
+              'even if started_at was not yet cleared in the local cache');
+    });
+
+    test('isLive is true for in_progress match even when started_at is null '
+        '(status is the source of truth)', () {
+      final live = TournamentMatch.fromJson({
+        'id': 'ml',
+        'division_id': 'd1',
+        'round_number': 1,
+        'match_number': 1,
+        'status': 'in_progress',
+        'created_at': '2026-06-24T09:00:00Z',
+        // started_at absent — DB not yet refreshed after startMatch
+      });
+      expect(live.isLive, isTrue,
+          reason: 'in_progress status is the canonical live signal');
+    });
+
+    // Regression: "Assign to court" must be hidden for decided matches.
+    //
+    // Before the fix, a completed match (both entrants set, not a walkover)
+    // passed the canScore check and showed the "Assign to court" action tile.
+    // Tapping it called assign_match_to_court which threw match_not_assignable,
+    // surfacing as a generic "Could not assign the court." snackbar.
+    //
+    // Fix: the tile condition is now `court == null && !match.isDecided`.
+    // This test guards the model predicates that feed that condition.
+    test('isDecided blocks court assignment for all three decided statuses', () {
+      TournamentMatch make(String status) => TournamentMatch.fromJson({
+            'id': 'mx',
+            'division_id': 'd1',
+            'round_number': 1,
+            'match_number': 1,
+            'status': status,
+            'entrant1_id': 'e1',
+            'entrant2_id': 'e2',
+            'created_at': '2026-06-24T09:00:00Z',
+          });
+
+      // All three decided statuses must block the "Assign to court" tile.
+      for (final status in ['completed', 'walkover', 'bye']) {
+        final m = make(status);
+        expect(m.isDecided, isTrue,
+            reason: 'status=$status should be decided; '
+                '"Assign to court" must not appear');
+        // The tile guard: court == null && !match.isDecided
+        // With isDecided=true the guard is false regardless of court.
+        expect(!m.isDecided, isFalse,
+            reason: 'tile guard !isDecided must be false for status=$status');
+      }
+
+      // Non-decided statuses with both entrants set should allow assignment.
+      for (final status in ['pending', 'scheduled', 'in_progress']) {
+        final m = make(status);
+        expect(m.isDecided, isFalse,
+            reason: 'status=$status should allow "Assign to court"');
+      }
+    });
+
     test('copyWith clears time fields', () {
       final base = TournamentMatch.fromJson({
         'id': 'm6',

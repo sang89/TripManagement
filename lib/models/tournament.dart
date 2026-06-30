@@ -762,7 +762,7 @@ class TournamentMatch {
   bool get isDecided => isCompleted || isWalkover || isBye;
   bool get isReady =>
       entrant1Id != null && entrant2Id != null && !isDecided;
-  bool get isLive => startedAt != null && endedAt == null;
+  bool get isLive => status == MatchStatus.inProgress;
   Duration? get elapsed =>
       startedAt != null ? DateTime.now().difference(startedAt!) : null;
 
