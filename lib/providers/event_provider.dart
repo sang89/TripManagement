@@ -2569,6 +2569,13 @@ class EventProvider extends ChangeNotifier {
     if (eventId != null) await fetchCourts(eventId);
   }
 
+  Future<void> stopMatch(TournamentMatch match) async {
+    await _db.rpc('stop_match', params: {'p_match_id': match.id});
+    await fetchMatches(match.divisionId);
+    final eventId = _eventIdForDivision(match.divisionId);
+    if (eventId != null) await fetchCourts(eventId);
+  }
+
   /// Awards a walkover to [winnerEntrantId] — no scores entered, no-show/forfeit.
   Future<void> awardWalkover(
       TournamentMatch match, String winnerEntrantId) async {
