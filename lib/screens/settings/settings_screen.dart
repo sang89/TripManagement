@@ -8,6 +8,8 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/user_profile_provider.dart';
+import '../../responsive/breakpoints.dart';
+import '../../responsive/responsive_modal.dart';
 import '../../services/biometric_service.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -19,21 +21,29 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(title: Text(l10n.settingsTitle)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: const [
-          _AccountCard(),
-          SizedBox(height: 12),
-          _SecurityCard(),
-          SizedBox(height: 12),
-          _NotificationsCard(),
-          SizedBox(height: 12),
-          _PrivacyCard(),
-          SizedBox(height: 12),
-          _LanguageCard(),
-          SizedBox(height: 12),
-          _AboutCard(),
-        ],
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop(context) ? 800 : double.infinity,
+          ),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: const [
+              _AccountCard(),
+              SizedBox(height: 12),
+              _SecurityCard(),
+              SizedBox(height: 12),
+              _NotificationsCard(),
+              SizedBox(height: 12),
+              _PrivacyCard(),
+              SizedBox(height: 12),
+              _LanguageCard(),
+              SizedBox(height: 12),
+              _AboutCard(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -246,12 +256,8 @@ class _LanguageCard extends StatelessWidget {
       );
 
   void _showPicker(BuildContext context, Locale? current) {
-    showModalBottomSheet(
+    showResponsiveModal(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.6,
@@ -345,12 +351,8 @@ class _AccountCard extends StatelessWidget {
   const _AccountCard();
 
   void _showChangePasswordSheet(BuildContext context) {
-    showModalBottomSheet(
+    showResponsiveModal(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (_) => _ChangePasswordSheet(parentContext: context),
     );
   }

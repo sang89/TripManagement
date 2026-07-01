@@ -7,6 +7,7 @@ import '../../config/api_keys.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/event_provider.dart';
+import '../../responsive/breakpoints.dart';
 import '../../services/trip_places_service.dart';
 import '../../widgets/event_type_banner.dart';
 import '../../widgets/places_autocomplete_field.dart';
@@ -340,8 +341,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
         child: Column(
           children: [
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop(context) ? 640 : double.infinity,
+                  ),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
                 children: [
                   // Event type — single chip when pre-selected (new event
                   // from modal), full picker strip when editing.
@@ -659,6 +666,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ],
               ),
             ),
+          ),
+        ),
             SafeArea(
               top: false,
               child: Padding(

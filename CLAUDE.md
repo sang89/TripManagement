@@ -30,6 +30,32 @@ implementing any feature in its domain:
 
 **Rule:** Before touching tournament event code, read `tournament.md` — it is the authoritative reference for all models, enums, user flows, provider methods, and invariants. Update `tournament.md` whenever a new tournament feature is added, a flow changes, or a new invariant is identified.
 
+## Big-screen optimisation (desktop / tablet / web ≥ 900 px)
+
+**This rule applies to every bug fix, feature, and UI change — no exceptions.**
+
+Helper: `lib/responsive/breakpoints.dart` → `isDesktop(context)` (900 px threshold, same as PropertyManagement).
+Responsive modal: `lib/responsive/responsive_modal.dart` → `showResponsiveModal()` — bottom sheet on mobile, centered Dialog (maxWidth 560, maxHeight 700) on desktop.
+
+For every change:
+- On wide screens (≥ 900 px) wrap list-heavy screen bodies in `Align(alignment: Alignment.topCenter, child: ConstrainedBox(constraints: BoxConstraints(maxWidth: isDesktop(context) ? N : double.infinity), child: ...))` so content does not stretch to 1440 px.
+- Replace every `showModalBottomSheet` call with `showResponsiveModal` so sheets become dialogs on desktop.
+- The shell switches to `NavigationRail` at ≥ 900 px (see `lib/screens/shell/shell_scaffold.dart`).
+- The tournament bracket scales card/column sizes via `LayoutBuilder` (see `lib/widgets/tournament/tournament_bracket_view.dart`).
+- Do NOT hardcode any pixel width — always derive from `MediaQuery.sizeOf(context).width` or `isDesktop(context)`.
+
+Max-width reference per screen:
+
+| Screen | maxWidth (desktop) |
+|---|---|
+| Settings | 800 |
+| Profile | 720 |
+| Events list | 1000 |
+| Event form | 640 |
+| Event type list | 900 |
+| Friends | 800 |
+| Notifications | 800 |
+
 ## App architecture
 
 This app shares the same Supabase project as PropertyManagement — the same user account

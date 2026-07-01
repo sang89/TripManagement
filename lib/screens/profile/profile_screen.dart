@@ -12,6 +12,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_profile_provider.dart';
+import '../../responsive/breakpoints.dart';
+import '../../responsive/responsive_modal.dart';
 import '../../utils/avatar_utils.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/supabase_image.dart';
@@ -53,11 +55,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showAvatarOptions(UserProfile profile) {
     final l10n = AppLocalizations.of(context);
-    showModalBottomSheet(
+    showResponsiveModal(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -350,9 +349,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-          children: [
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop(context) ? 720 : double.infinity,
+            ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              children: [
                   _ProfileHeader(
                     displayName: displayName,
                     email: auth.userEmail,
@@ -462,8 +467,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onUpgrade: () => context.push('/paywall'),
                   ),
                 ],
+            ),
           ),
         ),
+      ),
     );
   }
 }

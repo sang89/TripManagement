@@ -5,6 +5,10 @@ lib/config/api_keys.dart
 web/index.html.local
 web/index.html.placeholder
 
+# Claude Code agent worktrees and package mirrors — generated, never commit
+.claude/worktrees/
+.claude/packages/
+
 # Miscellaneous
 *.class
 *.log

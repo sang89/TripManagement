@@ -10,6 +10,7 @@ import '../../models/live_queue_item.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/event_provider.dart';
+import '../../responsive/breakpoints.dart';
 import '../events/session_scan_screen.dart';
 
 class ShellScaffold extends StatefulWidget {
@@ -82,10 +83,82 @@ class _ShellScaffoldState extends State<ShellScaffold>
     final l10n = AppLocalizations.of(context);
     final current = widget.navigationShell.currentIndex;
     final uid = context.read<AuthProvider>().userId ?? '';
+    // Watch providers unconditionally so both mobile and desktop paths are
+    // reactive to badge-count changes.
+    final eventProvider = context.watch<EventProvider>();
+    final friendsProvider = context.watch<FriendsProvider>();
 
     void go(int index) => widget.navigationShell
         .goBranch(index, initialLocation: index == current);
 
+    // ── Desktop layout ────────────────────────────────────────────────────────
+    if (isDesktop(context)) {
+      final pendingInvites = eventProvider.pendingInviteCount;
+      final friendRequests = friendsProvider.incomingRequests.length;
+      final liveCount = buildLiveQueue(
+              eventProvider.events, eventProvider.liveSessions, uid, DateTime.now())
+          .length;
+
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: current,
+              onDestinationSelected: go,
+              labelType: NavigationRailLabelType.all,
+              minWidth: 88,
+              leading: _LiveRailButton(count: liveCount, onTap: _onLiveTap),
+              destinations: [
+                NavigationRailDestination(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  icon: Badge(
+                    isLabelVisible: pendingInvites > 0,
+                    label: Text('$pendingInvites'),
+                    child: const Icon(Icons.event_outlined),
+                  ),
+                  selectedIcon: Badge(
+                    isLabelVisible: pendingInvites > 0,
+                    label: Text('$pendingInvites'),
+                    child: const Icon(Icons.event_rounded),
+                  ),
+                  label: Text(l10n.navEvents),
+                ),
+                NavigationRailDestination(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  icon: Badge(
+                    isLabelVisible: friendRequests > 0,
+                    label: Text('$friendRequests'),
+                    child: const Icon(Icons.people_outline),
+                  ),
+                  selectedIcon: Badge(
+                    isLabelVisible: friendRequests > 0,
+                    label: Text('$friendRequests'),
+                    child: const Icon(Icons.people_rounded),
+                  ),
+                  label: Text(l10n.navFriends),
+                ),
+                NavigationRailDestination(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  icon: const Icon(Icons.person_outline),
+                  selectedIcon: const Icon(Icons.person_rounded),
+                  label: Text(l10n.navProfile),
+                ),
+              ],
+              trailing: _JoinRailButton(
+                onTap: () => Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(
+                      builder: (_) => const SessionScanScreen()),
+                ),
+              ),
+            ),
+            const VerticalDivider(width: 1, thickness: 1),
+            Expanded(child: widget.navigationShell),
+          ],
+        ),
+      );
+    }
+
+    // ── Mobile layout (unchanged) ─────────────────────────────────────────────
     return Scaffold(
       body: widget.navigationShell,
       bottomNavigationBar: Stack(
@@ -454,6 +527,76 @@ class _NotchedBarPainter extends CustomPainter {
   bool shouldRepaint(_NotchedBarPainter old) =>
       old.color != color || old.borderColor != borderColor;
 }
+
+// ── Desktop rail helper widgets ───────────────────────────────────────────────
+
+/// Leading widget for the desktop [NavigationRail] — shows the Live sensor
+/// icon with a badge count and a text label.
+class _LiveRailButton extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _LiveRailButton({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final live = count > 0;
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 12),
+      child: AppTappable(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Badge(
+              isLabelVisible: live,
+              label: Text('$count'),
+              child: Icon(
+                Icons.sensors_rounded,
+                color:
+                    live ? const Color(0xFFDC2626) : Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Live',
+              style: TextStyle(
+                fontSize: 11,
+                color: live
+                    ? const Color(0xFFDC2626)
+                    : Colors.grey.shade500,
+                fontWeight:
+                    live ? FontWeight.w700 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Trailing widget for the desktop [NavigationRail] — QR code scanner to join
+/// a live session by scanning a code.
+class _JoinRailButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _JoinRailButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 20),
+      child: IconButton(
+        icon: const Icon(Icons.qr_code_scanner_rounded),
+        onPressed: onTap,
+        tooltip: 'Join',
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PillNavItem extends StatelessWidget {
   final IconData iconSelected;

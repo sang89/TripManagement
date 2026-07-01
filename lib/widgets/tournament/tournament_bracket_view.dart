@@ -5,6 +5,7 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../models/event.dart';
 import '../../models/tournament.dart';
 import '../../providers/event_provider.dart';
+import '../../responsive/responsive_modal.dart';
 import '../../utils/bracket_math.dart';
 import '../../utils/scoring_rules.dart';
 import '../../utils/tournament_standings.dart';
@@ -306,10 +307,8 @@ class _ManualBuilder extends StatelessWidget {
             child: FloatingActionButton.extended(
               onPressed: entrants.isEmpty
                   ? null
-                  : () => showModalBottomSheet<void>(
+                  : () => showResponsiveModal<void>(
                         context: context,
-                        isScrollControlled: true,
-                        useSafeArea: true,
                         builder: (_) => _AddManualMatchSheet(
                           division: division,
                           entrants: entrants,
@@ -471,15 +470,26 @@ class _RoundRobinView extends StatelessWidget {
   Widget build(BuildContext context) {
     final byId = {for (final e in entrants) e.id: e};
     final standings = computeStandings(entrants, matches);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      children: [
-        _StandingsTable(standings: standings, byId: byId),
-        const SizedBox(height: 20),
-        const _SectionLabel('Matches'),
-        ..._matchTiles(context, matches, byId, division, isOrganizer),
-      ],
-    );
+    return LayoutBuilder(builder: (ctx, constraints) {
+      final wide = constraints.maxWidth >= 900;
+      final listView = ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          _StandingsTable(standings: standings, byId: byId),
+          const SizedBox(height: 20),
+          const _SectionLabel('Matches'),
+          ..._matchTiles(context, matches, byId, division, isOrganizer),
+        ],
+      );
+      if (!wide) return listView;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: listView,
+        ),
+      );
+    });
   }
 }
 
@@ -493,14 +503,12 @@ const double _kCardH = 66;
 const double _kColGap = 46; // horizontal room for connector elbows
 const double _kRowGap = 30;
 const double _kLabelH = 38;
-double get _kColW => _kCardW + _kColGap;
-double get _kSlotH => _kCardH + _kRowGap;
 
 /// Vertical centre of match [i] in round [r] (rounds halve each step, so a
 /// match is centred between the pair of feeders below it). Geometry comes from
 /// the unit-tested [bracketCenterSlots].
-double _bracketCenterY(int r, int i) =>
-    _kLabelH + bracketCenterSlots(r, i) * _kSlotH;
+double _bracketCenterY(int r, int i, double slotH) =>
+    _kLabelH + bracketCenterSlots(r, i) * slotH;
 
 String _roundName(int r, int total) {
   final fromEnd = total - r - 1;
@@ -537,96 +545,118 @@ class _EliminationTree extends StatelessWidget {
     for (final r in roundNums) {
       rounds[r]!.sort((a, b) => a.matchNumber.compareTo(b.matchNumber));
     }
-
-    final nRounds = roundNums.length;
-    final firstCount = rounds[roundNums.first]!.length;
-    final totalW = nRounds * _kColW;
-    final totalH = _kLabelH + firstCount * _kSlotH + 16;
     final cs = Theme.of(context).colorScheme;
 
-    final children = <Widget>[
-      // Connector lines behind the cards.
-      Positioned.fill(
-        child: CustomPaint(
-          painter: _BracketLinesPainter(
-            counts: [for (final r in roundNums) rounds[r]!.length],
-            lineColor: cs.primary.withValues(alpha: 0.28),
-          ),
-        ),
-      ),
-    ];
+    return LayoutBuilder(builder: (ctx, constraints) {
+      final w = constraints.maxWidth;
+      final isWide = w >= 900;
+      final colGap = isWide ? 56.0 : _kColGap;
+      final rowGap = isWide ? 36.0 : _kRowGap;
 
-    for (var ri = 0; ri < nRounds; ri++) {
-      final list = rounds[roundNums[ri]]!;
-      // Round label pill.
-      final isFinal = nRounds - ri - 1 == 0;
-      children.add(Positioned(
-        left: ri * _kColW,
-        top: 6,
-        width: _kCardW,
-        child: Align(
-          alignment: Alignment.center,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: isFinal
-                  ? AppTheme.primary.withValues(alpha: 0.13)
-                  : cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isFinal)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Icon(Icons.emoji_events_rounded,
-                        size: 12, color: AppTheme.primary),
-                  ),
-                Text(
-                  _roundName(ri, nRounds),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: isFinal ? AppTheme.primary : cs.onSurfaceVariant,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+      // Dynamically fill ~88% of available width on desktop so the bracket
+      // expands naturally rather than sitting in a small fixed-size island.
+      final nRounds = roundNums.length;
+      final double cardW;
+      if (isWide && nRounds > 0) {
+        final target = (w * 0.88 / nRounds) - colGap;
+        cardW = target.clamp(200.0, 400.0);
+      } else {
+        cardW = _kCardW;
+      }
+      final cardH = isWide ? 76.0 : _kCardH;
+      final colW = cardW + colGap;
+      final slotH = cardH + rowGap;
+      final firstCount = rounds[roundNums.first]!.length;
+      final totalW = nRounds * colW;
+      final totalH = _kLabelH + firstCount * slotH + 16;
+
+      final children = <Widget>[
+        // Connector lines behind the cards.
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _BracketLinesPainter(
+              counts: [for (final r in roundNums) rounds[r]!.length],
+              lineColor: cs.primary.withValues(alpha: 0.28),
+              cardW: cardW,
+              colW: colW,
+              slotH: slotH,
             ),
           ),
         ),
-      ));
-      for (var i = 0; i < list.length; i++) {
+      ];
+
+      for (var ri = 0; ri < nRounds; ri++) {
+        final list = rounds[roundNums[ri]]!;
+        // Round label pill.
+        final isFinal = nRounds - ri - 1 == 0;
         children.add(Positioned(
-          left: ri * _kColW,
-          top: _bracketCenterY(ri, i) - _kCardH / 2,
-          width: _kCardW,
-          height: _kCardH,
-          child: _TreeMatchCard(
-            match: list[i],
-            byId: byId,
-            division: division,
-            isOrganizer: isOrganizer,
+          left: ri * colW,
+          top: 6,
+          width: cardW,
+          child: Align(
+            alignment: Alignment.center,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: isFinal
+                    ? AppTheme.primary.withValues(alpha: 0.13)
+                    : cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isFinal)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(Icons.emoji_events_rounded,
+                          size: 12, color: AppTheme.primary),
+                    ),
+                  Text(
+                    _roundName(ri, nRounds),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isFinal ? AppTheme.primary : cs.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ));
+        for (var i = 0; i < list.length; i++) {
+          children.add(Positioned(
+            left: ri * colW,
+            top: _bracketCenterY(ri, i, slotH) - cardH / 2,
+            width: cardW,
+            height: cardH,
+            child: _TreeMatchCard(
+              match: list[i],
+              byId: byId,
+              division: division,
+              isOrganizer: isOrganizer,
+            ),
+          ));
+        }
       }
-    }
 
-    // Two-axis scrolling: drag right to reach later rounds (the Final), down
-    // for tall first rounds. Plain scroll is more discoverable than pan/zoom.
-    return SingleChildScrollView(
-      scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 8, 24, 16),
-        child: SizedBox(
-          width: totalW,
-          height: totalH,
-          child: Stack(children: children),
+      // Two-axis scrolling: drag right to reach later rounds (the Final), down
+      // for tall first rounds. Plain scroll is more discoverable than pan/zoom.
+      return SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(16, 8, 24, 16),
+          child: SizedBox(
+            width: totalW,
+            height: totalH,
+            child: Stack(children: children),
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -635,7 +665,16 @@ class _EliminationTree extends StatelessWidget {
 class _BracketLinesPainter extends CustomPainter {
   final List<int> counts; // matches per round
   final Color lineColor;
-  const _BracketLinesPainter({required this.counts, required this.lineColor});
+  final double cardW;
+  final double colW;
+  final double slotH;
+  const _BracketLinesPainter({
+    required this.counts,
+    required this.lineColor,
+    required this.cardW,
+    required this.colW,
+    required this.slotH,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -646,10 +685,10 @@ class _BracketLinesPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     for (var r = 0; r < counts.length - 1; r++) {
       for (var i = 0; i < counts[r]; i++) {
-        final fromX = r * _kColW + _kCardW;
-        final fromY = _bracketCenterY(r, i);
-        final toX = (r + 1) * _kColW;
-        final toY = _bracketCenterY(r + 1, i ~/ 2);
+        final fromX = r * colW + cardW;
+        final fromY = _bracketCenterY(r, i, slotH);
+        final toX = (r + 1) * colW;
+        final toY = _bracketCenterY(r + 1, i ~/ 2, slotH);
         final midX = (fromX + toX) / 2;
         final path = Path()
           ..moveTo(fromX, fromY)
@@ -663,7 +702,8 @@ class _BracketLinesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BracketLinesPainter old) =>
-      old.counts != counts || old.lineColor != lineColor;
+      old.counts != counts || old.lineColor != lineColor ||
+      old.cardW != cardW || old.colW != colW || old.slotH != slotH;
 }
 
 /// Compact fixed-height match box for the bracket tree.
@@ -873,11 +913,10 @@ class _TreeMatchCard extends StatelessWidget {
     final win1 = match.isDecided && match.winnerEntrantId == match.entrant1Id;
     final win2 = match.isDecided && match.winnerEntrantId == match.entrant2Id;
 
-    final action = await showModalBottomSheet<String>(
+    final action = await showResponsiveModal<String>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      maxWidth: 640,
+      maxHeight: 800,
       builder: (sheet) {
         final cs = Theme.of(sheet).colorScheme;
         return Container(
@@ -1224,9 +1263,8 @@ class _TreeMatchCard extends StatelessWidget {
         : null;
     int? pickedMinutes = match.estimatedDurationMinutes;
 
-    await showModalBottomSheet<void>(
+    await showResponsiveModal<void>(
       context: context,
-      isScrollControlled: true,
       builder: (sheet) => StatefulBuilder(
         builder: (ctx, setSS) => Padding(
           padding: EdgeInsets.fromLTRB(
@@ -1361,37 +1399,48 @@ class _PoolsView extends StatelessWidget {
     final playoff =
         matches.where((m) => m.bracketType == BracketType.winners).toList();
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      children: [
-        for (final pool in pools) ...[
-          _SectionLabel('Pool $pool'),
-          const SizedBox(height: 8),
-          _StandingsTable(
-            standings: computeStandings(entrants, poolMatches, poolId: pool),
-            byId: byId,
-          ),
-          const SizedBox(height: 8),
-          ..._matchTiles(
-              context,
-              poolMatches.where((m) => m.poolId == pool).toList(),
-              byId,
-              division,
-              isOrganizer),
-          const SizedBox(height: 20),
+    return LayoutBuilder(builder: (ctx, constraints) {
+      final wide = constraints.maxWidth >= 900;
+      final listView = ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          for (final pool in pools) ...[
+            _SectionLabel('Pool $pool'),
+            const SizedBox(height: 8),
+            _StandingsTable(
+              standings: computeStandings(entrants, poolMatches, poolId: pool),
+              byId: byId,
+            ),
+            const SizedBox(height: 8),
+            ..._matchTiles(
+                context,
+                poolMatches.where((m) => m.poolId == pool).toList(),
+                byId,
+                division,
+                isOrganizer),
+            const SizedBox(height: 20),
+          ],
+          if (playoff.isNotEmpty) ...[
+            const _SectionLabel('Playoffs'),
+            const SizedBox(height: 8),
+            ..._matchTiles(context, playoff, byId, division, isOrganizer),
+          ] else
+            _PlayoffSeeder(
+              division: division,
+              poolMatches: poolMatches,
+              isOrganizer: isOrganizer,
+            ),
         ],
-        if (playoff.isNotEmpty) ...[
-          const _SectionLabel('Playoffs'),
-          const SizedBox(height: 8),
-          ..._matchTiles(context, playoff, byId, division, isOrganizer),
-        ] else
-          _PlayoffSeeder(
-            division: division,
-            poolMatches: poolMatches,
-            isOrganizer: isOrganizer,
-          ),
-      ],
-    );
+      );
+      if (!wide) return listView;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: listView,
+        ),
+      );
+    });
   }
 }
 
@@ -1482,11 +1531,10 @@ List<Widget> _matchTiles(
 Future<void> _openScoreSheet(
     BuildContext context, TournamentMatch match, TournamentDivision division,
     Map<String, TournamentEntrant> byId) async {
-  await showModalBottomSheet<void>(
+  await showResponsiveModal<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
+    maxWidth: 640,
+    maxHeight: 800,
     builder: (_) => _MatchScoreSheet(match: match, division: division, byId: byId),
   );
 }
@@ -1494,10 +1542,10 @@ Future<void> _openScoreSheet(
 Future<void> _openTieSheet(
     BuildContext context, TournamentMatch match, TournamentDivision division,
     Map<String, TournamentEntrant> byId) async {
-  await showModalBottomSheet<void>(
+  await showResponsiveModal<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
+    maxWidth: 640,
+    maxHeight: 800,
     builder: (_) => _TieSheet(tieId: match.id, division: division, byId: byId),
   );
 }
@@ -1516,10 +1564,8 @@ Future<void> _pickAndAssignCourt(
     );
     return;
   }
-  final court = await showModalBottomSheet<Court>(
+  final court = await showResponsiveModal<Court>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
     builder: (sheet) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1597,7 +1643,7 @@ Future<void> _showWalkoversForMatch(BuildContext context, TournamentMatch match,
     Map<String, TournamentEntrant> byId) async {
   final e1 = _entrantLabel(match.entrant1Id, byId, bye: false);
   final e2 = _entrantLabel(match.entrant2Id, byId, bye: false);
-  final winnerId = await showModalBottomSheet<String>(
+  final winnerId = await showResponsiveModal<String>(
     context: context,
     builder: (sheet) => SafeArea(
       child: Column(
@@ -1858,7 +1904,7 @@ class _MatchCard extends StatelessWidget {
   }
 
   Future<void> _assignCourt(BuildContext context, List<Court> courts) async {
-    final court = await showModalBottomSheet<Court>(
+    final court = await showResponsiveModal<Court>(
       context: context,
       builder: (_) => SafeArea(
         child: Column(
@@ -2655,7 +2701,7 @@ class _SubmatchRow extends StatelessWidget {
 
   Future<void> _assign(BuildContext context, int side) async {
     final roster = side == 1 ? teamARoster : teamBRoster;
-    final picked = await showModalBottomSheet<EntrantPlayer>(
+    final picked = await showResponsiveModal<EntrantPlayer>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Column(
@@ -2742,11 +2788,10 @@ class _SubmatchRow extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: AppTappable(
-                  onTap: () => showModalBottomSheet<void>(
+                  onTap: () => showResponsiveModal<void>(
                     context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    backgroundColor: Colors.transparent,
+                    maxWidth: 640,
+                    maxHeight: 800,
                     builder: (_) => _SubmatchScoreSheet(
                       submatch: submatch,
                       division: division,

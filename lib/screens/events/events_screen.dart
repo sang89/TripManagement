@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/event_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../../responsive/breakpoints.dart';
 import '../../widgets/event_card.dart';
 import '../../widgets/event_type_banner.dart';
 import '../notifications/notifications_screen.dart';
@@ -269,41 +270,49 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
         ),
         floatingActionButton: AppFab(onPressed: _onFabTap),
-        body: Column(
-          children: [
-            _TypeFilterRow(
-              selected: _typeFilter,
-              onChanged: (v) => setState(() => _typeFilter = v),
-              l10n: l10n,
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop(context) ? 1000 : double.infinity,
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: _calendarView
-                  ? _CalendarView(
-                      provider: provider,
-                      tab: _selectedTab,
-                      typeFilter: _typeFilter,
-                      focusedDay: _focusedDay,
-                      selectedDay: _selectedDay,
-                      onDaySelected: (sel, foc) => setState(() {
-                        _selectedDay = sel;
-                        _focusedDay = foc;
-                      }),
-                      onPageChanged: (foc) =>
-                          setState(() => _focusedDay = foc),
-                      l10n: l10n,
-                      currentUserId: userId,
-                    )
-                  : _EventList(
-                      provider: provider,
-                      tab: _selectedTab,
-                      typeFilter: _typeFilter,
-                      l10n: l10n,
-                      onCreateTap: _onFabTap,
-                      currentUserId: userId,
-                    ),
+            child: Column(
+              children: [
+                _TypeFilterRow(
+                  selected: _typeFilter,
+                  onChanged: (v) => setState(() => _typeFilter = v),
+                  l10n: l10n,
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: _calendarView
+                      ? _CalendarView(
+                          provider: provider,
+                          tab: _selectedTab,
+                          typeFilter: _typeFilter,
+                          focusedDay: _focusedDay,
+                          selectedDay: _selectedDay,
+                          onDaySelected: (sel, foc) => setState(() {
+                            _selectedDay = sel;
+                            _focusedDay = foc;
+                          }),
+                          onPageChanged: (foc) =>
+                              setState(() => _focusedDay = foc),
+                          l10n: l10n,
+                          currentUserId: userId,
+                        )
+                      : _EventList(
+                          provider: provider,
+                          tab: _selectedTab,
+                          typeFilter: _typeFilter,
+                          l10n: l10n,
+                          onCreateTap: _onFabTap,
+                          currentUserId: userId,
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

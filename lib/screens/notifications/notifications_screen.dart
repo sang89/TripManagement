@@ -5,6 +5,7 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/notifications_provider.dart';
+import '../../responsive/breakpoints.dart';
 
 // ─── Animated emoji icon ─────────────────────────────────────────────────────
 
@@ -160,41 +161,49 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ],
       ),
-      body: Consumer<NotificationsProvider>(
-        builder: (_, notifs, _) {
-          if (notifs.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (notifs.notifications.isEmpty) {
-            return _EmptyState(label: l10n.notificationsEmpty);
-          }
-          return RefreshIndicator(
-            onRefresh: notifs.reload,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: notifs.notifications.length,
-              separatorBuilder: (_, _) =>
-                  Divider(height: 1, color: Colors.grey.shade100),
-              itemBuilder: (context, i) {
-                final n = notifs.notifications[i];
-                return _NotificationTile(
-                  notification: n,
-                  onTap: () async {
-                    await notifs.markRead(n.id);
-                    final route = n.targetRoute;
-                    if (!context.mounted) return;
-                    // NotificationsScreen is on the root navigator — capture
-                    // the GoRouter reference before popping, then navigate.
-                    final router = GoRouter.of(context);
-                    Navigator.of(context, rootNavigator: true).pop();
-                    router.go(route);
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop(context) ? 800 : double.infinity,
+          ),
+          child: Consumer<NotificationsProvider>(
+            builder: (_, notifs, _) {
+              if (notifs.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (notifs.notifications.isEmpty) {
+                return _EmptyState(label: l10n.notificationsEmpty);
+              }
+              return RefreshIndicator(
+                onRefresh: notifs.reload,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: notifs.notifications.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: Colors.grey.shade100),
+                  itemBuilder: (context, i) {
+                    final n = notifs.notifications[i];
+                    return _NotificationTile(
+                      notification: n,
+                      onTap: () async {
+                        await notifs.markRead(n.id);
+                        final route = n.targetRoute;
+                        if (!context.mounted) return;
+                        // NotificationsScreen is on the root navigator — capture
+                        // the GoRouter reference before popping, then navigate.
+                        final router = GoRouter.of(context);
+                        Navigator.of(context, rootNavigator: true).pop();
+                        router.go(route);
+                      },
+                      onDismiss: () => notifs.deleteNotification(n.id),
+                    );
                   },
-                  onDismiss: () => notifs.deleteNotification(n.id),
-                );
-              },
-            ),
-          );
-        },
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }

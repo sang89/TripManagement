@@ -12,6 +12,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/blocked_users_provider.dart';
 import '../../providers/friends_provider.dart';
 import '../../providers/notifications_provider.dart';
+import '../../responsive/breakpoints.dart';
+import '../../responsive/responsive_modal.dart';
 import '../../utils/avatar_utils.dart';
 import 'contacts_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -89,12 +91,20 @@ class _FriendsScreenState extends State<FriendsScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _FriendsTab(searchFocusNode: _searchFocusNode),
-          _RequestsTab(),
-        ],
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop(context) ? 800 : double.infinity,
+          ),
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _FriendsTab(searchFocusNode: _searchFocusNode),
+              _RequestsTab(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -174,12 +184,8 @@ class _FriendsTabState extends State<_FriendsTab> {
     final name = f.otherDisplayName ?? '';
     final myId = context.read<AuthProvider>().userId ?? '';
     final otherId = f.otherUserId(myId);
-    showModalBottomSheet(
+    showResponsiveModal(
       context: context,
-      useRootNavigator: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx);
         return SafeArea(
