@@ -6,6 +6,7 @@ import 'package:shared_ui/shared_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../models/event.dart';
 import '../providers/event_provider.dart';
+import '../responsive/responsive_modal.dart';
 import 'event_type_banner.dart';
 
 // Standard luminance greyscale matrix — desaturates past/archived cards.
@@ -121,9 +122,8 @@ class EventCard extends StatelessWidget {
     final subtitle =
         toPast ? l10n.moveToPastSubtitle : l10n.moveToUpcomingSubtitle;
 
-    final confirmed = await showModalBottomSheet<bool>(
+    final confirmed = await showResponsiveModal<bool>(
       context: context,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,

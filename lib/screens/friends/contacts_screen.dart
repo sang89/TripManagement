@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/event_provider.dart';
 import '../../providers/friends_provider.dart';
+import '../../responsive/responsive_modal.dart';
 import '../../widgets/supabase_image.dart';
 import 'package:shared_ui/shared_ui.dart';
 
@@ -249,12 +250,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
       return;
     }
 
-    final selected = await showModalBottomSheet<Event>(
+    final selected = await showResponsiveModal<Event>(
       context: context,
-      useRootNavigator: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (_) => _TripPickerSheet(trips: trips),
     );
 

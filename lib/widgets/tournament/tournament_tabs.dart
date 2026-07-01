@@ -6,6 +6,7 @@ import '../../models/event.dart';
 import '../../models/event_guest.dart';
 import '../../models/tournament.dart';
 import '../../providers/event_provider.dart';
+import '../../responsive/responsive_modal.dart';
 import 'bracket_builder_screen.dart';
 import 'live_elapsed_timer.dart';
 import 'tournament_bracket_view.dart';
@@ -45,10 +46,8 @@ class _TournamentDivisionsTabState extends State<TournamentDivisionsTab> {
   }
 
   Future<void> _addDivision() async {
-    await showModalBottomSheet<void>(
+    await showResponsiveModal<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (_) => _DivisionFormSheet(eventId: widget.event.id),
     );
   }
@@ -920,10 +919,8 @@ String friendlyRegisterError(Object e) {
 
 /// A searchable bottom sheet of the event's members; returns the chosen guest.
 Future<EventGuest?> _pickMember(BuildContext context, String eventId) {
-  return showModalBottomSheet<EventGuest>(
+  return showResponsiveModal<EventGuest>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
     builder: (_) => _MemberPickerSheet(eventId: eventId),
   );
 }
@@ -1099,10 +1096,8 @@ class _TournamentEntrantsTabState extends State<TournamentEntrantsTab> {
   }
 
   Future<void> _register(TournamentDivision division) async {
-    await showModalBottomSheet<void>(
+    await showResponsiveModal<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (_) => division.entrantKind == EntrantKind.team
           ? _TeamFormSheet(division: division)
           : _EntrantFormSheet(division: division, authUid: widget.authUid),
@@ -1535,10 +1530,8 @@ class _TournamentCourtsTabState extends State<TournamentCourtsTab> {
 
   Future<void> _assignToCourt(
       BuildContext context, TournamentMatch m, List<Court> courts) async {
-    final court = await showModalBottomSheet<Court>(
+    final court = await showResponsiveModal<Court>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       builder: (sheet) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/event.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/event_provider.dart';
+import '../../responsive/breakpoints.dart';
 
 class EventTypeListScreen extends StatelessWidget {
   final EventType eventType;
@@ -33,7 +34,13 @@ class EventTypeListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(label)),
       floatingActionButton: AppFab(onPressed: goNew),
-      body: Consumer<EventProvider>(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop(context) ? 900 : double.infinity,
+          ),
+          child: Consumer<EventProvider>(
         builder: (_, provider, _) {
           if (!provider.loaded) {
             return const Center(child: CircularProgressIndicator());
@@ -97,6 +104,8 @@ class EventTypeListScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+        ),
       ),
     );
   }

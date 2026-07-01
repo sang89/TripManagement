@@ -1073,6 +1073,70 @@ The `ProfileScreen` header shows a `_TierBadge` below the user's name/email: fre
 
 ---
 
+## Responsive Layout (Big-screen / Desktop / Web)
+
+Breakpoint: **900 px** (`kDesktopBreakpoint` in `lib/responsive/breakpoints.dart`).
+
+Helper: `isDesktop(BuildContext context)` — returns `true` when `MediaQuery.sizeOf(context).width >= 900`.
+
+### Shell at ≥900 px
+
+`lib/screens/shell/shell_scaffold.dart` switches from the custom notched bottom bar to a `NavigationRail`:
+
+```
+Scaffold(body: Row([
+  NavigationRail(destinations: [Events, Friends, Profile],
+                 leading: _LiveRailButton, trailing: _JoinRailButton),
+  VerticalDivider,
+  Expanded(child: navigationShell),
+]))
+```
+
+Mobile layout (< 900 px) is unchanged.
+
+### Responsive modals
+
+`lib/responsive/responsive_modal.dart` exports `showResponsiveModal<T>()`:
+- Desktop: `showDialog` → centered `Dialog` with rounded corners, `ConstrainedBox(maxWidth, maxHeight)`
+- Mobile: `showModalBottomSheet(isScrollControlled: true, useSafeArea: true)`
+
+All `showModalBottomSheet` calls throughout the app use `showResponsiveModal` instead of the raw function.
+
+Default sizes: `maxWidth: 560, maxHeight: 700`. Overrides for large content:
+
+| Content | maxWidth | maxHeight |
+|---------|----------|-----------|
+| Score entry, large forms | 640 | 800 |
+| GIF picker, bracket config | 900 | 900 |
+
+### Max-width constraints per screen
+
+Each screen wraps its body in `Align(topCenter) > ConstrainedBox(maxWidth: N)` on desktop:
+
+| Screen | File | maxWidth |
+|--------|------|----------|
+| Events list | `screens/events/events_screen.dart` | 1000 |
+| Event form | `screens/events/event_form_screen.dart` | 640 |
+| Event type list | `screens/events/event_type_list_screen.dart` | 900 |
+| Settings | `screens/settings/settings_screen.dart` | 800 |
+| Profile | `screens/profile/profile_screen.dart` | 720 |
+| Friends | `screens/friends/friends_screen.dart` | 800 |
+| Notifications | `screens/notifications/notifications_screen.dart` | 800 |
+
+### Tournament bracket
+
+`lib/widgets/tournament/tournament_bracket_view.dart` uses `LayoutBuilder` to scale card dimensions:
+
+| Width | cardW | cardH | colGap | rowGap |
+|-------|-------|-------|--------|--------|
+| < 900 | 190 | 66 | 46 | 30 |
+| 900–1399 | 230 | 76 | 56 | 36 |
+| ≥ 1400 | 280 | 76 | 56 | 36 |
+
+Round-robin and pools views get `ConstrainedBox(maxWidth: 960)` at ≥900 px.
+
+---
+
 ## Key Conventions
 
 - **Models** are plain Dart classes with `toJson()` / `fromJson()`. No Flutter imports.

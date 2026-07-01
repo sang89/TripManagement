@@ -69,6 +69,8 @@ import '../../widgets/supabase_image.dart';
 import '../../widgets/poll_wheel_sheet.dart';
 import '../../widgets/wheel_math.dart';
 import '../../widgets/tournament/tournament_tabs.dart';
+import '../../responsive/responsive_modal.dart';
+import '../../responsive/breakpoints.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -156,14 +158,12 @@ class _EventDetailScreenState extends State<EventDetailScreen>
       context.push('/paywall');
       return;
     }
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => AiItinerarySheet(event: event, session: _aiChatSession),
-    );
+    showResponsiveModal<void>(
+          context: context,
+          builder: (_) => AiItinerarySheet(event: event, session: _aiChatSession),
+          maxWidth: 640,
+          maxHeight: 800,
+        );
   }
 
   List<EventMapPin> _buildMapPins(Event event) {
@@ -260,6 +260,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                     notifs.unreadCount > 9 ? '9+' : '${notifs.unreadCount}',
                   ),
                   child: IconButton(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop(context) ? 16 : 8),
                     icon: Icon(
                       notifs.unreadCount > 0
                           ? Icons.notifications_rounded
@@ -275,17 +277,23 @@ class _EventDetailScreenState extends State<EventDetailScreen>
               ),
               if (event.isTrip)
                 IconButton(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop(context) ? 16 : 8),
                   icon: const Icon(Icons.auto_awesome_outlined),
                   tooltip: l10n.generateWithAi,
                   onPressed: () => _openAiSheet(context, event, isOrganizer),
                 ),
               IconButton(
+                padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop(context) ? 16 : 8),
                 icon: const Icon(Icons.share_outlined),
                 tooltip: l10n.shareEvent,
                 onPressed: () => _shareEvent(context, event),
               ),
               if (isOrganizer)
                 IconButton(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop(context) ? 16 : 8),
                   icon: const Icon(Icons.more_vert),
                   onPressed: () => _showEventActions(
                     context,
@@ -299,6 +307,8 @@ class _EventDetailScreenState extends State<EventDetailScreen>
                   event.guests.any(
                       (g) => g.userId == authUid && g.status != 'left'))
                 IconButton(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop(context) ? 16 : 8),
                   icon: const Icon(Icons.exit_to_app_outlined,
                       color: AppTheme.danger),
                   tooltip: l10n.leave,
@@ -440,10 +450,9 @@ void _showEventActions(
   AppLocalizations l10n, {
   required VoidCallback onDelete,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheetCtx) {
+  showResponsiveModal<void>(
+        context: context,
+        builder: (sheetCtx) {
       final surface = Theme.of(sheetCtx).colorScheme.surface;
       final onSurface = Theme.of(sheetCtx).colorScheme.onSurface;
       final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
@@ -558,7 +567,7 @@ void _showEventActions(
         ),
       );
     },
-  );
+      );
 }
 
 class _ActionSheetTile extends StatelessWidget {
@@ -1667,11 +1676,9 @@ class _TodoTab extends StatelessWidget {
                       extentRatio: 0.44,
                       children: [
                         SlidableAction(
-                          onPressed: (_) => showModalBottomSheet<void>(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            builder: (_) => _AddBringItemSheet(
+                          onPressed: (_) => showResponsiveModal<void>(
+                                context: context,
+                                builder: (_) => _AddBringItemSheet(
                               l10n: l10n,
                               guests: event.guests,
                               existingItem: item,
@@ -1689,7 +1696,7 @@ class _TodoTab extends StatelessWidget {
                                   .read<EventProvider>()
                                   .deleteBringItem(item.id, event.id),
                             ),
-                          ),
+                              ),
                           backgroundColor: Colors.blueGrey,
                           foregroundColor: Colors.white,
                           icon: Icons.edit_outlined,
@@ -1716,11 +1723,9 @@ class _TodoTab extends StatelessWidget {
             right: 16,
             child: AppFab(
               icon: Icons.add,
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                builder: (_) => _AddBringItemSheet(
+              onPressed: () => showResponsiveModal<void>(
+                    context: context,
+                    builder: (_) => _AddBringItemSheet(
                   l10n: l10n,
                   guests: event.guests,
                   onAdd: (label, note, assignedToName) =>
@@ -1731,7 +1736,7 @@ class _TodoTab extends StatelessWidget {
                             assignedToName: assignedToName,
                           ),
                 ),
-              ),
+                  ),
             ),
           ),
       ],
@@ -2120,11 +2125,9 @@ class _PollsTab extends StatelessWidget {
             right: 16,
             child: AppFab(
               icon: Icons.add,
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                builder: (_) => _CreatePollSheet(
+              onPressed: () => showResponsiveModal<void>(
+                    context: context,
+                    builder: (_) => _CreatePollSheet(
                   l10n: l10n,
                   onCreate: (question, options) =>
                       context.read<EventProvider>().createPoll(
@@ -2133,7 +2136,7 @@ class _PollsTab extends StatelessWidget {
                             options,
                           ),
                 ),
-              ),
+                  ),
             ),
           ),
       ],
@@ -2323,18 +2326,17 @@ class _PollCard extends StatelessWidget {
           .toList(),
       votesFor: poll.votesFor,
     );
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => PollWheelSheet(
+    showResponsiveModal<void>(
+          context: context,
+          builder: (_) => PollWheelSheet(
         question: poll.question,
         segments: segments,
         l10n: l10n,
         isRestaurant: isRestaurant,
       ),
-    );
+          maxWidth: 640,
+          maxHeight: 800,
+        );
   }
 }
 
@@ -2458,11 +2460,9 @@ void _showEmojiPickerSheet(
   bool insertMode = false,
   void Function(String)? onInsert,
 }) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (_) => _EmojiPickerSheet(
+  showResponsiveModal(
+        context: context,
+        builder: (_) => _EmojiPickerSheet(
       initialMyEmojis: myEmojis,
       onReact: onReact,
       onUnreact: onUnreact,
@@ -2470,7 +2470,9 @@ void _showEmojiPickerSheet(
       insertMode: insertMode,
       onInsert: onInsert,
     ),
-  );
+        maxWidth: 640,
+        maxHeight: 800,
+      );
 }
 
 class _EmojiPickerSheet extends StatefulWidget {
@@ -3325,14 +3327,13 @@ class _RsvpButtonsState extends State<_RsvpButtons> {
     }
     // Going / Maybe: show optional note sheet.
     final existingNote = widget.myGuest?.rsvpNote ?? '';
-    final note = await showModalBottomSheet<String?>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetCtx) => _RsvpNoteSheet(
+    final note = await showResponsiveModal<String?>(
+          context: context,
+          builder: (sheetCtx) => _RsvpNoteSheet(
         initialNote: existingNote,
         l10n: l10n,
       ),
-    );
+        );
     if (!mounted) return;
     // note == null means sheet was dismissed without confirming.
     if (note == null) return;
@@ -4097,11 +4098,9 @@ void _showRestaurantDetail(
   Future<void> Function()? onPitch,
   bool isPitched = false,
 }) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (_) => _RestaurantDetailSheet(
+  showResponsiveModal<void>(
+        context: context,
+        builder: (_) => _RestaurantDetailSheet(
       name: name,
       address: address,
       rating: rating,
@@ -4110,7 +4109,9 @@ void _showRestaurantDetail(
       onPitch: onPitch,
       isPitched: isPitched,
     ),
-  );
+        maxWidth: 640,
+        maxHeight: 800,
+      );
 }
 
 class _RestaurantDetailSheet extends StatefulWidget {
@@ -5020,12 +5021,10 @@ class _GuestsTabState extends State<_GuestsTab> {
       context.push('/paywall');
       return;
     }
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _AddGuestSheet(eventId: widget.event.id),
-    );
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (_) => _AddGuestSheet(eventId: widget.event.id),
+        );
   }
 }
 
@@ -5442,12 +5441,12 @@ class _ChatTabState extends State<_ChatTab> {
 
 
   void _openGifPicker() async {
-    final gifUrl = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _GifPickerSheet(),
-    );
+    final gifUrl = await showResponsiveModal<String>(
+          context: context,
+          builder: (_) => const _GifPickerSheet(),
+          maxWidth: 900,
+          maxHeight: 900,
+        );
     if (gifUrl != null && mounted) {
       await _sendAndScroll(
           () => context.read<EventChatProvider>().sendGif(gifUrl));
@@ -5484,10 +5483,9 @@ class _ChatTabState extends State<_ChatTab> {
   }
 
   void _openAttachmentMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AttachmentMenuSheet(
+    showResponsiveModal(
+          context: context,
+          builder: (_) => _AttachmentMenuSheet(
         onTheme: () {
           Navigator.pop(context);
           _openThemePicker();
@@ -5505,19 +5503,20 @@ class _ChatTabState extends State<_ChatTab> {
           _openGifPicker();
         },
       ),
-    );
+        );
   }
 
   void _openThemePicker() {
     final provider = context.read<EventProvider>();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ChatThemePickerSheet(
+    showResponsiveModal(
+          context: context,
+          builder: (_) => _ChatThemePickerSheet(
         currentKey: widget.event.chatBackground,
         onSelect: (key) => provider.updateChatBackground(widget.event.id, key),
       ),
-    );
+          maxWidth: 640,
+          maxHeight: 800,
+        );
   }
 
   @override
@@ -6692,10 +6691,9 @@ Future<bool?> _showDeletePhotoSheet(
   final thumbUrl = photo.thumbnailUrl ?? photo.publicUrl;
   final quote =
       _deletePhotoQuotes[Random().nextInt(_deletePhotoQuotes.length)];
-  return showModalBottomSheet<bool>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheetCtx) {
+  return showResponsiveModal<bool>(
+        context: context,
+        builder: (sheetCtx) {
       final bottomPadding = MediaQuery.of(sheetCtx).padding.bottom;
       return Container(
         decoration: const BoxDecoration(
@@ -6864,7 +6862,7 @@ Future<bool?> _showDeletePhotoSheet(
         ),
       );
     },
-  );
+      );
 }
 
 // ── Polaroid card widget ───────────────────────────────────────────────────────
@@ -7313,8 +7311,8 @@ class _PhotosTabState extends State<_PhotosTab> {
                     padding: const EdgeInsets.fromLTRB(6, 6, 6, 100),
                     sliver: SliverGrid(
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 240,
                         mainAxisSpacing: 14,
                         crossAxisSpacing: 4,
                         childAspectRatio: 0.82,
@@ -7615,11 +7613,9 @@ class _PhotoViewerPageState extends State<_PhotoViewerPage>
 
   void _openCaptionSheet() {
     _captionController.text = widget.photos[_currentIndex].caption;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
+    showResponsiveModal(
+          context: context,
+          builder: (_) => Padding(
         padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
@@ -7665,7 +7661,7 @@ class _PhotoViewerPageState extends State<_PhotoViewerPage>
           ),
         ),
       ),
-    );
+        );
   }
 
   Future<void> _deleteCurrentPhoto() async {
@@ -8270,26 +8266,23 @@ class _ExpensesTab extends StatefulWidget {
 
 class _ExpensesTabState extends State<_ExpensesTab> {
   void _showSettlement() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SettlementSheet(
+    showResponsiveModal(
+          context: context,
+          builder: (_) => _SettlementSheet(
         event: widget.event,
         expenses: widget.expenses,
       ),
-    );
+          maxWidth: 640,
+          maxHeight: 800,
+        );
   }
 
   void _showAddExpense([EventExpense? existing]) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) =>
+    showResponsiveModal(
+          context: context,
+          builder: (ctx) =>
           _AddExpenseSheet(event: widget.event, existing: existing),
-    );
+        );
   }
 
   Future<void> _confirmDelete(EventExpense expense) async {
@@ -9534,12 +9527,9 @@ class _SettlementSheetState extends State<_SettlementSheet> {
       context.push('/paywall');
       return;
     }
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) => SafeArea(
+    showResponsiveModal<void>(
+          context: context,
+          builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -9577,7 +9567,7 @@ class _SettlementSheetState extends State<_SettlementSheet> {
           ],
         ),
       ),
-    );
+        );
   }
 
   Future<void> _exportImage() async {
@@ -10599,10 +10589,9 @@ class _GiftsTabState extends State<_GiftsTab> {
     final labelCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
     final linkCtrl = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
@@ -10658,7 +10647,7 @@ class _GiftsTabState extends State<_GiftsTab> {
           ),
         ),
       ),
-    );
+        );
     labelCtrl.dispose();
     priceCtrl.dispose();
     linkCtrl.dispose();
@@ -10668,10 +10657,9 @@ class _GiftsTabState extends State<_GiftsTab> {
     final l10n = AppLocalizations.of(context);
     final nameCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
@@ -10718,7 +10706,7 @@ class _GiftsTabState extends State<_GiftsTab> {
           ),
         ),
       ),
-    );
+        );
     nameCtrl.dispose();
     amountCtrl.dispose();
   }
@@ -10726,10 +10714,9 @@ class _GiftsTabState extends State<_GiftsTab> {
   Future<void> _showAddPledgeSheet(EventGiftPool pool) async {
     final l10n = AppLocalizations.of(context);
     final amountCtrl = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
@@ -10771,7 +10758,7 @@ class _GiftsTabState extends State<_GiftsTab> {
           ),
         ),
       ),
-    );
+        );
     amountCtrl.dispose();
   }
 
@@ -11222,10 +11209,9 @@ class _WishesTabState extends State<_WishesTab> {
   Future<void> _sendWish() async {
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
@@ -11270,7 +11256,7 @@ class _WishesTabState extends State<_WishesTab> {
           ),
         ),
       ),
-    );
+        );
     ctrl.dispose();
   }
 
@@ -11470,10 +11456,9 @@ class _PredictionsTabState extends State<_PredictionsTab> {
   Future<void> _addPrediction() async {
     final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
         ),
@@ -11514,7 +11499,7 @@ class _PredictionsTabState extends State<_PredictionsTab> {
           ),
         ),
       ),
-    );
+        );
     ctrl.dispose();
   }
 
@@ -11719,14 +11704,13 @@ class _ToastsTab extends StatefulWidget {
 
 class _ToastsTabState extends State<_ToastsTab> {
   Future<void> _addToast() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _AddToastSheet(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (_) => _AddToastSheet(
         event: widget.event,
         myName: widget.myName,
       ),
-    );
+        );
   }
 
   @override
@@ -12620,17 +12604,17 @@ class _SessionActivityTabState extends State<_SessionActivityTab> {
     final entries = {
       for (final q in queues) q.id: provider.entriesFor(q.id),
     };
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _SetupQueuesSheet(
+    showResponsiveModal<void>(
+          context: context,
+          builder: (_) => _SetupQueuesSheet(
         event: widget.event,
         session: session,
         currentQueues: queues,
         currentEntries: entries,
       ),
-    );
+          maxWidth: 640,
+          maxHeight: 800,
+        );
   }
 
   @override
@@ -12793,18 +12777,15 @@ class _SessionPicker extends StatelessWidget {
 
   void _openInfo(BuildContext context, EventSession s) {
     final position = sessions.indexOf(s) + 1;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SessionInfoSheet(
+    showResponsiveModal<void>(
+          context: context,
+          builder: (_) => _SessionInfoSheet(
         session: s,
         event: event,
         isOrganizer: isOrganizer,
         position: position,
       ),
-    );
+        );
   }
 
   static List<Color> _gradientFor(EventSession s) {
@@ -13994,12 +13975,9 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   void _showAddSlotDialog() {
     if (_loading) return;
     final l10n = AppLocalizations.of(context);
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
+    showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Column(
@@ -14135,12 +14113,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         })
         .toList();
 
-    showModalBottomSheet<void>(
+    showResponsiveModal<void>(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => _MemberPickerSheet(
         title: 'Add Teammates 👥',
         searchHint: 'Search members…',
@@ -14151,6 +14125,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
           _addTeammates(selected, availableSlots);
         },
       ),
+      maxWidth: 640,
+      maxHeight: 800,
     );
   }
 
@@ -14246,11 +14222,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   }
 
   void _showQueueFullDialog({required bool racedOut}) {
-    showModalBottomSheet<void>(
+    showResponsiveModal<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
@@ -14340,7 +14313,7 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
             ],
           ),
         ),
-      ),
+        ),
     );
   }
 
@@ -14351,12 +14324,9 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   Future<void> _showKickDialog(SessionQueueEntry entry) async {
     if (_loading) return;
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
+    final confirmed = await showResponsiveModal<bool>(
+          context: context,
+          builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
           child: Column(
@@ -14485,11 +14455,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
   Future<void> _showLeaveDialog() async {
     if (_loading) return;
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showModalBottomSheet<bool>(
+    final confirmed = await showResponsiveModal<bool>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -14621,11 +14588,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
     final requestReceived = hasAccount &&
         friends!.incomingRequests.any((f) => f.requesterId == userId);
 
-    showModalBottomSheet<void>(
+    showResponsiveModal<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -14758,11 +14722,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
         provider.canMoveQueuePastEmpty(widget.queue.id, widget.session.id);
     final isPlaying = widget.queue.isActive;
 
-    final action = await showModalBottomSheet<String>(
+    final action = await showResponsiveModal<String>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -15420,8 +15381,8 @@ class _QueueSpotRowState extends State<_QueueSpotRow>
                         ),
                       ),
                     ],
-                  ],  // Stack.children
-                  ),  // Stack
+                  ],
+        ),  // Stack
                   );
                 }),
               ),
@@ -16715,12 +16676,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
     final suggestion = source.startAt.add(const Duration(days: 7));
 
     if (!context.mounted) return;
-    final result = await showModalBottomSheet<_NewSessionConfig>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
+    final result = await showResponsiveModal<_NewSessionConfig>(
+          context: context,
+          builder: (_) => DraggableScrollableSheet(
         initialChildSize: 0.75,
         minChildSize: 0.4,
         maxChildSize: 0.95,
@@ -16738,7 +16696,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
           ),
         ),
       ),
-    );
+          maxWidth: 640,
+          maxHeight: 800,
+        );
     if (result == null || !context.mounted) return;
     await _applySessionConfig(context, provider, result);
   }
@@ -16754,12 +16714,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
         : widget.event.startAt.add(const Duration(days: 7));
 
     if (!context.mounted) return;
-    final result = await showModalBottomSheet<_NewSessionConfig>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
+    final result = await showResponsiveModal<_NewSessionConfig>(
+          context: context,
+          builder: (_) => DraggableScrollableSheet(
         initialChildSize: 0.75,
         minChildSize: 0.4,
         maxChildSize: 0.95,
@@ -16776,7 +16733,9 @@ class _SignupRosterTabState extends State<_SignupRosterTab> {
           ),
         ),
       ),
-    );
+          maxWidth: 640,
+          maxHeight: 800,
+        );
     if (result == null || !context.mounted) return;
     await _applySessionConfig(context, provider, result);
   }
@@ -17790,18 +17749,15 @@ class _SessionCardState extends State<_SessionCard>
   }
 
   void _showSessionInfo(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SessionInfoSheet(
+    showResponsiveModal<void>(
+          context: context,
+          builder: (_) => _SessionInfoSheet(
         session: widget.session,
         event: widget.event,
         isOrganizer: widget.isOrganizer,
         position: widget.position,
       ),
-    );
+        );
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -20761,12 +20717,9 @@ class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
 
   Future<void> _show() async {
     final l10n = AppLocalizations.of(context);
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => Padding(
+    await showResponsiveModal<void>(
+          context: context,
+          builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
             24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
         child: Column(
@@ -20831,7 +20784,7 @@ class _AddSessionGuestButtonState extends State<_AddSessionGuestButton> {
           ],
         ),
       ),
-    );
+        );
   }
 
   @override
