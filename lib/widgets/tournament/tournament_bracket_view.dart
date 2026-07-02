@@ -34,7 +34,11 @@ class TournamentBracketView extends StatefulWidget {
   State<TournamentBracketView> createState() => _TournamentBracketViewState();
 }
 
-class _TournamentBracketViewState extends State<TournamentBracketView> {
+class _TournamentBracketViewState extends State<TournamentBracketView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   String? _selectedDivisionId;
   bool _generating = false;
 
@@ -79,6 +83,7 @@ class _TournamentBracketViewState extends State<TournamentBracketView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final p = context.watch<EventProvider>();
     final divisions = p.divisionsFor(widget.event.id);
     if (divisions.isEmpty) {
