@@ -36,7 +36,11 @@ class TournamentDivisionsTab extends StatefulWidget {
   State<TournamentDivisionsTab> createState() => _TournamentDivisionsTabState();
 }
 
-class _TournamentDivisionsTabState extends State<TournamentDivisionsTab> {
+class _TournamentDivisionsTabState extends State<TournamentDivisionsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +66,7 @@ class _TournamentDivisionsTabState extends State<TournamentDivisionsTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final divisions = context.watch<EventProvider>().divisionsFor(widget.event.id);
     return Scaffold(
       body: divisions.isEmpty
@@ -1077,7 +1082,11 @@ class TournamentEntrantsTab extends StatefulWidget {
   State<TournamentEntrantsTab> createState() => _TournamentEntrantsTabState();
 }
 
-class _TournamentEntrantsTabState extends State<TournamentEntrantsTab> {
+class _TournamentEntrantsTabState extends State<TournamentEntrantsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   String? _selectedDivisionId;
 
   @override
@@ -1106,6 +1115,7 @@ class _TournamentEntrantsTabState extends State<TournamentEntrantsTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final p = context.watch<EventProvider>();
     final divisions = p.divisionsFor(widget.event.id);
     if (divisions.isEmpty) {
@@ -1486,7 +1496,11 @@ class TournamentCourtsTab extends StatefulWidget {
   State<TournamentCourtsTab> createState() => _TournamentCourtsTabState();
 }
 
-class _TournamentCourtsTabState extends State<TournamentCourtsTab> {
+class _TournamentCourtsTabState extends State<TournamentCourtsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -1576,6 +1590,7 @@ class _TournamentCourtsTabState extends State<TournamentCourtsTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final p = context.watch<EventProvider>();
     final courts = p.courtsFor(widget.event.id);
     final unassigned = widget.isOrganizer
