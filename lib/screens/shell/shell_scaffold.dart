@@ -51,30 +51,43 @@ class _ShellScaffoldState extends State<ShellScaffold>
   Future<void> _onLiveTap() async {
     final provider = context.read<EventProvider>();
     final uid = context.read<AuthProvider>().userId ?? '';
-    // Refresh live sessions FIRST, then build the queue from fresh data — the
-    // cached list is only seeded at load()/resume, so a tap must not rely on it
-    // (e.g. after hot reload load() never re-runs and the cache stays empty).
-    // Defensive: never let a refresh failure crash the tap — fall back to the
-    // cached list (which may be empty → handled below).
+    final l10n = AppLocalizations.of(context);
+
+    // Build the queue from the cache immediately — _liveSessions is kept fresh
+    // by the Realtime UPDATE handler, so it's reliable for instant navigation.
+    // Kick off a background refresh so the *next* tap sees any changes that
+    // arrived while the app was suspended (Realtime doesn't run when paused).
+    final cachedQueue = buildLiveQueue(
+        provider.events, provider.liveSessions, uid, DateTime.now());
+
+    if (cachedQueue.isNotEmpty) {
+      // Navigate instantly from cache, then refresh in the background.
+      final index = _liveCursor % cachedQueue.length;
+      context.go(cachedQueue[index].route);
+      setState(() => _liveCursor = index + 1);
+      unawaited(provider.fetchLiveSessions());
+      return;
+    }
+
+    // Cache is empty (cold start / first tap after long suspend) — fetch first,
+    // then navigate. This is the rare path; normal taps never reach here.
     try {
       await provider.fetchLiveSessions();
     } catch (_) {
-      /* ignore — proceed with whatever is cached */
+      /* ignore — fall through to empty-queue snackbar */
     }
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context);
-    final queue = buildLiveQueue(
+    final freshQueue = buildLiveQueue(
         provider.events, provider.liveSessions, uid, DateTime.now());
-
-    if (queue.isEmpty) {
+    if (freshQueue.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.liveNoneNow)),
       );
       return;
     }
-    final index = _liveCursor % queue.length;
-    context.go(queue[index].route);
+    final index = _liveCursor % freshQueue.length;
+    context.go(freshQueue[index].route);
     setState(() => _liveCursor = index + 1);
   }
 
