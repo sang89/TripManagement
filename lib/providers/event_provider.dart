@@ -1042,30 +1042,52 @@ class EventProvider extends ChangeNotifier {
             if (sessionId == null || eventId == null) return;
             // B9: skip rebuild for events the user isn't currently viewing.
             if (_watchedEventId != null && _watchedEventId != eventId) return;
-            _patchSessionInCache(
-              eventId,
-              sessionId,
-              (s) => EventSession.fromJson({
-                'id': s.id,
-                'event_id': s.eventId,
-                'session_number': s.sessionNumber,
-                'start_at': (row.containsKey('start_at') ? row['start_at'] : null) ?? s.startAt.toIso8601String(),
-                'end_at': row.containsKey('end_at') ? row['end_at'] : s.endAt?.toIso8601String(),
-                'invite_code': s.inviteCode,
-                'created_at': s.createdAt.toIso8601String(),
-                'going_count': row['going_count'] as int? ?? s.goingCount,
-                'waitlist_count': row['waitlist_count'] as int? ?? s.waitlistCount,
-                'pending_count': row['pending_count'] as int? ?? s.pendingCount,
-                'capacity': row.containsKey('capacity') ? row['capacity'] : s.capacity,
-                'waitlist_enabled': row.containsKey('waitlist_enabled') ? row['waitlist_enabled'] : s.waitlistEnabled,
-                'signup_lock_hours': row.containsKey('signup_lock_hours') ? row['signup_lock_hours'] : s.signupLockHours,
-                'is_public': row.containsKey('is_public') ? row['is_public'] : s.isPublic,
-                'requires_approval': row.containsKey('requires_approval') ? row['requires_approval'] : s.requiresApproval,
-                'is_active': row.containsKey('is_active') ? row['is_active'] : s.isActive,
-                'is_active_override': row.containsKey('is_active_override') ? row['is_active_override'] : s.isActiveOverride,
-                'notes': row.containsKey('notes') ? row['notes'] : s.notes,
-              }),
-            );
+            EventSession Function(EventSession) patchFn;
+            patchFn = (s) => EventSession.fromJson({
+              'id': s.id,
+              'event_id': s.eventId,
+              'session_number': s.sessionNumber,
+              'start_at': (row.containsKey('start_at') ? row['start_at'] : null) ?? s.startAt.toIso8601String(),
+              'end_at': row.containsKey('end_at') ? row['end_at'] : s.endAt?.toIso8601String(),
+              'invite_code': s.inviteCode,
+              'created_at': s.createdAt.toIso8601String(),
+              'going_count': row['going_count'] as int? ?? s.goingCount,
+              'waitlist_count': row['waitlist_count'] as int? ?? s.waitlistCount,
+              'pending_count': row['pending_count'] as int? ?? s.pendingCount,
+              'capacity': row.containsKey('capacity') ? row['capacity'] : s.capacity,
+              'waitlist_enabled': row.containsKey('waitlist_enabled') ? row['waitlist_enabled'] : s.waitlistEnabled,
+              'signup_lock_hours': row.containsKey('signup_lock_hours') ? row['signup_lock_hours'] : s.signupLockHours,
+              'is_public': row.containsKey('is_public') ? row['is_public'] : s.isPublic,
+              'requires_approval': row.containsKey('requires_approval') ? row['requires_approval'] : s.requiresApproval,
+              'is_active': row.containsKey('is_active') ? row['is_active'] : s.isActive,
+              'is_active_override': row.containsKey('is_active_override') ? row['is_active_override'] : s.isActiveOverride,
+              'notes': row.containsKey('notes') ? row['notes'] : s.notes,
+            });
+            _patchSessionInCache(eventId, sessionId, patchFn);
+            // Keep _liveSessions in sync so the Live button queue is always
+            // accurate without needing a full fetchLiveSessions() on every tap.
+            final isNowActive = (row['is_active'] as bool?) ?? false;
+            final liveIdx = _liveSessions.indexWhere((s) => s.id == sessionId);
+            if (isNowActive && liveIdx < 0) {
+              // Session just became active — add it to the live list.
+              final upstream = _upcomingSessions[eventId]?.firstWhere(
+                    (s) => s.id == sessionId,
+                    orElse: () => EventSession.fromJson(row),
+                  ) ??
+                  EventSession.fromJson(row);
+              _liveSessions = [..._liveSessions, upstream]
+                ..sort((a, b) => a.startAt.compareTo(b.startAt));
+            } else if (!isNowActive && liveIdx >= 0) {
+              // Session deactivated — remove it from the live list.
+              final copy = List<EventSession>.from(_liveSessions);
+              copy.removeAt(liveIdx);
+              _liveSessions = copy;
+            } else if (liveIdx >= 0) {
+              // Session already live — patch it in place.
+              final copy = List<EventSession>.from(_liveSessions);
+              copy[liveIdx] = patchFn(copy[liveIdx]);
+              _liveSessions = copy;
+            }
             notifyListeners();
             // The session count changed, meaning a roster entry was added,
             // removed, promoted, or demoted. Refresh the roster so the player
@@ -2689,15 +2711,17 @@ class EventProvider extends ChangeNotifier {
         'id,event_id,session_number,start_at,end_at,invite_code,created_at,going_count,waitlist_count,pending_count,capacity,waitlist_enabled,signup_lock_hours,is_public,requires_approval,is_active,is_active_override,notes';
     try {
       final now = DateTime.now().toUtc().toIso8601String();
-      final activeRows = await _db
-          .from('event_sessions')
-          .select(cols)
-          .eq('is_active', true) as List<dynamic>;
-      final windowRows = await _db
-          .from('event_sessions')
-          .select(cols)
-          .lte('start_at', now)
-          .or('end_at.is.null,end_at.gt.$now') as List<dynamic>;
+      // Run both queries in parallel — they have no dependency on each other.
+      final results = await Future.wait([
+        _db.from('event_sessions').select(cols).eq('is_active', true),
+        _db
+            .from('event_sessions')
+            .select(cols)
+            .lte('start_at', now)
+            .or('end_at.is.null,end_at.gt.$now'),
+      ]);
+      final activeRows = results[0] as List<dynamic>;
+      final windowRows = results[1] as List<dynamic>;
 
       final byId = <String, EventSession>{};
       for (final r in [...activeRows, ...windowRows]) {
