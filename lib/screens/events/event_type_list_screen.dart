@@ -32,8 +32,16 @@ class EventTypeListScreen extends StatelessWidget {
         context.push('/event/new?type=${eventType.dbValue}');
 
     return Scaffold(
-      appBar: AppBar(title: Text(label)),
-      floatingActionButton: AppFab(onPressed: goNew),
+      appBar: AppBar(
+        title: Text(label),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.white),
+            tooltip: 'New event',
+            onPressed: goNew,
+          ),
+        ],
+      ),
       body: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

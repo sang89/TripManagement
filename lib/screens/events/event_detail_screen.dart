@@ -1657,7 +1657,7 @@ class _TodoTab extends StatelessWidget {
                 ),
               )
             : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                 itemCount: visibleItems.length,
                 itemBuilder: (_, i) {
                   final item = visibleItems[i];
@@ -1719,10 +1719,11 @@ class _TodoTab extends StatelessWidget {
               ),
         if (isOrganizer)
           Positioned(
-            bottom: 16,
-            right: 16,
-            child: AppFab(
-              icon: Icons.add,
+            top: 4,
+            right: 4,
+            child: IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add item',
               onPressed: () => showResponsiveModal<void>(
                     context: context,
                     builder: (_) => _AddBringItemSheet(
@@ -2106,7 +2107,7 @@ class _PollsTab extends StatelessWidget {
                 ),
               )
             : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                 itemCount: polls.length,
                 itemBuilder: (_, i) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -2121,10 +2122,11 @@ class _PollsTab extends StatelessWidget {
               ),
         if (isOrganizer)
           Positioned(
-            bottom: 16,
-            right: 16,
-            child: AppFab(
-              icon: Icons.add,
+            top: 4,
+            right: 4,
+            child: IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Create poll',
               onPressed: () => showResponsiveModal<void>(
                     context: context,
                     builder: (_) => _CreatePollSheet(
@@ -4473,69 +4475,55 @@ class _RouteTabState extends State<_RouteTab> {
   Widget _buildList(BuildContext context, AppLocalizations l10n) {
     final event = widget.event;
 
-    if (event.stops.isEmpty) {
-      return Stack(
-        children: [
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.route_outlined,
-                    size: 64, color: AppTheme.primaryLight),
-                const SizedBox(height: 16),
-                Text(l10n.noStopsInItinerary),
-                const SizedBox(height: 8),
-                Text(l10n.addFirstStop,
-                    style: const TextStyle(color: Colors.grey)),
-              ],
-            ),
-          ),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: AppFab(
-              onPressed: () =>
-                  showEventStopFormSheet(context, eventId: event.id),
-              icon: Icons.add_location_alt_outlined,
-            ),
-          ),
-        ],
-      );
-    }
-
     return Stack(
       children: [
-        ListView.builder(
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
-          itemCount: event.stops.length,
-          itemBuilder: (context, index) {
-            final stop = event.stops[index];
-            return Slidable(
-              key: ValueKey(stop.id),
-              endActionPane: ActionPane(
-                motion: const DrawerMotion(),
-                children: [
-                  SlidableAction(
-                    onPressed: (_) =>
-                        _confirmDeleteStop(context, stop),
-                    backgroundColor: AppTheme.danger,
-                    foregroundColor: Colors.white,
-                    icon: Icons.delete_outline,
-                    label: l10n.delete,
-                  ),
-                ],
+        event.stops.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.route_outlined,
+                        size: 64, color: AppTheme.primaryLight),
+                    const SizedBox(height: 16),
+                    Text(l10n.noStopsInItinerary),
+                    const SizedBox(height: 8),
+                    Text(l10n.addFirstStop,
+                        style: const TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(0, 48, 0, 16),
+                itemCount: event.stops.length,
+                itemBuilder: (context, index) {
+                  final stop = event.stops[index];
+                  return Slidable(
+                    key: ValueKey(stop.id),
+                    endActionPane: ActionPane(
+                      motion: const DrawerMotion(),
+                      children: [
+                        SlidableAction(
+                          onPressed: (_) =>
+                              _confirmDeleteStop(context, stop),
+                          backgroundColor: AppTheme.danger,
+                          foregroundColor: Colors.white,
+                          icon: Icons.delete_outline,
+                          label: l10n.delete,
+                        ),
+                      ],
+                    ),
+                    child: _StopCard(stop: stop, eventId: event.id),
+                  );
+                },
               ),
-              child: _StopCard(stop: stop, eventId: event.id),
-            );
-          },
-        ),
         Positioned(
-          bottom: 16,
-          right: 16,
-          child: AppFab(
+          top: 4,
+          right: 4,
+          child: IconButton(
+            icon: const Icon(Icons.add_location_alt_outlined),
+            tooltip: 'Add stop',
             onPressed: () =>
                 showEventStopFormSheet(context, eventId: event.id),
-            icon: Icons.add_location_alt_outlined,
           ),
         ),
       ],
@@ -4731,7 +4719,7 @@ class _GuestsTabState extends State<_GuestsTab> {
                 ),
               )
             : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                 itemCount: sortedGuests.length,
                 itemBuilder: (_, i) {
                   final g = sortedGuests[i];
@@ -4850,11 +4838,12 @@ class _GuestsTabState extends State<_GuestsTab> {
               ),
         if (widget.isOrganizer)
           Positioned(
-            bottom: 16,
-            right: 16,
-            child: AppFab(
+            top: 4,
+            right: 4,
+            child: IconButton(
+              icon: const Icon(Icons.person_add_outlined),
+              tooltip: 'Add guest',
               onPressed: _showAddGuest,
-              icon: Icons.person_add_outlined,
             ),
           ),
       ],
@@ -4879,8 +4868,8 @@ class _GuestsTabState extends State<_GuestsTab> {
                   });
                 return ListView.builder(
                 padding:
-                    const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                itemCount: sortedGuests.length,
+                    const EdgeInsets.fromLTRB(16, 48, 16, 16),
+                  itemCount: sortedGuests.length,
                 itemBuilder: (_, i) {
                   final g = sortedGuests[i];
                   final isMe = g.userId != null &&
@@ -5001,14 +4990,15 @@ class _GuestsTabState extends State<_GuestsTab> {
                   );
                 },
               );
-              }),
+                }),
         if (widget.canInvite)
           Positioned(
-            bottom: 16,
-            right: 16,
-            child: AppFab(
+            top: 4,
+            right: 4,
+            child: IconButton(
+              icon: const Icon(Icons.person_add_outlined),
+              tooltip: 'Add member',
               onPressed: () => showAddMemberSheet(context, eventId: event.id),
-              icon: Icons.person_add_outlined,
             ),
           ),
       ],
@@ -7210,20 +7200,21 @@ class _PhotosTabState extends State<_PhotosTab> {
 
     return Stack(
       children: [
-        photos.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.photo_library_outlined,
-                        size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 12),
-                    Text(l10n.noMemoriesYet,
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600])),
-                    const SizedBox(height: 6),
+        Positioned.fill(
+          child: photos.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.photo_library_outlined,
+                          size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 12),
+                      Text(l10n.noMemoriesYet,
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600])),
+                      const SizedBox(height: 6),
                     Text(l10n.addFirstPhoto,
                         style: TextStyle(
                             fontSize: 14, color: Colors.grey[400])),
@@ -7370,31 +7361,20 @@ class _PhotosTabState extends State<_PhotosTab> {
                   ),
                 ],
               ),
+        ),
         Positioned(
-          bottom: 16,
-          right: 16,
-          child: AppFab(
-            onPressed: _uploading ? null : _pickAndUpload,
-            icon: Icons.add_a_photo,
-            child: _uploading
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      ),
-                      if (_uploadTotal > 1)
-                        Text(
-                          '$_uploadCurrent/$_uploadTotal',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 9),
-                        ),
-                    ],
+          top: 4,
+          right: 4,
+          child: IconButton(
+            icon: _uploading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : null,
+                : const Icon(Icons.add_a_photo_outlined),
+            tooltip: 'Add photos',
+            onPressed: _uploading ? null : _pickAndUpload,
           ),
         ),
       ],
@@ -8315,55 +8295,61 @@ class _ExpensesTabState extends State<_ExpensesTab> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        widget.expenses.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.receipt_outlined,
-                        size: 48, color: Colors.grey[300]),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.noExpensesYet,
-                      style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ],
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (widget.expenses.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: TextButton.icon(
+                  onPressed: _showSettlement,
+                  icon: const Icon(Icons.balance_rounded, size: 18),
+                  label: Text(l10n.settleUp),
                 ),
               )
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                itemCount: widget.expenses.length,
-                itemBuilder: (_, i) => _ExpenseCard(
-                  expense: widget.expenses[i],
-                  event: widget.event,
-                  authUid: widget.authUid,
-                  canEdit: widget.isOrganizer,
-                  onEdit: () => _showAddExpense(widget.expenses[i]),
-                  onDelete: () => _confirmDelete(widget.expenses[i]),
-                ),
-              ),
-        if (widget.expenses.isNotEmpty)
-          Positioned(
-            bottom: 16,
-            left: 16,
-            child: FloatingActionButton.extended(
-              heroTag: 'settle_up',
-              onPressed: _showSettlement,
-              backgroundColor: AppTheme.accent,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.balance_rounded),
-              label: Text(AppLocalizations.of(context).settleUp),
+            else
+              const SizedBox.shrink(),
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Add expense',
+              onPressed: _showAddExpense,
             ),
-          ),
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: AppFab(onPressed: _showAddExpense),
+          ],
+        ),
+        Expanded(
+          child: widget.expenses.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_outlined,
+                          size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.noExpensesYet,
+                        style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  itemCount: widget.expenses.length,
+                  itemBuilder: (_, i) => _ExpenseCard(
+                    expense: widget.expenses[i],
+                    event: widget.event,
+                    authUid: widget.authUid,
+                    canEdit: widget.isOrganizer,
+                    onEdit: () => _showAddExpense(widget.expenses[i]),
+                    onDelete: () => _confirmDelete(widget.expenses[i]),
+                  ),
+                ),
         ),
       ],
     );
@@ -11353,7 +11339,7 @@ class _WishesTabState extends State<_WishesTab> {
         wishes.isEmpty
             ? Center(child: Text(l10n.wishesEmpty))
             : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
                 itemCount: wishes.length,
                 itemBuilder: (_, i) {
                   final wish = wishes[i];
@@ -11369,7 +11355,8 @@ class _WishesTabState extends State<_WishesTab> {
                       ),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                          color: const Color(0xFFE91E63).withValues(alpha: 0.2)),
+                          color:
+                              const Color(0xFFE91E63).withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -11392,29 +11379,25 @@ class _WishesTabState extends State<_WishesTab> {
                 },
               ),
         Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            heroTag: null,
-            onPressed: _alreadySentWish ? null : _sendWish,
-            backgroundColor: _alreadySentWish
-                ? colorScheme.surfaceContainerLow
-                : const Color(0xFFE91E63),
-            label: Text(
-              _alreadySentWish ? 'Wish sent! 🎉' : l10n.addWish,
-              style: TextStyle(
-                color: _alreadySentWish
-                    ? colorScheme.onSurface
-                    : Colors.white,
-              ),
-            ),
-            icon: Icon(
-              Icons.favorite_rounded,
-              color: _alreadySentWish
-                  ? colorScheme.onSurface
-                  : Colors.white,
-            ),
-          ),
+          top: 4,
+          right: 4,
+          child: _alreadySentWish
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 8),
+                  child: Text(
+                    'Wish sent! 🎉',
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.favorite_rounded,
+                      color: Color(0xFFE91E63)),
+                  tooltip: l10n.addWish,
+                  onPressed: _sendWish,
+                ),
         ),
       ],
     );
@@ -11520,159 +11503,148 @@ class _PredictionsTabState extends State<_PredictionsTab> {
     final colorScheme = Theme.of(context).colorScheme;
     final predictions = widget.predictions;
 
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!_isRevealed && predictions.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🔮', style: TextStyle(fontSize: 48)),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.predictionsHowItWorks,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.predictionsEmpty(widget.honoreeName),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic),
-                  ),
-                ],
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            if (_canReveal && !_isRevealed)
+              TextButton.icon(
+                onPressed: _revealing ? null : _revealPredictions,
+                icon: _revealing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('🔮'),
+                label: Text(l10n.revealPredictions),
+                style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF7B1FA2)),
               ),
-            ),
-          )
-        else
-          ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-            itemCount: predictions.length +
-                (!_isRevealed ? 2 : 0),
-            itemBuilder: (_, i) {
-              if (!_isRevealed && i == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    l10n.predictionsHowItWorks,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic),
-                  ),
-                );
-              }
-              if (!_isRevealed && i == 1) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7B1FA2).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      l10n.predictionsSealed(predictions.length),
-                      style: const TextStyle(
-                          color: Color(0xFF7B1FA2),
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                );
-              }
-              final pred = predictions[_isRevealed ? i : i - 2];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            if (!_alreadySent)
+              IconButton(
+                icon: const Icon(Icons.add,
+                    color: Color(0xFF7B1FA2)),
+                tooltip: l10n.addPrediction,
+                onPressed: _addPrediction,
+              ),
+          ],
+        ),
+        Expanded(
+          child: !_isRevealed && predictions.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('🔮', style: TextStyle(fontSize: 18)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _isRevealed ? pred.predictionText : '???',
-                            style: const TextStyle(fontSize: 15),
-                          ),
+                        const Text('🔮', style: TextStyle(fontSize: 48)),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.predictionsHowItWorks,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 14),
                         ),
-                        if ((pred.submittedBy == widget.authUid ||
-                                widget.isOrganizer) &&
-                            !_isRevealed)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                color: AppTheme.danger, size: 18),
-                            onPressed: () => context
-                                .read<EventProvider>()
-                                .deletePrediction(pred.id, widget.event.id),
-                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.predictionsEmpty(widget.honoreeName),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic),
+                        ),
                       ],
                     ),
-                    if (_isRevealed) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        '— ${pred.submittedByName}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                            fontStyle: FontStyle.italic),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-          ),
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (_canReveal && !_isRevealed)
-                FloatingActionButton.extended(
-                  heroTag: null,
-                  onPressed: _revealing ? null : _revealPredictions,
-                  backgroundColor: const Color(0xFF7B1FA2),
-                  label: Text(
-                    l10n.revealPredictions,
-                    style: const TextStyle(color: Colors.white),
                   ),
-                  icon: _revealing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : const Text('🔮'),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  itemCount: predictions.length + (!_isRevealed ? 2 : 0),
+                  itemBuilder: (_, i) {
+                    if (!_isRevealed && i == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          l10n.predictionsHowItWorks,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic),
+                        ),
+                      );
+                    }
+                    if (!_isRevealed && i == 1) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF7B1FA2).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            l10n.predictionsSealed(predictions.length),
+                            style: const TextStyle(
+                                color: Color(0xFF7B1FA2),
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      );
+                    }
+                    final pred = predictions[_isRevealed ? i : i - 2];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text('🔮', style: TextStyle(fontSize: 18)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _isRevealed ? pred.predictionText : '???',
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                              ),
+                              if ((pred.submittedBy == widget.authUid ||
+                                      widget.isOrganizer) &&
+                                  !_isRevealed)
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: AppTheme.danger, size: 18),
+                                  onPressed: () => context
+                                      .read<EventProvider>()
+                                      .deletePrediction(pred.id, widget.event.id),
+                                ),
+                            ],
+                          ),
+                          if (_isRevealed) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              '— ${pred.submittedByName}',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              if (!_alreadySent) ...[
-                const SizedBox(height: 8),
-                FloatingActionButton.extended(
-                  heroTag: null,
-                  onPressed: _addPrediction,
-                  backgroundColor: const Color(0xFF7B1FA2).withValues(alpha: 0.85),
-                  label: Text(l10n.addPrediction,
-                      style: const TextStyle(color: Colors.white)),
-                  icon: const Icon(Icons.add_rounded, color: Colors.white),
-                ),
-              ],
-            ],
-          ),
         ),
       ],
     );

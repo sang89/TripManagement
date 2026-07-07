@@ -243,6 +243,11 @@ class _EventsScreenState extends State<EventsScreen> {
                 if (!_calendarView) _selectedDay = null;
               }),
             ),
+            IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              tooltip: 'New event',
+              onPressed: _onFabTap,
+            ),
           ],
           bottom: TabBar(
             onTap: (i) => setState(() => _selectedTab = _EventTab.values[i]),
@@ -269,7 +274,6 @@ class _EventsScreenState extends State<EventsScreen> {
             ],
           ),
         ),
-        floatingActionButton: AppFab(onPressed: _onFabTap),
         body: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(

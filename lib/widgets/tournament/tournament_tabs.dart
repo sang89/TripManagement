@@ -69,48 +69,49 @@ class _TournamentDivisionsTabState extends State<TournamentDivisionsTab>
     super.build(context);
     final divisions = context.watch<EventProvider>().divisionsFor(widget.event.id);
     return Scaffold(
-      body: divisions.isEmpty
-          ? (widget.isOrganizer
-              ? _DivisionsFirstRunHint(
-                  onAdd: _addDivision,
-                  onBuildStructure: _openBuilder,
-                )
-              : const _EmptyState(
-                  icon: Icons.account_tree_outlined,
-                  message:
-                      'No divisions yet.\nThe organizer hasn\'t set up any draws for this tournament.',
-                ))
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-              itemCount: divisions.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => _DivisionCard(
-                division: divisions[i],
-                isOrganizer: widget.isOrganizer,
-              ),
-            ),
-      // Empty state uses the inline buttons; FABs appear once there are divisions.
-      floatingActionButton: widget.isOrganizer && divisions.isNotEmpty
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.isOrganizer && divisions.isNotEmpty)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                FloatingActionButton.small(
-                  heroTag: 'fab_builder',
-                  onPressed: _openBuilder,
+                IconButton(
+                  icon: const Icon(Icons.account_tree_rounded),
                   tooltip: 'Build structure',
-                  child: const Icon(Icons.account_tree_rounded),
+                  onPressed: _openBuilder,
                 ),
-                const SizedBox(height: 10),
-                FloatingActionButton.extended(
-                  heroTag: 'fab_add',
-                  onPressed: _addDivision,
+                IconButton(
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Division'),
+                  tooltip: 'Add Division',
+                  onPressed: _addDivision,
                 ),
               ],
-            )
-          : null,
+            ),
+          Expanded(
+            child: divisions.isEmpty
+                ? (widget.isOrganizer
+                    ? _DivisionsFirstRunHint(
+                        onAdd: _addDivision,
+                        onBuildStructure: _openBuilder,
+                      )
+                    : const _EmptyState(
+                        icon: Icons.account_tree_outlined,
+                        message:
+                            'No divisions yet.\nThe organizer hasn\'t set up any draws for this tournament.',
+                      ))
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    itemCount: divisions.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) => _DivisionCard(
+                      division: divisions[i],
+                      isOrganizer: widget.isOrganizer,
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1134,15 +1135,30 @@ class _TournamentEntrantsTabState extends State<TournamentEntrantsTab>
     return Scaffold(
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: AppPickerField<TournamentDivision>(
-              label: 'Division',
-              value: selected,
-              items: divisions,
-              labelOf: (d) => d.name,
-              onChanged: (d) => setState(() => _selectedDivisionId = d.id),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+                  child: AppPickerField<TournamentDivision>(
+                    label: 'Division',
+                    value: selected,
+                    items: divisions,
+                    labelOf: (d) => d.name,
+                    onChanged: (d) => setState(() => _selectedDivisionId = d.id),
+                  ),
+                ),
+              ),
+              if (selected.registrationOpen)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4, top: 8),
+                  child: IconButton(
+                    icon: const Icon(Icons.person_add_alt_1),
+                    tooltip: 'Add Team',
+                    onPressed: () => _register(selected),
+                  ),
+                ),
+            ],
           ),
           if (!selected.registrationOpen)
             const Padding(
@@ -1162,7 +1178,7 @@ class _TournamentEntrantsTabState extends State<TournamentEntrantsTab>
                     message: 'No teams registered yet.',
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                     itemCount: entrants.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (_, i) {
@@ -1194,15 +1210,6 @@ class _TournamentEntrantsTabState extends State<TournamentEntrantsTab>
           ),
         ],
       ),
-      floatingActionButton:
-          (widget.isOrganizer || selected.registrationOpen) &&
-                  selected.registrationOpen
-              ? FloatingActionButton.extended(
-                  onPressed: () => _register(selected),
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Add Team'),
-                )
-              : null,
     );
   }
 }
@@ -1600,14 +1607,28 @@ class _TournamentCourtsTabState extends State<TournamentCourtsTab>
     final hasWarning = doubleBooked.isNotEmpty;
 
     return Scaffold(
-      body: courts.isEmpty
-          ? const _EmptyState(
-              icon: Icons.stadium_outlined,
-              message: 'No courts yet.\nAdd the courts available at your venue.',
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-              children: [
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.isOrganizer)
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'Add Court',
+                onPressed: _addCourt,
+              ),
+            ),
+          Expanded(
+            child: courts.isEmpty
+                ? const _EmptyState(
+                    icon: Icons.stadium_outlined,
+                    message:
+                        'No courts yet.\nAdd the courts available at your venue.',
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    children: [
                 if (hasWarning)
                   Container(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -1694,15 +1715,11 @@ class _TournamentCourtsTabState extends State<TournamentCourtsTab>
                       matches: p.assignedMatchesForCourt(widget.event.id, c.id),
                       matchLabel: (m) => _matchLabel(p, m),
                     )),
-              ],
-            ),
-      floatingActionButton: widget.isOrganizer
-          ? FloatingActionButton.extended(
-              onPressed: _addCourt,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Court'),
-            )
-          : null,
+                  ],
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

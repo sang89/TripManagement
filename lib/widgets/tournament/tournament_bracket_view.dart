@@ -307,9 +307,13 @@ class _ManualBuilder extends StatelessWidget {
           ),
         if (isOrganizer)
           Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton.extended(
+            right: 8,
+            top: 8,
+            child: IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: division.entrantKind == EntrantKind.team
+                  ? 'Add tie'
+                  : 'Add match',
               onPressed: entrants.isEmpty
                   ? null
                   : () => showResponsiveModal<void>(
@@ -320,10 +324,6 @@ class _ManualBuilder extends StatelessWidget {
                           nextRound: roundNums.isEmpty ? 1 : roundNums.last,
                         ),
                       ),
-              icon: const Icon(Icons.add),
-              label: Text(division.entrantKind == EntrantKind.team
-                  ? 'Add tie'
-                  : 'Add match'),
             ),
           ),
       ],
